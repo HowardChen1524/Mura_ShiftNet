@@ -66,10 +66,10 @@ def init_weights(net, init_type='normal', gain=0.02):
 
 def init_net(net, init_type='normal', init_gain=0.02, gpu_ids=[]):
     if len(gpu_ids) > 0:
-        assert(torch.cuda.is_available())
+        assert(torch.cuda.is_available()) # 電腦的 GPU 能否被 PyTorch 調用
         net.to(gpu_ids[0])
-        net = torch.nn.DataParallel(net, gpu_ids)
-    init_weights(net, init_type, gain=init_gain)
+        net = torch.nn.DataParallel(net, gpu_ids) # 用多个GPU来加速训练
+    init_weights(net, init_type, gain=init_gain) # 初始化權重
     return net
 
 
@@ -81,9 +81,9 @@ def define_G(input_nc, output_nc, ngf, which_model_netG, opt, mask_global, norm=
     innerCos_list = []
     shift_list = []
 
-    print('input_nc {}'.format(input_nc))
-    print('output_nc {}'.format(output_nc))
-    print('which_model_netG {}'.format(which_model_netG))
+    print('input_nc {}'.format(input_nc)) # input channel dim
+    print('output_nc {}'.format(output_nc)) # output channel dim
+    print('which_model_netG {}'.format(which_model_netG)) # 目前是 unet_shift_triple
 
     # Here we need to initlize an artificial mask_global to construct the init model.
     # When training, we need to set mask for special layers(mostly for Shift layers) first.
@@ -98,7 +98,7 @@ def define_G(input_nc, output_nc, ngf, which_model_netG, opt, mask_global, norm=
     elif which_model_netG == 'face_unet_shift_triple':
         netG = FaceUnetGenerator(input_nc, output_nc, innerCos_list, shift_list, mask_global, opt, \
                                                          ngf, norm_layer=norm_layer, use_spectral_norm=use_spectral_norm)
-    elif which_model_netG == 'unet_shift_triple':
+    elif which_model_netG == 'unet_shift_triple': # current use
         netG = UnetGeneratorShiftTriple(input_nc, output_nc, 8, opt, innerCos_list, shift_list, mask_global, \
                                                          ngf, norm_layer=norm_layer, use_spectral_norm=use_spectral_norm)
     elif which_model_netG == 'res_unet_shift_triple':
@@ -114,13 +114,16 @@ def define_G(input_nc, output_nc, ngf, which_model_netG, opt, mask_global, norm=
         raise NotImplementedError('Generator model name [%s] is not recognized' % which_model_netG)
     print('[CREATED] MODEL')
     print('Constraint in netG:')
-    print(innerCos_list)
+    print(innerCos_list) # [InnerCos(skip: Truelayer 3 to last ,strength: 1)]
 
     print('Shift in netG:')
-    print(shift_list)
+    print(shift_list) # [InnerShiftTriple( ,triple_weight 1)]
+
+    # print(f"Howard coding test {type(netG)}") 
+    # <class 'models.modules.shift_unet.UnetGeneratorShiftTriple'>
 
     print('NetG:')
-    print(netG)
+    print(netG) # Network 架構
 
     return init_net(netG, init_type, init_gain, gpu_ids), innerCos_list, shift_list
 

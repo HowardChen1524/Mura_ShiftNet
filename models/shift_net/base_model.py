@@ -25,10 +25,15 @@ class BaseModel():
 
     def forward(self):
         pass
+        '''
+        寫程式的時候，有時候想的比實際寫出來的速度快，例如定義一個函數，但還沒有實作出來，
+        空著內容不寫又會產生語法錯誤，這時就會使用 pass 來替代，當作是個指標，提醒自己之後要來完成。
+        '''
 
     # used in test time, wrapping `forward` in no_grad() so we don't save
     # intermediate steps for backprop
     def test(self):
+        # disables the gradient calculation，等於 torch.set_grad_enabled(False)
         with torch.no_grad():
             self.forward()
 
@@ -52,7 +57,7 @@ class BaseModel():
         for name in self.visual_names:
             if isinstance(name, str):
                 visual_ret[name] = getattr(self, name)
-        return visual_ret
+        return visual_ret # dict
 
     # return traning losses/errors. train.py will print out these errors as debugging information
     def get_current_losses(self):

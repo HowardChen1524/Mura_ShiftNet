@@ -72,7 +72,7 @@ class ShiftNetModel(BaseModel):
 
         self.netG, self.ng_innerCos_list, self.ng_shift_list = networks.define_G(input_nc, opt.output_nc, opt.ngf,
                                       opt.which_model_netG, opt, self.mask_global, opt.norm, opt.use_spectral_norm_G, opt.init_type, self.gpu_ids, opt.init_gain)
-
+        '''
         if self.isTrain:
             use_sigmoid = False
             if opt.gan_type == 'vanilla':
@@ -81,13 +81,19 @@ class ShiftNetModel(BaseModel):
             self.netD = networks.define_D(opt.input_nc, opt.ndf,
                                           opt.which_model_netD,
                                           opt.n_layers_D, opt.norm, use_sigmoid, opt.use_spectral_norm_D, opt.init_type, self.gpu_ids, opt.init_gain)
+        '''
+        # 06/19 add for generatro and discriminator
+        use_sigmoid = True
+        self.netD = networks.define_D(opt.input_nc, opt.ndf,
+                                        opt.which_model_netD,
+                                        opt.n_layers_D, opt.norm, use_sigmoid, opt.use_spectral_norm_D, opt.init_type, self.gpu_ids, opt.init_gain)
 
         # add style extractor
         self.vgg16_extractor = util.VGG16FeatureExtractor()
         if len(opt.gpu_ids) > 0:
             self.vgg16_extractor = self.vgg16_extractor.to(self.gpu_ids[0])
             self.vgg16_extractor = torch.nn.DataParallel(self.vgg16_extractor, self.gpu_ids)
-
+        
         if self.isTrain:
             self.old_lr = opt.lr
             # define loss functions
@@ -121,6 +127,8 @@ class ShiftNetModel(BaseModel):
             self.optimizers.append(self.optimizer_D)
             for optimizer in self.optimizers:
                 self.schedulers.append(networks.get_scheduler(optimizer, opt))
+        else: # 06/19 add for discriminator
+            self.criterionGAN = networks.GANLoss(gan_type=opt.gan_type).to(self.device)
 
         if not self.isTrain or opt.continue_train:
             self.load_networks(opt.which_epoch)
@@ -128,12 +136,15 @@ class ShiftNetModel(BaseModel):
         self.print_networks(opt.verbose)
 
     def set_input(self, input):
+        # aligned_dataset.py , 這裡 A 等於 B
         self.image_paths = input['A_paths'] # batch image path
         real_A = input['A'].to(self.device)
         real_B = input['B'].to(self.device)
 
         # directly load mask offline
+        # torch.byte()将该tensor投射为byte类型
         self.mask_global = input['M'].to(self.device).byte()
+        # narrow(dim, index, size) : 表示取出tensor中第dim维上索引从index开始到index+size-1的所有元素存放在data中
         self.mask_global = self.mask_global.narrow(1,0,1).bool()
 
         # create mask online
@@ -144,6 +155,7 @@ class ShiftNetModel(BaseModel):
                                     int(self.opt.fineSize/4) + self.opt.overlap: int(self.opt.fineSize/2) + int(self.opt.fineSize/4) - self.opt.overlap] = 1
                 self.rand_t, self.rand_l = int(self.opt.fineSize/4) + self.opt.overlap, int(self.opt.fineSize/4) + self.opt.overlap
             elif self.opt.mask_type == 'random':
+                # 函数tensor1.type_as(tensor2)将1的数据类型转换为2的数据类型
                 self.mask_global = self.create_random_mask().type_as(self.mask_global).view(1, *self.mask_global.size()[-3:])
                 # ***重要***
                 # As generating random masks online are computation-heavy
@@ -160,7 +172,7 @@ class ShiftNetModel(BaseModel):
         # ?
         self.set_latent_mask(self.mask_global)
 
-        # masked_fill_?
+        # masked_fill_(mask, value)，real_A 大小會跟 mask_global 一樣，將兩個疊起來，real_A 會將 mask_global 為 1 的位置取代為 0.(value)
         real_A.narrow(1,0,1).masked_fill_(self.mask_global, 0.)#2*123.0/255.0 - 1.0
         real_A.narrow(1,1,1).masked_fill_(self.mask_global, 0.)#2*104.0/255.0 - 1.0
         real_A.narrow(1,2,1).masked_fill_(self.mask_global, 0.)#2*117.0/255.0 - 1.0
@@ -196,6 +208,33 @@ class ShiftNetModel(BaseModel):
     def forward(self):
         self.set_gt_latent() # 設定 input vec ?
         self.fake_B = self.netG(self.real_A) # real_A 當 input 進去做 inpaint
+    
+    # 06/18 add for testing
+    def test(self):
+        # disables the gradient calculation，等於 torch.set_grad_enabled(False)
+        with torch.no_grad():
+            self.forward()
+        # 06/18 add for testing 
+        fake_B = self.fake_B # Real
+        real_B = self.real_B # GroundTruth
+        # Has been verfied, for square mask, let D discrinate masked patch, improves the results.
+        if self.opt.mask_type == 'center' or self.opt.mask_sub_type == 'rect': 
+            # Using the cropped fake_B as the input of D.
+            fake_B = self.fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
+                                            self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
+
+            real_B = self.real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
+                                            self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]  
+
+        pred_fake = self.netD(fake_B.detach())
+        pred_real = self.netD(real_B)
+        # default
+        if self.opt.gan_type in ['vanilla', 'lsgan']:
+            loss_D_fake = self.criterionGAN(pred_fake, False)
+            loss_D_real = self.criterionGAN(pred_real, True)
+
+            loss_D = (loss_D_fake + loss_D_real) * 0.5
+        return loss_D
 
     # Just assume one shift layer.
     def set_flow_src(self):

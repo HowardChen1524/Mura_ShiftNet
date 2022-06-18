@@ -10,11 +10,11 @@ if __name__ == "__main__":
     opt = TrainOptions().parse()
     # 建立 DataLoader 並讀取 (data_loader.py)
     # isTrain 來自 train option
-    data_loader = CreateDataLoader(opt, isTrain=True)
+    data_loader = CreateDataLoader(opt)
     dataset = data_loader.load_data()
     dataset_size = len(data_loader)
     print('#training images = %d' % dataset_size)
-
+    
     # 建立 model
     model = create_model(opt)
     # 建立 visualizer
@@ -25,7 +25,6 @@ if __name__ == "__main__":
 
     # 開始訓練
     for epoch in range(opt.epoch_count, opt.niter + opt.niter_decay + 1): 
-
         # 初始化 epoch_start_time
         epoch_start_time = time.time()
         # 初始化 iter_data_time
@@ -98,3 +97,4 @@ if __name__ == "__main__":
                 (epoch, opt.niter + opt.niter_decay, time.time() - epoch_start_time))
         
         model.update_learning_rate()
+    

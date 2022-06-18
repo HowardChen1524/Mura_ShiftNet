@@ -25,17 +25,16 @@ def CreateDataset(opt):
     dataset.initialize(opt)
     return dataset
 
-
 class CustomDatasetDataLoader(BaseDataLoader):
     def name(self):
         return 'CustomDatasetDataLoader'
 
-    def initialize(self, opt, isTrain):
+    def initialize(self, opt):
         BaseDataLoader.initialize(self, opt)
         self.dataset = CreateDataset(opt)
 
         # 06/05 add random choose 10000 from train dataset
-        if isTrain:
+        if opt.isTrain:
             self.dataset = torch.utils.data.Subset(self.dataset,random.sample(list(range(len(self.dataset))), 10000))
             print("Success random choose!")
         

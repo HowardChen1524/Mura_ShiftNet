@@ -16,7 +16,7 @@ class GANLoss(nn.Module):
             self.loss = nn.MSELoss()
         elif gan_type == 'lsgan':
             self.loss = nn.MSELoss()
-        elif gan_type == 'vanilla':
+        elif gan_type == 'vanilla': # default
             self.loss = nn.BCELoss()
         #######################################################################
         ###  Relativistic GAN - https://github.com/AlexiaJM/RelativisticGAN ###
