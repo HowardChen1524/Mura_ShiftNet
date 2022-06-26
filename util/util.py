@@ -90,7 +90,9 @@ def tensor2im(input_image, imtype=np.uint8):
     image_numpy = image_tensor[0].cpu().float().numpy()
     if image_numpy.shape[0] == 1:
         image_numpy = np.tile(image_numpy, (3, 1, 1))
+    # 0~255, transpose(1,2,0) => [C,H,W -> H,W,C]
     image_numpy = (np.transpose(image_numpy, (1, 2, 0)) + 1) / 2.0 * 255.0
+    
     return image_numpy.astype(imtype)
 
 # Remove dummy dim from a tensor.

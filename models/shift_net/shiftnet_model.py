@@ -8,6 +8,7 @@ import torchvision.transforms as transforms
 import os
 import numpy as np
 from PIL import Image
+import cv2
 
 class ShiftNetModel(BaseModel):
     def name(self):
@@ -36,6 +37,7 @@ class ShiftNetModel(BaseModel):
         self.isTrain = opt.isTrain # train=True, test=False
         # specify the training losses you want to print out. The program will call base_model.get_current_losses
         self.loss_names = ['G_GAN', 'G_L1', 'D', 'style', 'content', 'tv']
+        # self.loss_names = ['G_GAN', 'G_L1', 'D']
         # specify the images you want to save/display. The program will call base_model.get_current_visuals
         if self.opt.show_flow:
             self.visual_names = ['real_A', 'fake_B', 'real_B', 'flow_srcs']
@@ -82,7 +84,7 @@ class ShiftNetModel(BaseModel):
                                           opt.which_model_netD,
                                           opt.n_layers_D, opt.norm, use_sigmoid, opt.use_spectral_norm_D, opt.init_type, self.gpu_ids, opt.init_gain)
         '''
-        # 06/19 add for generatro and discriminator
+        # 06/19 add for generator and discriminator
         use_sigmoid = True
         self.netD = networks.define_D(opt.input_nc, opt.ndf,
                                         opt.which_model_netD,
@@ -128,7 +130,9 @@ class ShiftNetModel(BaseModel):
             for optimizer in self.optimizers:
                 self.schedulers.append(networks.get_scheduler(optimizer, opt))
         else: # 06/19 add for discriminator
-            self.criterionGAN = networks.GANLoss(gan_type=opt.gan_type).to(self.device)
+            # self.criterionGAN = networks.GANLoss(gan_type=opt.gan_type).to(self.device)
+            self.criterionL1 = torch.nn.L1Loss()
+            self.criterionL2 = torch.nn.MSELoss()
 
         if not self.isTrain or opt.continue_train:
             self.load_networks(opt.which_epoch)
@@ -183,6 +187,9 @@ class ShiftNetModel(BaseModel):
             # Mention: the extra dim, the masked part is filled with 0, non-mask part is filled with 1. 但為啥會變 127 ???
             real_A = torch.cat((real_A, (~self.mask_global).expand(real_A.size(0), 1, real_A.size(2), real_A.size(3)).type_as(real_A)), dim=1)
         
+        # print(real_A.shape)
+        # print(real_B.shape)
+
         # 建立好 input real_A & real_B
         self.real_A = real_A
         self.real_B = real_B
@@ -211,30 +218,117 @@ class ShiftNetModel(BaseModel):
     
     # 06/18 add for testing
     def test(self):
-        # disables the gradient calculation，等於 torch.set_grad_enabled(False)
-        with torch.no_grad():
-            self.forward()
-        # 06/18 add for testing 
-        fake_B = self.fake_B # Real
-        real_B = self.real_B # GroundTruth
+        # Inpainting 方式
+        if self.opt.inpainting_mode == 'ShiftNet':
+        # disables the gradient calculation，等於 torch.set_grad_enabled(False)                       
+            with torch.no_grad():
+                self.forward()
+            fake_B = self.fake_B # Inpaint
+            real_B = self.real_B # Original
+        elif self.opt.inpainting_mode == 'OpenCV':
+            real_B = self.real_B # Original
+            print(real_B.shape)
+            # =====Create fake_B=====
+            # 去掉第一個 batch dim (1,1,256,256)
+            mask_global = np.copy(self.mask_global.detach().cpu().numpy()[0])
+            fake_B = np.copy(self.real_B.detach().cpu().numpy()[0])
+            
+            # 建立 mask, mask part white, else black
+            mask = np.zeros(mask_global.shape)
+            mask[np.where(mask_global==True)] = 255.0 # white
+            mask[np.where(mask_global!=True)] = 0.0 # black      
+            mask = np.transpose(mask, (1, 2, 0)) # (1,256,256) -> (256,256,1)
+            mask = np.squeeze(mask, axis=2) # (256,256,1) -> (256,256)
+            mask = mask.astype('uint8')
+            mask_img = Image.fromarray(mask)
+            mask_img.save('./opencv_mask.png')
+
+            # mask part black
+            fake_B = (fake_B + 1) / 2.0 * 255.0
+
+            fake_B[0][np.where(mask_global[0]==True)] = 0.0 # black
+            fake_B[1][np.where(mask_global[0]==True)] = 0.0 # black
+            fake_B[2][np.where(mask_global[0]==True)] = 0.0 # black
+
+            fake_B = np.transpose(fake_B, (1, 2, 0))
+            fake_B = fake_B.astype('uint8')
+            fake_B = cv2.inpaint(fake_B, mask, 3, cv2.INPAINT_TELEA)
+                        
+            fake_B_img = Image.fromarray(fake_B)
+            fake_B_img.save('./opencv_img.png')
+
+            # change back tensor
+            transform = transforms.Compose([transforms.ToTensor(),
+                                            transforms.Normalize((0.5, 0.5, 0.5),(0.5, 0.5, 0.5))])
+            fake_B = transform(fake_B_img).to(self.device)
+            fake_B = torch.unsqueeze(fake_B, 0)
+            print(fake_B.shape)
+
+        elif self.opt.inpainting_mode == 'Mean':
+            real_B = self.real_B # Original
+            
+            # =====Create fake_B=====
+            # 去掉第一個 batch dim (1,1,256,256)
+            mask_global = np.copy(self.mask_global.detach().cpu().numpy()[0])
+            fake_B = np.copy(self.real_B.detach().cpu().numpy()[0])
+
+            # mask part mean
+            fake_B = (fake_B + 1) / 2.0 * 255.0
+            R_mean = fake_B[0][np.where(mask_global[0]!=True)].mean()
+            G_mean = fake_B[1][np.where(mask_global[0]!=True)].mean()
+            B_mean = fake_B[2][np.where(mask_global[0]!=True)].mean()
+
+            fake_B[0][np.where(mask_global[0]==True)] = R_mean
+            fake_B[1][np.where(mask_global[0]==True)] = G_mean
+            fake_B[2][np.where(mask_global[0]==True)] = B_mean
+
+            fake_B = np.transpose(fake_B, (1, 2, 0))
+            fake_B = fake_B.astype('uint8')
+            fake_B_img = Image.fromarray(fake_B)
+            fake_B_img.save('./mean_img.png')
+
+            # change back tensor
+            transform = transforms.Compose([transforms.ToTensor(),
+                                            transforms.Normalize((0.5, 0.5, 0.5),(0.5, 0.5, 0.5))])
+            fake_B = transform(fake_B_img).to(self.device)
+            fake_B = torch.unsqueeze(fake_B, 0)
+            print(fake_B.shape)
+
+        # 計算 Distance 或 Score 方式 
+        if self.opt.measure_mode == 'MAE':
+            return self.criterionL1(real_B, fake_B)
+        elif self.opt.measure_mode == 'MSE':
+            return self.criterionL2(real_B, fake_B).detach().cpu().numpy()
+        elif self.opt.measure_mode == 'Mask_MAE':
+            pass
+        elif self.opt.measure_mode == 'Mask_MSE':
+            pass
+        elif self.opt.measure_mode == 'Discriminator':
+            pass
+        elif self.opt.measure_mode == 'Mask_Discriminator':
+            pass
+        else:
+            print("Please choose one measure mode")
         # Has been verfied, for square mask, let D discrinate masked patch, improves the results.
-        if self.opt.mask_type == 'center' or self.opt.mask_sub_type == 'rect': 
-            # Using the cropped fake_B as the input of D.
-            fake_B = self.fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
-                                            self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
+        # # Mask crop MSE
+        # if self.opt.mask_type == 'center' or self.opt.mask_sub_type == 'rect': 
+        #     # Using the cropped fake_B as the input of D.
+        #     fake_B = self.fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
+        #                                     self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
 
-            real_B = self.real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
-                                            self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]  
+        #     real_B = self.real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
+        #                                     self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]  
+        # print(real_B.shape)
+        # print(real_B)
+        # print(fake_B.shape)
+        # print(fake_B)
 
-        pred_fake = self.netD(fake_B.detach())
-        pred_real = self.netD(real_B)
-        # default
-        if self.opt.gan_type in ['vanilla', 'lsgan']:
-            loss_D_fake = self.criterionGAN(pred_fake, False)
-            loss_D_real = self.criterionGAN(pred_real, True)
-
-            loss_D = (loss_D_fake + loss_D_real) * 0.5
-        return loss_D
+        # # Mask crop Discriminator MSE 
+        # pred_fake = self.netD(fake_B.detach()) # 0
+        # pred_real = self.netD(real_B) # 1
+        # # input normal pred_fake 跟 pred_real 都接近 1
+        # # input smura pred_fake 偏 normal，接近 1，pred_real 接近 0
+        # score = self.criterionL1(pred_real,pred_fake)
 
     # Just assume one shift layer.
     def set_flow_src(self):

@@ -24,12 +24,12 @@ def roc(labels, scores, name_model):
     return roc_auc, optimal_th
 
 def plot_distance_distribution(n_mse_log, s_mse_log, name_dist):
-    bins = np.linspace(0.6,0.9)
+    bins = np.linspace(0.0001,0.001)
     plt.hist(s_mse_log, bins, alpha=0.5, label="smura")
     plt.hist(n_mse_log, bins, alpha=0.5, label="normal")
-    plt.xlabel('anomaly score (D_loss)')
+    plt.xlabel('Distance or Score')
     plt.ylabel('Number')
-    plt.title('score distribution')
+    plt.title('Distribution')
     plt.legend(loc='upper right')
     plt.savefig(name_dist + '_dist.png')
     plt.show()
@@ -48,7 +48,7 @@ def plot_roc_curve(fpr, tpr, name_model):
 
 def prediction(labels, scores, name_model, normal_max):
     pred_labels = [] 
-    print(normal_max)
+    # print(normal_max)
     roc_auc, optimal_th = roc(labels, scores, name_model)
     for score in scores:
         if score >= optimal_th:
@@ -130,23 +130,29 @@ if __name__ == "__main__":
             score = model.test()
             t2 = time.time()
             # test 一張圖片的時間
-            print(t2-t1)
-            print(score.detach().cpu().numpy())
+            # print(t2-t1)
+            print(score)
+            # break
             if mode == 0:
-                n_score_log.append(score.detach().cpu().numpy())
+                n_score_log.append(score)
             else:
-                s_score_log.append(score.detach().cpu().numpy())
+                s_score_log.append(score)
 
     n_score_arr = np.array(n_score_log)
     s_score_arr = np.array(s_score_log)
     del n_score_log, s_score_log
+    print(f"Normal mean: {n_score_arr.mean()}")
+    print(f"Normal std: {n_score_arr.std()}")
+
+    print(f"Smura mean: {s_score_arr.mean()}")
+    print(f"Smura std: {s_score_arr.std()}")
 
     scores = np.concatenate([n_score_arr, s_score_arr])
     true_label = [0]*n_score_arr.shape[0]+[1]*s_score_arr.shape[0]
 
-    plot_distance_distribution(n_score_arr, s_score_arr, "Anomaly score")
+    plot_distance_distribution(n_score_arr, s_score_arr, "Distance")
 
-    prediction(true_label, scores, "mask_score", np.max(n_score_arr))
+    prediction(true_label, scores, "Distance", np.max(n_score_arr))
 
     '''
     # create website

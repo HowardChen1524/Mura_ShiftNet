@@ -12,11 +12,13 @@ class TestOptions(BaseOptions):
         parser.add_argument('--which_epoch', type=str, default='latest', help='which epoch to load? set to latest to use latest cached model')
         parser.add_argument('--how_many', type=int, default=1000, help='how many test images to run')
         parser.add_argument('--testing_mask_folder', type=str, default='masks/testing_masks', help='perpared masks for testing')
-        # 用分類器預測時使用
+        # Howard add
         parser.add_argument('--testing_normal_dataroot', type=str, default='', help='test normal data path')
         parser.add_argument('--testing_smura_dataroot', type=str, default='', help='test smura data path')        
         parser.add_argument('--normal_how_many', type=int, default=1000, help='how many test images to run')
         parser.add_argument('--smura_how_many', type=int, default=1000, help='how many test images to run')
+        parser.add_argument('--inpainting_mode', type=str, default='ShiftNet', help='[ShiftNet|OpenCV|Mean]')        
+        parser.add_argument('--measure_mode', type=str, default='MSE', help='[MAE|MSE|Mask_MAE|Mask_MSE|Discriminator|Mask_Discriminator]')
 
         self.isTrain = False
 

@@ -1,6 +1,8 @@
+# Now model: sliding
+
 # 0407
 # none
-python train.py --batchSize=1 --use_spectral_norm_D=1 --which_model_netD='basic' --which_model_netG='unet_shift_triple' --model='shiftnet' --shift_sz=1 --mask_thred=1 --dataroot='/home/levi/Howard/Mura/mura_data/RGB/20220407/20220407_merged/train_data/normal' --loadSize=256
+python train.py --batchSize=1 --use_spectral_norm_D=1 --which_model_netD='densenet' --which_model_netG='unet_shift_triple' --model='shiftnet' --shift_sz=1 --mask_thred=1 --dataroot='/home/levi/Howard/Mura/mura_data/RGB/20220407/20220407_merged/train_data/normal' --loadSize=256
 python test.py --batchSize=1 --use_spectral_norm_D=1 --which_model_netD='basic' --which_model_netG='unet_shift_triple' --model='shiftnet' --shift_sz=1 --mask_thred=1 --dataroot='/home/levi/Howard/Mura/mura_data/RGB/20220407/20220407_merged/test_data/normal' --how_many=8261 --results_dir='./results/normal_ori/' --loadSize=256
 python test.py --batchSize=1 --use_spectral_norm_D=1 --which_model_netD='basic' --which_model_netG='unet_shift_triple' --model='shiftnet' --shift_sz=1 --mask_thred=1 --dataroot='/home/levi/Howard/Mura/mura_data/RGB/20220407/20220407_merged/test_data/defect' --how_many=3095 --results_dir='./results/smura_ori/' --loadSize=256
 
@@ -53,12 +55,6 @@ python test.py --batchSize=1 --use_spectral_norm_D=1 --which_model_netD='basic' 
 python test.py --batchSize=1 --use_spectral_norm_D=1 --which_model_netD='basic' --which_model_netG='unet_shift_triple' --model='shiftnet' --shift_sz=1 --mask_thred=1 --dataroot='/home/levi/Howard/Mura/mura_data/RGB/20220407/20220407_sliding_256_0604_resizefirst/test_data/normal' --how_many=8261 --results_dir='./results/normal_resizefirst_5/'
 python test.py --batchSize=1 --use_spectral_norm_D=1 --which_model_netD='basic' --which_model_netG='unet_shift_triple' --model='shiftnet' --shift_sz=1 --mask_thred=1 --dataroot='/home/levi/Howard/Mura/mura_data/RGB/20220407/20220407_sliding_256_0604_resizefirst/test_data/defect' --how_many=3095 --results_dir='./results/smura_resizefirst_5/'
 
-# discriminator 
-python test.py --batchSize=1 --use_spectral_norm_D=1 --which_model_netD='basic' --which_model_netG='unet_shift_triple' --model='shiftnet' \
---shift_sz=1 --mask_thred=1 --loadSize=256 --results_dir='./results/normal_ori_test_/' \
---normal_how_many=8261 --testing_normal_dataroot='/home/levi/Howard/Mura/mura_data/RGB/20220407/20220407_merged/test_data/normal' \
---smura_how_many=3095 --testing_smura_dataroot='/home/levi/Howard/Mura/mura_data/RGB/20220407/20220407_merged/test_data/defect'
-
 #0429/home/levi/Howard/Mura/mura_data/RGB/20220407/20220407_merged/test/normal
 python train.py --batchSize=1 --use_spectral_norm_D=1 --which_model_netD='basic' --which_model_netG='unet_shift_triple' --model='shiftnet' --shift_sz=1 --mask_thred=1 --dataroot='/home/levi/Howard/Mura/mura_data/RGB/20220429/20220429_merge/train/normal' --loadSize=256
 python test.py --batchSize=1 --use_spectral_norm_D=1 --which_model_netD='basic' --which_model_netG='unet_shift_triple' --model='shiftnet' --shift_sz=1 --mask_thred=1 --dataroot='/home/levi/Howard/Mura/mura_data/RGB/20220429/20220429_merge/test/normal' --how_many=10146 --results_dir='./results/normal_ori_345_0429/' --loadSize=256
@@ -102,3 +98,16 @@ python test.py --batchSize=1 --use_spectral_norm_D=1 --which_model_netD='basic' 
 
 python test.py --batchSize=1 --use_spectral_norm_D=1 --which_model_netD='basic' --which_model_netG='unet_shift_triple' --model='shiftnet' --shift_sz=1 --mask_thred=1 --dataroot='/home/levi/Howard/Mura/mura_data/RGB/20220527_merge/test/normal' --how_many=13272 --results_dir='./results/normal_ori_train_d12_test_d17_2/' --loadSize=256
 python test.py --batchSize=1 --use_spectral_norm_D=1 --which_model_netD='basic' --which_model_netG='unet_shift_triple' --model='shiftnet' --shift_sz=1 --mask_thred=1 --dataroot='/home/levi/Howard/Mura/mura_data/RGB/20220527_merge/test/smura' --how_many=386 --results_dir='./results/smura_ori_train_d12_test_d17_2/' --loadSize=256
+
+# train
+python train.py --batchSize=1 --use_spectral_norm_D=1 --which_model_netD='basic' --which_model_netG='unet_shift_triple' --model='shiftnet' \
+--shift_sz=1 --mask_thred=1 --loadSize=256 --input_nc=1 --output_nc=1 \
+--dataroot='/home/levi/Howard/Mura/mura_data/RGB/20220407/20220407_merged/train_data/normal'
+
+# test 
+python test.py --batchSize=1 --use_spectral_norm_D=1 --which_model_netD='basic' --which_model_netG='unet_shift_triple' --model='shiftnet' \
+--shift_sz=1 --mask_thred=1 --loadSize=256 --inpainting_mode='ShiftNet' --measure_mode='MSE' --which_epoch='latest' \
+--normal_how_many=8261 --testing_normal_dataroot='/home/levi/Howard/Mura/mura_data/RGB/20220407/20220407_merged/test_data/normal/' \
+--smura_how_many=3095 --testing_smura_dataroot='/home/levi/Howard/Mura/mura_data/RGB/20220407/20220407_merged/test_data/defect/' \
+
+--input_nc=1 --output_nc=1

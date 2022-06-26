@@ -23,13 +23,17 @@ class AlignedDataset(BaseDataset):
         transform_list = [transforms.ToTensor(),
                           transforms.Normalize((0.5, 0.5, 0.5),
                                                (0.5, 0.5, 0.5))]
-
+        # transform_list = [transforms.ToTensor(),
+        #                   transforms.Normalize((0.5),
+        #                                        (0.5))]
         self.transform = transforms.Compose(transform_list)
 
     def __getitem__(self, index):
         # read image
         A_path = self.A_paths[index]
         A = Image.open(A_path).convert('RGB')
+        # A = Image.open(A_path).convert('L')
+        
         w, h = A.size
 
         # resize image
@@ -46,13 +50,15 @@ class AlignedDataset(BaseDataset):
         A = self.transform(A)
         h = A.size(1)
         w = A.size(2)
-        # ?
+        
+        # crop image
         w_offset = random.randint(0, max(0, w - self.opt.fineSize - 1))
         h_offset = random.randint(0, max(0, h - self.opt.fineSize - 1))
-
-        # color, row, col ?
+        print(w_offset)
+        print(h_offset)
         A = A[:, h_offset:h_offset + self.opt.fineSize,
-               w_offset:w_offset + self.opt.fineSize]
+               w_offset:w_offset + self.opt.fineSize] # color, row, col 
+
 
         if (not self.opt.no_flip) and random.random() < 0.5:
             A = torch.flip(A, [2])
