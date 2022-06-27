@@ -79,7 +79,8 @@ class BaseOptions():
                             help='If True, it will save only the lastest weights')
         parser.add_argument('--add_mask2input', type=int, default=1,
                             help='If True, It will add the mask as a fourth dimension over input space')
-
+        # Howard add
+        parser.add_argument('--image_load_mode', type=str, default='ori_crop', help='[ori_crop|resize|sliding_crop]')
         self.initialized = True
         return parser
 

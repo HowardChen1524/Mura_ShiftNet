@@ -101,13 +101,11 @@ python test.py --batchSize=1 --use_spectral_norm_D=1 --which_model_netD='basic' 
 
 # train
 python train.py --batchSize=1 --use_spectral_norm_D=1 --which_model_netD='basic' --which_model_netG='unet_shift_triple' --model='shiftnet' \
---shift_sz=1 --mask_thred=1 --loadSize=256 --input_nc=1 --output_nc=1 \
+--shift_sz=1 --mask_thred=1 --loadSize=256 \
 --dataroot='/home/levi/Howard/Mura/mura_data/RGB/20220407/20220407_merged/train_data/normal'
 
 # test 
 python test.py --batchSize=1 --use_spectral_norm_D=1 --which_model_netD='basic' --which_model_netG='unet_shift_triple' --model='shiftnet' \
---shift_sz=1 --mask_thred=1 --loadSize=256 --inpainting_mode='ShiftNet' --measure_mode='MSE' --which_epoch='latest' \
+--shift_sz=1 --mask_thred=1 --loadSize=256 --inpainting_mode='ShiftNet' --measure_mode='MSE' --which_epoch='50' \
 --normal_how_many=8261 --testing_normal_dataroot='/home/levi/Howard/Mura/mura_data/RGB/20220407/20220407_merged/test_data/normal/' \
 --smura_how_many=3095 --testing_smura_dataroot='/home/levi/Howard/Mura/mura_data/RGB/20220407/20220407_merged/test_data/defect/' \
-
---input_nc=1 --output_nc=1

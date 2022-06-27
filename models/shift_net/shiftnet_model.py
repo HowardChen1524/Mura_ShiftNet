@@ -296,7 +296,7 @@ class ShiftNetModel(BaseModel):
 
         # 計算 Distance 或 Score 方式 
         if self.opt.measure_mode == 'MAE':
-            return self.criterionL1(real_B, fake_B)
+            return self.criterionL1(real_B, fake_B).detach().cpu().numpy()
         elif self.opt.measure_mode == 'MSE':
             return self.criterionL2(real_B, fake_B).detach().cpu().numpy()
         elif self.opt.measure_mode == 'Mask_MAE':

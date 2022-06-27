@@ -24,7 +24,7 @@ def roc(labels, scores, name_model):
     return roc_auc, optimal_th
 
 def plot_distance_distribution(n_mse_log, s_mse_log, name_dist):
-    bins = np.linspace(0.0001,0.001)
+    bins = np.linspace(0.00001,0.0001)
     plt.hist(s_mse_log, bins, alpha=0.5, label="smura")
     plt.hist(n_mse_log, bins, alpha=0.5, label="normal")
     plt.xlabel('Distance or Score')
