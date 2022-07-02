@@ -35,80 +35,53 @@ class AlignedDataset(BaseDataset):
         # A = Image.open(A_path).convert('L')
         
         w, h = A.size
-        # print(f"w: {w}") 1980
-        # print(f"h: {h}") 1080
-        if self.opt.training_image_mode == 'ori_crop':
-            # ori crop
-            if w < h:
-                ht_1 = self.opt.loadSize * h // w
-                wd_1 = self.opt.loadSize
-                A = A.resize((wd_1, ht_1), Image.BICUBIC)
+        # print(f"w: {w}") # 1920
+        # print(f"h: {h}") # 1080
+        
+        # ori crop
+        if w < h:
+            ht_1 = self.opt.loadSize * h // w
+            wd_1 = self.opt.loadSize
+            A = A.resize((wd_1, ht_1), Image.BICUBIC)
+        else:
+            wd_1 = self.opt.loadSize * w // h
+            ht_1 = self.opt.loadSize
+            print(f"wd_1w: {wd_1}") # 455
+            A = A.resize((wd_1, ht_1), Image.BICUBIC)
+        # 進行前處理
+        A = self.transform(A)
+        h = A.size(1)
+        w = A.size(2)
+
+        # crop image
+        w_offset = random.randint(0, max(0, w - self.opt.fineSize - 1))
+        h_offset = random.randint(0, max(0, h - self.opt.fineSize - 1))
+        # print(f"w_offset: {w_offset}")
+        # print(f"h_offset: {h_offset}")
+        A = A[:, h_offset:h_offset + self.opt.fineSize,
+            w_offset:w_offset + self.opt.fineSize] # color, row, col 
+
+        if (not self.opt.no_flip) and random.random() < 0.5: # self.opt.no_flip 預設 False
+            A = torch.flip(A, [2]) # torch.flip(input, dims) → Tensor Reverse the order of a n-D tensor along given axis in dims.
+        
+        # let B directly equals to A
+        B = A.clone()
+        A_flip = torch.flip(A, [2])
+        B_flip = A_flip.clone()
+
+        # Just zero the mask is fine if not offline_loading_mask.
+        mask = A.clone().zero_()
+        if self.opt.offline_loading_mask:
+            if self.opt.isTrain:
+                mask = Image.open(self.mask_paths[random.randint(0, len(self.mask_paths)-1)])
             else:
-                wd_1 = self.opt.loadSize * w // h
-                ht_1 = self.opt.loadSize
-                A = A.resize((wd_1, ht_1), Image.BICUBIC)
-            # 進行前處理
-            A = self.transform(A)
-            h = A.size(1)
-            w = A.size(2)
-
-            # crop image
-            w_offset = random.randint(0, max(0, w - self.opt.fineSize - 1))
-            h_offset = random.randint(0, max(0, h - self.opt.fineSize - 1))
-            print(w_offset)
-            print(h_offset)
-            A = A[:, h_offset:h_offset + self.opt.fineSize,
-                w_offset:w_offset + self.opt.fineSize] # color, row, col 
-
-            if (not self.opt.no_flip) and random.random() < 0.5: # self.opt.no_flip 預設 False
-                A = torch.flip(A, [2]) # torch.flip(input, dims) → Tensor Reverse the order of a n-D tensor along given axis in dims.
-            
-            # let B directly equals to A
-            B = A.clone()
-            A_flip = torch.flip(A, [2])
-            B_flip = A_flip.clone()
-
-            # Just zero the mask is fine if not offline_loading_mask.
-            mask = A.clone().zero_()
-            if self.opt.offline_loading_mask:
-                if self.opt.isTrain:
-                    mask = Image.open(self.mask_paths[random.randint(0, len(self.mask_paths)-1)])
-                else:
-                    mask = Image.open(self.mask_paths[index % len(self.mask_paths)])
-                mask = mask.resize((self.opt.fineSize, self.opt.fineSize), Image.NEAREST)
-                mask = transforms.ToTensor()(mask)
-        
-            # 用 dict 回傳
-            return {'A': A, 'B': B, 'A_F': A_flip, 'B_F': B_flip, 'M': mask,
-                    'A_paths': A_path}
-
-        elif self.opt.training_image_mode == 'resize':
-            A = A.resize((self.opt.loadSize, self.opt.loadSize), Image.BICUBIC)
-
-            # 進行前處理
-            A = self.transform(A)
-
-            # let B directly equals to A
-            B = A.clone()
-            A_flip = torch.flip(A, [2])
-            B_flip = A_flip.clone()
-
-            # Just zero the mask is fine if not offline_loading_mask.
-            mask = A.clone().zero_()
-            if self.opt.offline_loading_mask:
-                if self.opt.isTrain:
-                    mask = Image.open(self.mask_paths[random.randint(0, len(self.mask_paths)-1)])
-                else:
-                    mask = Image.open(self.mask_paths[index % len(self.mask_paths)])
-                mask = mask.resize((self.opt.fineSize, self.opt.fineSize), Image.NEAREST)
-                mask = transforms.ToTensor()(mask)
-        
-            # 用 dict 回傳
-            return {'A': A, 'B': B, 'A_F': A_flip, 'B_F': B_flip, 'M': mask,
-                    'A_paths': A_path}
-
-        elif self.opt.training_image_mode == 'sliding_crop':
-            pass
+                mask = Image.open(self.mask_paths[index % len(self.mask_paths)])
+            mask = mask.resize((self.opt.fineSize, self.opt.fineSize), Image.NEAREST)
+            mask = transforms.ToTensor()(mask)
+    
+        # 用 dict 回傳
+        return {'A': A, 'B': B, 'A_F': A_flip, 'B_F': B_flip, 'M': mask,
+                'A_paths': A_path}
 
     def __len__(self):
         return len(self.A_paths)

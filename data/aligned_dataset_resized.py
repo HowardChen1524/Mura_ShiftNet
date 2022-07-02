@@ -36,10 +36,19 @@ class AlignedDatasetResized(BaseDataset):
         #    idx = torch.LongTensor(idx)
         #    A = A.index_select(2, idx)
 
+        # Just zero the mask is fine if not offline_loading_mask.
+        mask = A.clone().zero_()
+        if self.opt.offline_loading_mask:
+            if self.opt.isTrain:
+                mask = Image.open(self.mask_paths[random.randint(0, len(self.mask_paths)-1)])
+            else:
+                mask = Image.open(self.mask_paths[index % len(self.mask_paths)])
+            mask = mask.resize((self.opt.fineSize, self.opt.fineSize), Image.NEAREST)
+            mask = transforms.ToTensor()(mask)
+
         # let B directly equals A
         B = A.clone()
-        return {'A': A, 'B': B,
-                'A_paths': A_path}
+        return {'A': A, 'B': B, 'M': mask, 'A_paths': A_path}
 
     def __len__(self):
         return len(self.A_paths)

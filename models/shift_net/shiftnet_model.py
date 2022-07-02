@@ -56,7 +56,7 @@ class ShiftNetModel(BaseModel):
 
         # Here we need to set an artificial mask_global(center hole is ok.)
         self.mask_global.zero_() # 填滿 0
-        # mask_global[:, : ,64+4=70 : 128+64-4=188, 70:188]=1(True)
+        # 初始化預設 center 64+4=68 ~ 128+64-4=188
         self.mask_global[:, :, int(self.opt.fineSize/4) + self.opt.overlap : int(self.opt.fineSize/2) + int(self.opt.fineSize/4) - self.opt.overlap,\
                                 int(self.opt.fineSize/4) + self.opt.overlap: int(self.opt.fineSize/2) + int(self.opt.fineSize/4) - self.opt.overlap] = 1
 
@@ -141,9 +141,13 @@ class ShiftNetModel(BaseModel):
 
     def set_input(self, input):
         # aligned_dataset.py , 這裡 A 等於 B
-        self.image_paths = input['A_paths'] # batch image path
+        self.image_paths = input['A_paths']
+
+        # 06/28 需轉成 list
         real_A = input['A'].to(self.device)
         real_B = input['B'].to(self.device)
+
+        # 06/28 查看 shape
 
         # directly load mask offline
         # torch.byte()将该tensor投射为byte类型
@@ -153,8 +157,9 @@ class ShiftNetModel(BaseModel):
 
         # create mask online
         if not self.opt.offline_loading_mask:
-            if self.opt.mask_type == 'center':
+            if self.opt.mask_type == 'center': # 06/28 center mask
                 self.mask_global.zero_()
+                # 64+4 = 68 ~ 128+64-4 = 188 = 120
                 self.mask_global[:, :, int(self.opt.fineSize/4) + self.opt.overlap : int(self.opt.fineSize/2) + int(self.opt.fineSize/4) - self.opt.overlap,\
                                     int(self.opt.fineSize/4) + self.opt.overlap: int(self.opt.fineSize/2) + int(self.opt.fineSize/4) - self.opt.overlap] = 1
                 self.rand_t, self.rand_l = int(self.opt.fineSize/4) + self.opt.overlap, int(self.opt.fineSize/4) + self.opt.overlap
@@ -173,14 +178,16 @@ class ShiftNetModel(BaseModel):
             self.opt.mask_type = 'random'
             self.opt.mask_sub_type = 'island'
 
-        # ?
+        # 06/28 可能需針對一個 batch
         self.set_latent_mask(self.mask_global)
 
+        # 06/28 需改成 list
         # masked_fill_(mask, value)，real_A 大小會跟 mask_global 一樣，將兩個疊起來，real_A 會將 mask_global 為 1 的位置取代為 0.(value)
         real_A.narrow(1,0,1).masked_fill_(self.mask_global, 0.)#2*123.0/255.0 - 1.0
         real_A.narrow(1,1,1).masked_fill_(self.mask_global, 0.)#2*104.0/255.0 - 1.0
         real_A.narrow(1,2,1).masked_fill_(self.mask_global, 0.)#2*117.0/255.0 - 1.0
 
+        # 06/28 需改成 list
         if self.opt.add_mask2input:
             # # ***重要***
             # make it 4 dimensions.
@@ -191,6 +198,7 @@ class ShiftNetModel(BaseModel):
         # print(real_B.shape)
 
         # 建立好 input real_A & real_B
+        # 06/28 需改成 list
         self.real_A = real_A
         self.real_B = real_B
     
@@ -225,6 +233,7 @@ class ShiftNetModel(BaseModel):
                 self.forward()
             fake_B = self.fake_B # Inpaint
             real_B = self.real_B # Original
+            
         elif self.opt.inpainting_mode == 'OpenCV':
             real_B = self.real_B # Original
             print(real_B.shape)

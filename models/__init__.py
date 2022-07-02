@@ -3,7 +3,7 @@ def create_model(opt):
     print(opt.model)
     if opt.model == 'shiftnet':
         # 不是 aligned or aligned_resized 就跳出
-        assert (opt.dataset_mode == 'aligned' or opt.dataset_mode == 'aligned_resized')
+        assert (opt.dataset_mode == 'aligned' or opt.dataset_mode == 'aligned_resized' or opt.dataset_mode == 'aligned_sliding')
         from models.shift_net.shiftnet_model import ShiftNetModel
         model = ShiftNetModel()
 

@@ -171,11 +171,13 @@ def create_gMask(gMask_opts, limit_cnt=1):
 def create_rand_mask(opt):
     h, w = opt.fineSize, opt.fineSize
     mask = np.zeros((h, w))
+    # 256-4-128 = 120
     maxt = h - opt.overlap - h // 2
     maxl = w - opt.overlap - w // 2
+    # 4~120
     rand_t = np.random.randint(opt.overlap, maxt)
     rand_l = np.random.randint(opt.overlap, maxl)
-
+    # 4~120+128-8
     mask[rand_t:rand_t+opt.fineSize//2-2*opt.overlap, rand_l:rand_l+opt.fineSize//2-2*opt.overlap] = 1
 
     return torch.ByteTensor(mask), rand_t, rand_l

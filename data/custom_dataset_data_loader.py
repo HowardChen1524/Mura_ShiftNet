@@ -14,6 +14,11 @@ def CreateDataset(opt):
         from data.aligned_dataset_resized import AlignedDatasetResized
         dataset = AlignedDatasetResized()
 
+    # 06/28 Howard add
+    elif opt.dataset_mode == 'aligned_sliding':
+        from data.aligned_dataset_sliding import AlignedDatasetSliding
+        dataset = AlignedDatasetSliding()
+
     elif opt.dataset_mode == 'single':
         from data.single_dataset import SingleDataset
         dataset = SingleDataset()
@@ -34,8 +39,9 @@ class CustomDatasetDataLoader(BaseDataLoader):
         self.dataset = CreateDataset(opt)
 
         # 06/05 add random choose 10000 from train dataset
+        # 10000 -> param
         if opt.isTrain:
-            self.dataset = torch.utils.data.Subset(self.dataset,random.sample(list(range(len(self.dataset))), 10000))
+            self.dataset = torch.utils.data.Subset(self.dataset,random.sample(list(range(len(self.dataset))), opt.random_choose_num))
             print("Success random choose!")
         
         self.dataloader = torch.utils.data.DataLoader(

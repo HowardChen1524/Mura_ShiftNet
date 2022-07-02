@@ -26,7 +26,9 @@ class BaseOptions():
         parser.add_argument('--name', type=str, default='exp', help='name of the experiment. It decides where to store samples and models')
         parser.add_argument('--n_layers_D', type=int, default=3, help='only used if which_model_netD==n_layers')
         parser.add_argument('--gpu_ids', type=str, default='0', help='gpu ids: e.g. 0  0,1,2, 0,2, use \'-1 \' for cpu training/testing')
-        parser.add_argument('--dataset_mode', type=str, default='aligned', help='chooses how datasets are loaded. [aligned | aligned_resized | single]')
+        # parser.add_argument('--dataset_mode', type=str, default='aligned', help='chooses how datasets are loaded. [aligned | aligned_resized | single]')
+        parser.add_argument('--dataset_mode', type=str, default='aligned_resized', help='chooses how datasets are loaded. [aligned | aligned_resized | single | aligned_sliding]')
+        # parser.add_argument('--dataset_mode', type=str, default='aligned_resized', help='chooses how datasets are loaded. [aligned | aligned_resized | single]')
         parser.add_argument('--nThreads', default=2, type=int, help='# threads for loading data')
         parser.add_argument('--checkpoints_dir', type=str, default='./log', help='models are saved here')
         parser.add_argument('--norm', type=str, default='instance', help='[instance|batch|switchable] normalization')
@@ -80,7 +82,7 @@ class BaseOptions():
         parser.add_argument('--add_mask2input', type=int, default=1,
                             help='If True, It will add the mask as a fourth dimension over input space')
         # Howard add
-        parser.add_argument('--image_load_mode', type=str, default='ori_crop', help='[ori_crop|resize|sliding_crop]')
+                        
         self.initialized = True
         return parser
 
