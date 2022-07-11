@@ -76,7 +76,7 @@ def init_net(net, init_type='normal', init_gain=0.02, gpu_ids=[]):
 # Note: Adding SN to G tends to give inferior results. Need more checking.
 def define_G(input_nc, output_nc, ngf, which_model_netG, opt, mask_global, norm='batch', use_spectral_norm=False, init_type='normal', gpu_ids=[], init_gain=0.02):
     netG = None
-    norm_layer = get_norm_layer(norm_type=norm)
+    norm_layer = get_norm_layer(norm_type=norm) # batch
 
     innerCos_list = []
     shift_list = []
@@ -99,7 +99,9 @@ def define_G(input_nc, output_nc, ngf, which_model_netG, opt, mask_global, norm=
         netG = FaceUnetGenerator(input_nc, output_nc, innerCos_list, shift_list, mask_global, opt, \
                                                          ngf, norm_layer=norm_layer, use_spectral_norm=use_spectral_norm)
     elif which_model_netG == 'unet_shift_triple': # current use
-        netG = UnetGeneratorShiftTriple(input_nc, output_nc, 8, opt, innerCos_list, shift_list, mask_global, \
+        # input_nc = 2, output_nc = 1, innerCos_list=[], shift_list=[], ngf=64
+        # num_downs will be param, 8->6 because input size 256->64
+        netG = UnetGeneratorShiftTriple(input_nc, output_nc, 6, opt, innerCos_list, shift_list, mask_global, \
                                                          ngf, norm_layer=norm_layer, use_spectral_norm=use_spectral_norm)
     elif which_model_netG == 'res_unet_shift_triple':
         netG = ResUnetGeneratorShiftTriple(input_nc, output_nc, 8, opt, innerCos_list, shift_list, mask_global, \

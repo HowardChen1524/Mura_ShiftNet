@@ -33,6 +33,7 @@ if __name__ == "__main__":
         epoch_iter = 0
 
         for i, data in enumerate(dataset): # enumerate(dataset)每次都會讀入一個 batch 的資料
+            
             # 初始化 iter_start_time
             iter_start_time = time.time()
 
@@ -51,24 +52,24 @@ if __name__ == "__main__":
             # it not only sets the input data with mask, but also sets the latent mask.
             model.set_input(data) 
 
-            # 依照 display_freq 去 set_show_map_true()？
+            # 依照 display_freq 去 set_show_map_true()？ 
             # Additonal, should set it before 'optimize_parameters()'.
-            if total_steps % opt.display_freq == 0:
+            if total_steps % opt.display_freq == 0: # default:100
                 if opt.show_flow:
                     model.set_show_map_true()
             
             model.optimize_parameters()
 
             # 依照 display_freq 去 display_current_results
-            if total_steps % opt.display_freq == 0:
+            if total_steps % opt.display_freq == 0: # default:100
                 save_result = total_steps % opt.update_html_freq == 0
                 if opt.show_flow:
                     model.set_flow_src()
                     model.set_show_map_false()
-                visualizer.display_current_results(model.get_current_visuals(), epoch, save_result)
+                # visualizer.display_current_results(model.get_current_visuals(), epoch, save_result)
 
             # 依照 print_freq 去 plot_current_losses
-            if total_steps % opt.print_freq == 0:
+            if total_steps % opt.print_freq == 0: # default:50
                 losses = model.get_current_losses()
                 t = (time.time() - iter_start_time) / opt.batchSize # 平均每張圖的時間
                 visualizer.print_current_losses(epoch, epoch_iter, losses, t, t_data)

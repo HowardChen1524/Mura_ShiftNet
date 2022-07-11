@@ -25,7 +25,7 @@ def roc(labels, scores, name_model):
     return roc_auc, optimal_th
 
 def plot_distance_distribution(n_mse_log, s_mse_log, name_dist):
-    bins = np.linspace(0.00001,0.0005)
+    bins = np.linspace(0.00001,0.0001)
     plt.hist(s_mse_log, bins, alpha=0.5, label="smura")
     plt.hist(n_mse_log, bins, alpha=0.5, label="normal")
     plt.xlabel('Distance or Score')
@@ -112,7 +112,10 @@ if __name__ == "__main__":
     model = create_model(opt)
 
     n_score_log = list()
+    n_mask_score_log = list()
     s_score_log = list()
+    s_mask_score_log = list()
+
     # test
 
     for mode, dataset in enumerate(dataset_list): 
@@ -121,15 +124,17 @@ if __name__ == "__main__":
             opt.how_many = opt.normal_how_many
         else:
             opt.how_many = opt.smura_how_many
+        
+        all_crop_scores = []
+
         print(f"Mode(0:normal,1:smura): {mode}, {opt.how_many}")
         for i, data in enumerate(dataset):
             # 超過設定的測試張數就跳出
             if i >= opt.how_many:
                 break
             t1 = time.time()
-            # 建立 input real_A & real_B
-            # it not only sets the input data with mask, but also sets the latent mask.
-            # 06/28 或是在這裡寫 for 每次 read 1 張
+            
+            # (1,mini-batch,c,h,w) -> (mini-batch,c,h,w)，會有多一個維度是因為 dataloader batchsize 設 1
             bs, ncrops, c, h, w = data['A'].size()
             data['A'] = data['A'].view(-1, c, h, w)
             # print(data['A'].shape)
@@ -137,35 +142,65 @@ if __name__ == "__main__":
             bs, ncrops, c, h, w = data['B'].size()
             data['B'] = data['B'].view(-1, c, h, w)
             # print(data['B'].shape)
-            crop_scores = []
             
-            for crop_id in range(4):
-                crop_data = {'A': torch.unsqueeze(data['A'][crop_id], 0), 
-                             'B': torch.unsqueeze(data['B'][crop_id], 0), 
-                             'M': data['M'], 
-                             'A_paths': data['A_paths']}
-                model.set_input(crop_data) 
-                crop_scores.append(model.test())
-            max_mse = np.max(crop_scores)        
-            print(max_mse)
+            bs, ncrops, c, h, w = data['M'].size()
+            data['M'] = data['M'].view(-1, c, h, w)
+            # print(data['M'].shape)
 
-            t2 = time.time()
-            # test 一張圖片的時間
-            # print(t2-t1)
-            # break
-            if mode == 0:
-                n_score_log.append(max_mse)
+
+            # for OpenCV and Mean 待改
+            # crop_scores = [] 
+            # for crop_id in range(256):
+            #     crop_data = {'A': torch.unsqueeze(data['A'][crop_id], 0), 
+            #                  'B': torch.unsqueeze(data['B'][crop_id], 0), 
+            #                  'M': torch.unsqueeze(data['M'][crop_id], 0), 
+            #                  'A_paths': data['A_paths']}
+            #     model.set_input(crop_data) 
+            #     crop_score = model.test()
+            #     crop_scores.append(crop_score)
+
+            # all_crop_scores.extend(crop_scores)
+            # max_mse = np.max(crop_scores)        
+            # print(max_mse)
+
+            # 建立 input real_A & real_B
+            # it not only sets the input data with mask, but also sets the latent mask.
+            model.set_input(data) 
+            crop_scores = model.test()
+            max_crop_score = np.max(crop_scores)
+            print(max_crop_score)
+            
+            if i == 0:
+                all_crop_scores = crop_scores.copy()
             else:
-                s_score_log.append(max_mse)
+                all_crop_scores.append(crop_scores)
+            
+            t2 = time.time()
+            # test 一張大圖的時間
+            # print(t2-t1)
+            raise
+            if mode == 0:
+                n_score_log.append(max_crop_score)
+            else:
+                s_score_log.append(max_crop_score)
+
+        # 計算所有圖片平均
+        # if mode == 0:
+        #     n_mean = np.array(all_crop_scores).mean()
+        #     n_std = np.array(all_crop_scores).std()
+        # else:
+        #     s_mean = np.array(all_crop_scores).mean()
+        #     s_std = np.array(all_crop_scores).std()
+
+    print(f"Normal mean: {n_mean}")
+    print(f"Normal std: {n_std}")
+
+    print(f"Smura mean: {s_mean}")
+    print(f"Smura std: {s_std}")
 
     n_score_arr = np.array(n_score_log)
     s_score_arr = np.array(s_score_log)
     del n_score_log, s_score_log
-    print(f"Normal mean: {n_score_arr.mean()}")
-    print(f"Normal std: {n_score_arr.std()}")
-
-    print(f"Smura mean: {s_score_arr.mean()}")
-    print(f"Smura std: {s_score_arr.std()}")
 
     scores = np.concatenate([n_score_arr, s_score_arr])
     true_label = [0]*n_score_arr.shape[0]+[1]*s_score_arr.shape[0]

@@ -14,7 +14,7 @@ def CreateDataset(opt):
         from data.aligned_dataset_resized import AlignedDatasetResized
         dataset = AlignedDatasetResized()
 
-    # 06/28 Howard add
+    # 06/28 add sliding
     elif opt.dataset_mode == 'aligned_sliding':
         from data.aligned_dataset_sliding import AlignedDatasetSliding
         dataset = AlignedDatasetSliding()
@@ -38,17 +38,16 @@ class CustomDatasetDataLoader(BaseDataLoader):
         BaseDataLoader.initialize(self, opt)
         self.dataset = CreateDataset(opt)
 
-        # 06/05 add random choose 10000 from train dataset
-        # 10000 -> param
-        if opt.isTrain:
-            self.dataset = torch.utils.data.Subset(self.dataset,random.sample(list(range(len(self.dataset))), opt.random_choose_num))
+        # 06/05 add random choose from train dataset
+        if self.opt.isTrain:
+            self.dataset = torch.utils.data.Subset(self.dataset,random.sample(list(range(len(self.dataset))), self.opt.random_choose_num))
             print("Success random choose!")
         
         self.dataloader = torch.utils.data.DataLoader(
             self.dataset,
-            batch_size=opt.batchSize,
-            shuffle=not opt.serial_batches, # if true, 照圖片順序建立 batches, 反之 random
-            num_workers=int(opt.nThreads))
+            batch_size=self.opt.batchSize,
+            shuffle=not self.opt.serial_batches, # if true, create batches in order, otherwise random, self.opt.serial_batches default false
+            num_workers=int(self.opt.nThreads))
 
     def load_data(self):
         return self
