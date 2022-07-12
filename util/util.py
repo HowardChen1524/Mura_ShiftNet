@@ -17,7 +17,7 @@ def create_masks(opt, N=10):
     masks = []
     masks_resized = []
     for _ in range(N):
-        mask = wrapper_gmask (opt).cpu().numpy()
+        mask = wrapper_gmask(opt).cpu().numpy()
         masks.append(mask)
         
         mask_resized = resize(np.squeeze(mask), (64, 64))
@@ -83,15 +83,16 @@ class OptimizerMask:
 # Converts a Tensor into an image array (numpy)
 # |imtype|: the desired type of the converted numpy array
 def tensor2im(input_image, imtype=np.uint8):
-    if isinstance(input_image, torch.Tensor):
-        image_tensor = input_image.data
+    if isinstance(input_image, torch.Tensor): 
+        # image_tensor = input_image.data # deprecated
+        image_tensor = input_image.data.detach()
     else:
         return input_image
-    image_numpy = image_tensor[0].cpu().float().numpy()
-    if image_numpy.shape[0] == 1:
-        image_numpy = np.tile(image_numpy, (3, 1, 1))
-    # 0~255, transpose(1,2,0) => [C,H,W -> H,W,C]
-    image_numpy = (np.transpose(image_numpy, (1, 2, 0)) + 1) / 2.0 * 255.0
+    
+    image_numpy = image_tensor[0].cpu().float().numpy() # (1,c,h,w) -> (c,h,w)
+    # if image_numpy.shape[0] == 1:
+    #     image_numpy = np.tile(image_numpy, (3, 1, 1))
+    image_numpy = (np.transpose(image_numpy, (1, 2, 0)) + 1) / 2.0 * 255.0 # (c,h,w) -> (h,w,c) + denormalization 0~255
     
     return image_numpy.astype(imtype)
 
@@ -477,7 +478,7 @@ class VGG16FeatureExtractor(nn.Module):
         # print(self.enc_1)
         # print(self.enc_2)
         # print(self.enc_3)
-
+        # raise
         # fix the encoder
         for i in range(3):
             for param in getattr(self, 'enc_{:d}'.format(i + 1)).parameters():

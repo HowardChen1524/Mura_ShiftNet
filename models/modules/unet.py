@@ -38,7 +38,7 @@ class UnetSkipConnectionBlock(nn.Module):
 
         if input_nc is None:
             input_nc = outer_nc
-
+            
         downconv = spectral_norm(nn.Conv2d(input_nc, inner_nc, kernel_size=4,
                              stride=2, padding=1), use_spectral_norm)
         downrelu = nn.LeakyReLU(0.2, True)
@@ -76,6 +76,7 @@ class UnetSkipConnectionBlock(nn.Module):
         self.model = nn.Sequential(*model)
 
     def forward(self, x):
+        # print(self.outermost) # True
         if self.outermost:  # if it is the outermost, directly pass the input in.
             return self.model(x)
         else:

@@ -38,10 +38,10 @@ def save_images(webpage, visuals, image_path, aspect_ratio=1.0, width=256):
         h, w, _ = im.shape
         # default = 1
         if aspect_ratio > 1.0:
-            # im = imresize(im, (h, int(w * aspect_ratio)), interp='bicubic')
+            # im = imresize(im, (h, int(w * aspect_ratio)), interp='bicubic') # deprecated
             im = resize(im, (h, int(w * aspect_ratio)), interp='bicubic')
         if aspect_ratio < 1.0:
-            # im = imresize(im, (int(h / aspect_ratio), w), interp='bicubic')
+            # im = imresize(im, (int(h / aspect_ratio), w), interp='bicubic') # deprecated
             im = resize(im, (int(h / aspect_ratio), w), interp='bicubic')
         util.save_image(im, save_path)
 
@@ -71,6 +71,8 @@ class Visualizer():
             self.img_dir = os.path.join(self.web_dir, 'images')
             print('create web directory %s...' % self.web_dir)
             util.mkdirs([self.web_dir, self.img_dir])
+
+        # 紀錄 loss    
         self.log_name = os.path.join(opt.checkpoints_dir, opt.name, 'loss_log.txt')
         with open(self.log_name, "a") as log_file:
             now = time.strftime("%c")

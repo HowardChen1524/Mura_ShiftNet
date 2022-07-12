@@ -26,9 +26,8 @@ class BaseOptions():
         parser.add_argument('--name', type=str, default='exp', help='name of the experiment. It decides where to store samples and models')
         parser.add_argument('--n_layers_D', type=int, default=3, help='only used if which_model_netD==n_layers')
         parser.add_argument('--gpu_ids', type=str, default='0', help='gpu ids: e.g. 0  0,1,2, 0,2, use \'-1 \' for cpu training/testing')
-        # parser.add_argument('--dataset_mode', type=str, default='aligned', help='chooses how datasets are loaded. [aligned | aligned_resized | single]')
-        parser.add_argument('--dataset_mode', type=str, default='aligned_resized', help='chooses how datasets are loaded. [aligned | aligned_resized | single | aligned_sliding]')
-        # parser.add_argument('--dataset_mode', type=str, default='aligned_resized', help='chooses how datasets are loaded. [aligned | aligned_resized | single]')
+        # parser.add_argument('--dataset_mode', type=str, default='aligned', help='chooses how datasets are loaded. [aligned|aligned_resized|single]')
+        parser.add_argument('--dataset_mode', type=str, default='aligned_resized', help='chooses how datasets are loaded. [aligned|aligned_resized|aligned_sliding|single]')
         parser.add_argument('--nThreads', default=2, type=int, help='# threads for loading data')
         parser.add_argument('--checkpoints_dir', type=str, default='./log', help='models are saved here')
         parser.add_argument('--norm', type=str, default='instance', help='[instance|batch|switchable] normalization')
@@ -43,19 +42,18 @@ class BaseOptions():
         parser.add_argument('--show_flow', type=int, default=0, help='show the flow information. WARNING: set display_freq a large number as it is quite slow when showing flow')
         parser.add_argument('--verbose', action='store_true', help='if specified, print more debugging information')
         ## model specific
-        # parser.add_argument('--mask_type', type=str, default='center',
-                            # help='the type of mask you want to apply, \'center\' or \'random\'')
+        parser.add_argument('--mask_type', type=str, default='center',
+                            help='the type of mask you want to apply, \'center\' or \'random\'')
         # parser.add_argument('--mask_sub_type', type=str, default='island',
                             # help='the type of mask you want to apply, \'rect \' or \'fractal \' or \'island \'')
-        parser.add_argument('--mask_type', type=str, default='random',
-                            help='the type of mask you want to apply, \'center\' or \'random\'')
         parser.add_argument('--mask_sub_type', type=str, default='rect',
                             help='the type of mask you want to apply, \'rect \' or \'fractal \' or \'island \'')
         parser.add_argument('--lambda_A', type=int, default=100, help='weight on L1 term in objective')
         parser.add_argument('--stride', type=int, default=1, help='should be dense, 1 is a good option.')
         parser.add_argument('--shift_sz', type=int, default=1, help='shift_sz>1 only for \'soft_shift_patch\'.')
         parser.add_argument('--mask_thred', type=int, default=1, help='number to decide whether a patch is masked')
-        parser.add_argument('--overlap', type=int, default=4, help='the overlap for center mask')
+        # parser.add_argument('--overlap', type=int, default=4, help='the overlap for center mask')
+        parser.add_argument('--overlap', type=int, default=0, help='the overlap for center mask')
         parser.add_argument('--bottleneck', type=int, default=512, help='neurals of fc')
         parser.add_argument('--gp_lambda', type=float, default=10.0, help='gradient penalty coefficient')
         parser.add_argument('--constrain', type=str, default='MSE', help='guidance loss type')
@@ -68,7 +66,6 @@ class BaseOptions():
                                                                             'vanilla, '
                                                                             're_s_gan (Relativistic Standard GAN), ')
         parser.add_argument('--gan_weight', type=float, default=0.2, help='the weight of gan loss')
-        # New added
         parser.add_argument('--style_weight', type=float, default=10.0, help='the weight of style loss')
         parser.add_argument('--content_weight', type=float, default=1.0, help='the weight of content loss')
         parser.add_argument('--tv_weight', type=float, default=0.0, help='the weight of tv loss, you can set a small value, such as 0.1/0.01')
@@ -81,8 +78,9 @@ class BaseOptions():
                             help='If True, it will save only the lastest weights')
         parser.add_argument('--add_mask2input', type=int, default=1,
                             help='If True, It will add the mask as a fourth dimension over input space')
-        # Howard add
-                        
+        # New add
+        parser.add_argument('--color_mode', type=str, default='RGB', help='[RGB|L], PIL Image convert')
+           
         self.initialized = True
         return parser
 
