@@ -169,6 +169,7 @@ if __name__ == "__main__":
             crop_scores = model.test()
             max_crop_score = np.max(crop_scores)
             print(max_crop_score)
+<<<<<<< HEAD
             # mean_crop_score = np.mean(crop_scores)
             # print(mean_crop_score)
 
@@ -176,15 +177,27 @@ if __name__ == "__main__":
                 all_crop_scores = crop_scores.copy()
             else:
                 all_crop_scores = np.append(all_crop_scores, crop_scores)
+=======
+            
+            if i == 0:
+                all_crop_scores = crop_scores.copy()
+            else:
+                all_crop_scores.append(crop_scores)
+>>>>>>> 07ceea3efe73b9982b4e36445593f3cc380a7e47
             
             t2 = time.time()
             # test 一張大圖的時間
             # print(t2-t1)
+<<<<<<< HEAD
             
+=======
+            raise
+>>>>>>> 07ceea3efe73b9982b4e36445593f3cc380a7e47
             if mode == 0:
                 n_score_log.append(max_crop_score)
             else:
                 s_score_log.append(max_crop_score)
+<<<<<<< HEAD
             # if mode == 0:
             #     n_score_log.append(mean_crop_score)
             # else:
@@ -197,6 +210,16 @@ if __name__ == "__main__":
         else:
             s_mean = all_crop_scores.mean()
             s_std = all_crop_scores.std()
+=======
+
+        # 計算所有圖片平均
+        # if mode == 0:
+        #     n_mean = np.array(all_crop_scores).mean()
+        #     n_std = np.array(all_crop_scores).std()
+        # else:
+        #     s_mean = np.array(all_crop_scores).mean()
+        #     s_std = np.array(all_crop_scores).std()
+>>>>>>> 07ceea3efe73b9982b4e36445593f3cc380a7e47
 
     print(f"Normal mean: {n_mean}")
     print(f"Normal std: {n_std}")
