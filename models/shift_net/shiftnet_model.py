@@ -50,8 +50,8 @@ class ShiftNetModel(BaseModel):
         # specify the models you want to save to the disk. The program will call base_model.save_networks and base_model.load_networks
         if self.isTrain:
             self.model_names = ['G', 'D']
-        else:  # during test time, only load Gs
-            self.model_names = ['G']
+        else:  # during test time, only load Gs, if need d_score, add Ds
+            self.model_names = ['G', 'D']
 
 
         # batchsize should be 1 for mask_global
@@ -249,7 +249,7 @@ class ShiftNetModel(BaseModel):
             # torch.no_grad() disables the gradient calculation，等於 torch.set_grad_enabled(False)                       
             with torch.no_grad():
                 self.forward()
-            fake_B = self.fake_B # Inpaint
+            fake_B = self.fake_B.detach() # Inpaint
             real_B = self.real_B # Original
         elif self.opt.inpainting_mode == 'OpenCV' and self.opt.color_mode != 'RGB':
             real_B = self.real_B # Original
@@ -325,10 +325,8 @@ class ShiftNetModel(BaseModel):
             crop_scores = []
             for i in range(0,256):
                 crop_scores.append(self.criterionL2(real_B[i], fake_B[i]).detach().cpu().numpy())
-            
             crop_scores = np.array(crop_scores)
-            return crop_scores
-            
+            return crop_scores          
         elif self.opt.measure_mode == 'Mask_MSE':
             fake_B = fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
                                             self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
@@ -336,20 +334,54 @@ class ShiftNetModel(BaseModel):
             real_B = real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
                                             self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]  
             crop_scores = []
+            # print(fake_B.shape)
             for i in range(0,256):
                 crop_scores.append(self.criterionL2(real_B[i], fake_B[i]).detach().cpu().numpy())
             crop_scores = np.array(crop_scores)
             return crop_scores
-
         elif self.opt.measure_mode == 'D_model_score':
-            # pred_fake = self.netD(fake_B.detach()) # 0
-            # pred_real = self.netD(real_B) # 1
             # # input normal pred_fake 跟 pred_real 都接近 1
             # # input smura pred_fake 偏 normal，接近 1，pred_real 接近 0
-            # score = self.criterionL1(pred_real,pred_fake)
-            pass
+            # pred_fake = self.netD(fake_B) # 0
+            # pred_real = self.netD(real_B) # 1
+            # # pred_real shape 6*6
+
+            fake_B = self.fake_B # Real
+            
+            real_B = self.real_B # GroundTruth
+
+            # # Has been verfied, for square mask, let D discrinate masked patch, improves the results.
+            # # Using the cropped fake_B as the input of D.
+            # fake_B = self.fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
+            #                                 self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
+
+            # real_B = self.real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
+            #                                 self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]  
+
+            self.netD.eval()
+            with torch.no_grad():
+                pred_fake = self.netD(fake_B.detach())
+                pred_real = self.netD(real_B)
+            # print(pred_fake.shape)
+            crop_scores = []
+            for i in range(0,256):
+                crop_scores.append(self.criterionL2(pred_real[i], pred_fake[i]).detach().cpu().numpy())
+            crop_scores = np.array(crop_scores)
+            return crop_scores
+            
         elif self.opt.measure_mode == 'Mask_D_model_score':
-            pass
+            fake_B = fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
+                                            self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
+
+            real_B = real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
+                                            self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]  
+            pred_fake = self.netD(fake_B) # 0
+            pred_real = self.netD(real_B) # 1            
+            crop_scores = []
+            for i in range(0,256):
+                crop_scores.append(self.criterionL2(pred_real[i], pred_fake[i]).detach().cpu().numpy())
+            crop_scores = np.array(crop_scores)
+            return crop_scores
         else:
             raise ValueError("Please choose one measure mode!")
 
@@ -396,7 +428,7 @@ class ShiftNetModel(BaseModel):
         else:
             # default
             if self.opt.gan_type in ['vanilla', 'lsgan']:
-                self.loss_D_fake = self.criterionGAN(self.pred_fake, False)
+                self.loss_D_fake = self.criterionGAN(self.pred_fake, False) # default BCE loss
                 self.loss_D_real = self.criterionGAN(self.pred_real, True)
 
                 self.loss_D = (self.loss_D_fake + self.loss_D_real) * 0.5
@@ -422,7 +454,6 @@ class ShiftNetModel(BaseModel):
 
         pred_fake = self.netD(fake_B)
 
-
         if self.opt.gan_type == 'wgan_gp':
             self.loss_G_GAN = -torch.mean(pred_fake)
         else:
@@ -431,7 +462,7 @@ class ShiftNetModel(BaseModel):
                 self.loss_G_GAN = self.criterionGAN(pred_fake, True) * self.opt.gan_weight
 
             elif self.opt.gan_type == 're_s_gan':
-                pred_real = self.netD (real_B)
+                pred_real = self.netD(real_B)
                 self.loss_G_GAN = self.criterionGAN (pred_fake - pred_real, True) * self.opt.gan_weight
 
             elif self.opt.gan_type == 're_avg_gan':
@@ -443,7 +474,7 @@ class ShiftNetModel(BaseModel):
 
         # If we change the mask as 'center with random position', then we can replacing loss_G_L1_m with 'Discounted L1'.
         self.loss_G_L1, self.loss_G_L1_m = 0, 0
-        self.loss_G_L1 += self.criterionL1(self.fake_B, self.real_B) * self.opt.lambda_A
+        self.loss_G_L1 += self.criterionL1(self.fake_B, self.real_B) * self.opt.lambda_A # 100
         # calcuate mask construction loss
         # When mask_type is 'center' or 'random_with_rect', we can add additonal mask region construction loss (traditional L1).
         # Only when 'discounting_loss' is 1, then the mask region construction loss changes to 'discounting L1' instead of normal L1.
@@ -454,7 +485,7 @@ class ShiftNetModel(BaseModel):
                                                 self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
                                         
             # Using Discounting L1 loss
-            self.loss_G_L1_m += self.criterionL1_mask(mask_patch_fake, mask_patch_real)*self.opt.mask_weight_G
+            self.loss_G_L1_m += self.criterionL1_mask(mask_patch_fake, mask_patch_real)*self.opt.mask_weight_G # 400
 
         self.loss_G = self.loss_G_L1 + self.loss_G_L1_m + self.loss_G_GAN
 

@@ -35,10 +35,7 @@ def plot_roc_curve(fpr, tpr, name):
     plt.show()
     plt.clf()
 def plot_distance_distribution(n_scores, s_scores, name):
-    # bins = np.linspace(0.00001,0.0001) # MSE
-    # bins = np.linspace(0.00001,0.0001) # D score
-    bins = np.linspace(0.00001,0.0001) # 4k
-    # bins = np.linspace(0.00001,0.001) # 8k
+    bins = np.linspace(0.00001,0.0001)
     plt.hist(s_scores, bins, alpha=0.5, label="smura")
     plt.hist(n_scores, bins, alpha=0.5, label="normal")
     plt.xlabel('Anomaly Score')
@@ -56,26 +53,20 @@ def plot_distance_scatter(n_max, s_max, n_mean, s_mean, name):
     x2 = s_max
     y2 = s_mean
     # 設定座標軸
-    # normal
-    plt.xlabel("max")
-    plt.ylabel("mean")
+    plt.xlabel("MSE max")
+    plt.ylabel("MSE mean")
     plt.title('scatter')
+    # normal
     plt.scatter(x1, y1, s=5, c ="blue", alpha=0.3, label="normal")
     plt.legend(loc='upper right')
     plt.savefig(name + '_normal_scatter.png')
     plt.clf()
     # smura
-    plt.xlabel("max")
-    plt.ylabel("mean")
-    plt.title('scatter')
     plt.scatter(x2, y2, s=5, c ="red", alpha=0.3, label="smura")
     plt.legend(loc='upper right')
     plt.savefig(name + '_smura_scatter.png')
     plt.clf()
-    # all
-    plt.xlabel("max")
-    plt.ylabel("mean")
-    plt.title('scatter')
+    # normal
     plt.scatter(x1, y1, s=5, c ="blue", alpha=0.3, label="normal")
     plt.scatter(x2, y2, s=5, c ="red", alpha=0.3, label="smura")
     plt.legend(loc='upper right')
@@ -112,27 +103,24 @@ def combined_prediction(labels, max_scores, mean_scores, name):
     # score = a*max + b*mean + c
     best_a, best_b, best_c = 0, 0, 0
     best_auc = 0
-    for ten_a in range(0, 10, 1):
-        a = ten_a/10.0
-        for ten_b in range(0, 10, 1):
-            b = ten_b/10.0
-            for ten_thousand_c in range(-10, 5, 1): # y -0.0001~0.00005
-                c = ten_thousand_c/100000
-                scores = a*max_scores + b*mean_scores + c
-                fpr, tpr, th = roc_curve(labels, scores)
-                current_auc = auc(fpr, tpr)
-                if current_auc >= best_auc:
-                    best_auc = current_auc
-                    best_a = a
-                    best_b = b
-                    best_c = c
+    for a in range(0, 1, 0.1):
+        for b in range(0, 1, 0.1):
+            for c in range(0, 0.0001, 0.00001)
+            scores = a*max_score + b*mean_scores + c
+            fpr, tpr, th = roc_curve(labels, scores)
+            current_auc = auc(fpr, tpr)
+            if current_auc >= best_auc:
+                best_auc = current_auc
+                best_a = a
+                best_b = b
+                best_c = c
 
     print(best_auc)
     print(best_a)
     print(best_b)
     print(best_c)
 
-    best_scores = best_a*max_scores + best_b*mean_scores + best_c
+    best_scores = best_a*max_score + best_b*mean_scores + best_c
     pred_labels = [] 
     roc_auc, optimal_th = roc(labels, best_scores, name)
     for score in best_scores:
@@ -204,7 +192,7 @@ if __name__ == "__main__":
             # 超過設定的測試張數就跳出
             if i >= opt.how_many:
                 break
-            print(f"Image num: {i}")
+            
             # (1,mini-batch,c,h,w) -> (mini-batch,c,h,w)，會有多一個維度是因為 dataloader batchsize 設 1
             bs, ncrops, c, h, w = data['A'].size()
             data['A'] = data['A'].view(-1, c, h, w)
@@ -253,20 +241,20 @@ if __name__ == "__main__":
     print(f"Smura mean: {s_score_log.mean()}")
     print(f"Smura std: {s_score_log.std()}")
 
-    plot_distance_distribution(n_mean_anomaly_score_log, s_mean_anomaly_score_log, f"8k_{opt.measure_mode}_MEAN")
+    plot_distance_distribution(n_mean_anomaly_score_log, s_mean_anomaly_score_log, "MEAN")
     plot_distance_scatter(n_max_anomaly_score_log, s_max_anomaly_score_log, 
-                            n_mean_anomaly_score_log, s_mean_anomaly_score_log, f"8k_{opt.measure_mode}_Combined")
+                            n_mean_anomaly_score_log, s_mean_anomaly_score_log, "MEAN_MAX")
     
     all_max_anomaly_score_log = np.concatenate([n_max_anomaly_score_log, s_max_anomaly_score_log])
     all_mean_anomaly_score_log = np.concatenate([n_mean_anomaly_score_log, s_mean_anomaly_score_log])
     true_label = [0]*n_mean_anomaly_score_log.shape[0]+[1]*s_mean_anomaly_score_log.shape[0]
 
     print("=====Anomaly Score Max=====")
-    prediction(true_label, all_max_anomaly_score_log, f"8k_{opt.measure_mode}_MAX")
+    prediction(true_label, all_max_anomaly_score_log, "MAX")
     print("=====Anomaly Score Mean=====")
-    prediction(true_label, all_mean_anomaly_score_log, f"8k_{opt.measure_mode}_MEAN")
+    prediction(true_label, all_mean_anomaly_score_log, "MEAN")
     print("=====Anomaly Score Conbined=====")
-    combined_prediction(true_label, all_max_anomaly_score_log, all_mean_anomaly_score_log, f"8k_{opt.measure_mode}_Combined")
+    combined_prediction(true_label, all_max_anomaly_score_log, all_mean_anomaly_score_log, "Combined")
     
     '''
     # create website

@@ -350,7 +350,7 @@ class ResUnetSkipConnectionBlock(nn.Module):
             up = [uprelu, innerCos, shift, upconv, upnorm]
 
             model = down + [submodule] + up
-
+        
         self.model = nn.Sequential(*model)
 
     def forward(self, x):

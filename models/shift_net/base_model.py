@@ -110,6 +110,7 @@ class BaseModel():
                     self.__patch_instance_norm_state_dict(state_dict, net, key.split('.'))
                 net.load_state_dict(state_dict)
 
+
     # print network information
     def print_networks(self, verbose):
         print('---------- Networks initialized -------------')
