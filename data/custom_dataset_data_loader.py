@@ -19,6 +19,11 @@ def CreateDataset(opt):
         from data.aligned_dataset_sliding import AlignedDatasetSliding
         dataset = AlignedDatasetSliding()
 
+    # 07/30 add combined testing normal & smura
+    elif opt.dataset_mode == 'aligned_combined':
+        from data.aligned_dataset_combined import AlignedDatasetCombined
+        dataset = AlignedDatasetCombined()
+
     elif opt.dataset_mode == 'single':
         from data.single_dataset import SingleDataset
         dataset = SingleDataset()
@@ -45,8 +50,8 @@ class CustomDatasetDataLoader(BaseDataLoader):
         
         self.dataloader = torch.utils.data.DataLoader(
             self.dataset,
-            batch_size=self.opt.batchSize,
-            shuffle=not self.opt.serial_batches, # if true, create batches in order, otherwise random, self.opt.serial_batches default false
+            batch_size=self.opt.batchSize, # default=1
+            shuffle=not self.opt.serial_batches, # if true, create batches in order, otherwise random, default self.opt.serial_batches=false
             num_workers=int(self.opt.nThreads))
 
     def load_data(self):

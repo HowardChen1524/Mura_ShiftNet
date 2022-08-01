@@ -321,13 +321,22 @@ class ShiftNetModel(BaseModel):
 
         # ======Anomaly score======
         if self.opt.measure_mode == 'MSE':
+            return self.criterionL2(real_B, fake_B).detach().cpu().numpy()   
+        elif self.opt.measure_mode == 'Mask_MSE':
+            fake_B = fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
+                                            self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
+
+            real_B = real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
+                                            self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]  
+            return self.criterionL2(real_B, fake_B).detach().cpu().numpy()   
+        if self.opt.measure_mode == 'MSE_sliding':
             # return self.criterionL2(real_B, fake_B).detach().cpu().numpy()
             crop_scores = []
             for i in range(0,256):
                 crop_scores.append(self.criterionL2(real_B[i], fake_B[i]).detach().cpu().numpy())
             crop_scores = np.array(crop_scores)
             return crop_scores          
-        elif self.opt.measure_mode == 'Mask_MSE':
+        elif self.opt.measure_mode == 'Mask_MSE_sliding':
             fake_B = fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
                                             self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
 
@@ -339,24 +348,10 @@ class ShiftNetModel(BaseModel):
                 crop_scores.append(self.criterionL2(real_B[i], fake_B[i]).detach().cpu().numpy())
             crop_scores = np.array(crop_scores)
             return crop_scores
-        elif self.opt.measure_mode == 'D_model_score':
+        elif self.opt.measure_mode == 'D_model_score_sliding':
             # # input normal pred_fake 跟 pred_real 都接近 1
             # # input smura pred_fake 偏 normal，接近 1，pred_real 接近 0
-            # pred_fake = self.netD(fake_B) # 0
-            # pred_real = self.netD(real_B) # 1
             # # pred_real shape 6*6
-
-            fake_B = self.fake_B # Real
-            
-            real_B = self.real_B # GroundTruth
-
-            # # Has been verfied, for square mask, let D discrinate masked patch, improves the results.
-            # # Using the cropped fake_B as the input of D.
-            # fake_B = self.fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
-            #                                 self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
-
-            # real_B = self.real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
-            #                                 self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]  
 
             self.netD.eval()
             with torch.no_grad():
@@ -369,7 +364,7 @@ class ShiftNetModel(BaseModel):
             crop_scores = np.array(crop_scores)
             return crop_scores
             
-        elif self.opt.measure_mode == 'Mask_D_model_score':
+        elif self.opt.measure_mode == 'Mask_D_model_score_sliding':
             fake_B = fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
                                             self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
 

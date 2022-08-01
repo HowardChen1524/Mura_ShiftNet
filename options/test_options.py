@@ -19,7 +19,7 @@ class TestOptions(BaseOptions):
         parser.add_argument('--normal_how_many', type=int, default=0, help='how many test images to run')
         parser.add_argument('--smura_how_many', type=int, default=0, help='how many test images to run')
         parser.add_argument('--inpainting_mode', type=str, default='ShiftNet', help='[ShiftNet|OpenCV|Mean], OpenCV and Mean only for grayscale')        
-        parser.add_argument('--measure_mode', type=str, default='MSE', help='[MSE|Mask_MSE|D_model_score|Mask_D_model_score]')
+        parser.add_argument('--measure_mode', type=str, default='MSE', help='[MSE|Mask_MSE|D_model_score|Mask_D_model_score], if need sliding add tail, e.g. MSE_sliding')
         parser.add_argument('--crop_stride', type=int, default=32, help='slding crop stride')
 
         self.isTrain = False
