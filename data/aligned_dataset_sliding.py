@@ -16,14 +16,27 @@ class AlignedDatasetSliding(BaseDataset):
         self.opt = opt # param
         self.dir_A = opt.dataroot
         self.A_paths = sorted(make_dataset(self.dir_A)) # return image path list (image_folder.py)
-        if opt.continue_train:
+        if not opt.continue_train:
+            self.A_paths = make_dataset(self.dir_A) # return image path list (image_folder.py)
+            random.shuffle(self.A_paths) # shffle path list
+            self.A_paths = self.A_paths[:opt.random_choose_num]
+
+            # save filename
             recover_list = []
-            recover_df = pd.read_csv('/home/sallylab/Howard/shift-Net_sliding_crop/Mura_ShiftNet/training_imgs.csv')
-            data_df = pd.read_csv('/home/levi/Howard/Mura/mura_data/RGB/0527_512/data_merged.csv')
+            for i, path in enumerate(self.A_paths):
+                # print(i)
+                recover_list.append(path[len(self.dir_A):].replace('.png','.bmp'))
+            recover_df = pd.DataFrame(recover_list, columns=['PIC_ID'])
+            recover_df.to_csv('./training_imgs.csv', index=False, columns=['PIC_ID'])
+            print(f"Record {len(self.A_paths)} filename successful!")
+        else:
+            recover_list = []
+            recover_df = pd.read_csv('./training_imgs.csv')
+            data_df = pd.read_csv('/home/sally/0527_512/data_merged.csv')
             recover_fn = pd.merge(recover_df, data_df, on='PIC_ID', how='inner')['PIC_ID'].tolist()
             for fn in recover_fn:
                 recover_list.append(f"{self.dir_A}{fn.replace('bmp','png')}")
-            self.A_paths = sorted(recover_list)
+            self.A_paths = recover_list
             print(f"recover img num: {len(self.A_paths)}")
         # preprocessing
         if opt.isTrain:
