@@ -15,8 +15,9 @@ class AlignedDatasetSliding(BaseDataset):
     def initialize(self, opt):
         self.opt = opt # param
         self.dir_A = opt.dataroot
-        self.A_paths = sorted(make_dataset(self.dir_A)) # return image path list (image_folder.py)
-        if not opt.continue_train:
+        # create img path list
+        # train
+        if (opt.isTrain) and (not opt.continue_train):
             self.A_paths = make_dataset(self.dir_A) # return image path list (image_folder.py)
             random.shuffle(self.A_paths) # shffle path list
             self.A_paths = self.A_paths[:opt.random_choose_num]
@@ -29,7 +30,8 @@ class AlignedDatasetSliding(BaseDataset):
             recover_df = pd.DataFrame(recover_list, columns=['PIC_ID'])
             recover_df.to_csv('./training_imgs.csv', index=False, columns=['PIC_ID'])
             print(f"Record {len(self.A_paths)} filename successful!")
-        else:
+        # continue train
+        elif (opt.isTrain) and (opt.continue_train):
             recover_list = []
             recover_df = pd.read_csv('./training_imgs.csv')
             data_df = pd.read_csv('/home/sally/0527_512/data_merged.csv')
@@ -37,7 +39,12 @@ class AlignedDatasetSliding(BaseDataset):
             for fn in recover_fn:
                 recover_list.append(f"{self.dir_A}{fn.replace('bmp','png')}")
             self.A_paths = recover_list
-            print(f"recover img num: {len(self.A_paths)}")
+            print(f"Recover img num: {len(self.A_paths)}")
+        # test
+        else:
+            self.A_paths = make_dataset(self.dir_A) # return image path list (image_folder.py)
+            print(f"Take all img: {len(self.A_paths)}")
+        
         # preprocessing
         if opt.isTrain:
             if self.opt.color_mode=='RGB':
