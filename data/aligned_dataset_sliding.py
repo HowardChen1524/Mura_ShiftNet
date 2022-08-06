@@ -7,6 +7,8 @@ from data.base_dataset import BaseDataset
 from data.image_folder import make_dataset
 from PIL import Image
 
+import pandas as pd
+import numpy as np
 ORISIZE = 512
 
 class AlignedDatasetSliding(BaseDataset):
@@ -14,7 +16,15 @@ class AlignedDatasetSliding(BaseDataset):
         self.opt = opt # param
         self.dir_A = opt.dataroot
         self.A_paths = sorted(make_dataset(self.dir_A)) # return image path list (image_folder.py)
-
+        if opt.continue_train:
+            recover_list = []
+            recover_df = pd.read_csv('/home/sallylab/Howard/shift-Net_sliding_crop/Mura_ShiftNet/training_imgs.csv')
+            data_df = pd.read_csv('/home/levi/Howard/Mura/mura_data/RGB/0527_512/data_merged.csv')
+            recover_fn = pd.merge(recover_df, data_df, on='PIC_ID', how='inner')['PIC_ID'].tolist()
+            for fn in recover_fn:
+                recover_list.append(f"{self.dir_A}{fn.replace('bmp','png')}")
+            self.A_paths = sorted(recover_list)
+            print(f"recover img num: {len(self.A_paths)}")
         # preprocessing
         if opt.isTrain:
             if self.opt.color_mode=='RGB':
@@ -48,8 +58,9 @@ class AlignedDatasetSliding(BaseDataset):
         if self.opt.isTrain:
             for i in range(self.opt.crop_image_num):
                 A_imgs.append(self.transform(A))
-                # print(A_imgs[i].shape)
-                # print(A_imgs[i])
+            #     print(A_imgs[i].shape)
+            #     print(A_imgs[i])
+            # print(A_imgs[0] == A_imgs[1])
         else:
             A_img = self.transform(A)
             (c, w, h) = A_img.size()
@@ -82,11 +93,10 @@ class AlignedDatasetSliding(BaseDataset):
 
                 if x_end_crop and y_end_crop:
                     break
-    
+
         A = torch.stack(A_imgs)
 
         # Just zero the mask is fine if not offline_loading_mask.
-        # mask = A[0].clone().zero_()
         mask = A.clone().zero_()
         
         # let B directly equals A

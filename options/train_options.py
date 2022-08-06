@@ -33,7 +33,10 @@ class TrainOptions(BaseOptions):
         # New add
         parser.add_argument('--random_choose_num', type=int, default=10000, help='The number of training data')
         parser.add_argument('--crop_image_num', type=int, default=64, help='The number of cropping image')
-       
+        parser.add_argument('--validate_normal_dataroot', type=str, default='', help='validation normal num')
+        parser.add_argument('--validate_smura_dataroot', type=str, default='', help='validation smura num')
+        parser.add_argument('--validaton_num', type=int, default=200, help='validation number')
+
         self.isTrain = True
 
         return parser

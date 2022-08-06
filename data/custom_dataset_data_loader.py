@@ -3,6 +3,7 @@ import torch.utils.data
 from data.base_data_loader import BaseDataLoader
 import random
 import csv
+import pandas as pd
 
 def CreateDataset(opt):
     dataset = None
@@ -19,6 +20,11 @@ def CreateDataset(opt):
     elif opt.dataset_mode == 'aligned_sliding':
         from data.aligned_dataset_sliding import AlignedDatasetSliding
         dataset = AlignedDatasetSliding()
+
+     # 07/30 add combined testing normal & smura
+    elif opt.dataset_mode == 'aligned_combined':
+        from data.aligned_dataset_combined import AlignedDatasetCombined
+        dataset = AlignedDatasetCombined()
 
     elif opt.dataset_mode == 'single':
         from data.single_dataset import SingleDataset
@@ -41,16 +47,19 @@ class CustomDatasetDataLoader(BaseDataLoader):
         
         # 06/05 add random choose from train dataset
         if self.opt.isTrain:
-            self.random = random.sample(list(range(len(self.dataset))), self.opt.random_choose_num)
-            self.dataset = torch.utils.data.Subset(self.dataset,self.random)
-            header = ['number']
-            with open('trainimg.csv', 'w', newline='') as file:
-                imgpath = csv.writer(file, delimiter=',')
-                imgpath.writerow(header)
-                imgpath.writerows([self.random])
-            
-            print("Success random choose!")
-        
+            if not self.opt.continue_train: # if no continue train, save the random choosed filename           
+                self.random = random.sample(list(range(len(self.dataset))), self.opt.random_choose_num)
+                self.dataset = torch.utils.data.Subset(self.dataset, self.random)
+                recover_list = []
+                for i, data in enumerate(self.dataset):
+                    print(i)
+                    recover_list.append(data['A_paths'][len(self.opt.dataroot):].replace('.png','.bmp'))
+                recover_df = pd.DataFrame(recover_list, columns=['PIC_ID'])
+                recover_df.to_csv('./training_imgs.csv', index=False, columns=['PIC_ID'])
+                print("Success random choose!")
+            else:
+                print("Start continue train!")
+
         self.dataloader = torch.utils.data.DataLoader(
             self.dataset,
             batch_size=self.opt.batchSize,
@@ -59,7 +68,6 @@ class CustomDatasetDataLoader(BaseDataLoader):
         
 
     def load_data(self):
-    
         return self
 
     def __len__(self):
@@ -67,7 +75,6 @@ class CustomDatasetDataLoader(BaseDataLoader):
     
     def __iter__(self):
         for i, data in enumerate(self.dataloader):
-            # print(data)
             if i*self.opt.batchSize >= self.opt.max_dataset_size:
                 break
             yield data

@@ -3,8 +3,30 @@ from options.train_options import TrainOptions
 from data.data_loader import CreateDataLoader
 from models import create_model
 from util.visualizer import Visualizer
-
 import torch
+import numpy as np
+import matplotlib.pyplot as plt
+
+def plot_loss(epochs, loss, name):
+    plt.plot(epochs, loss)
+    plt.xlabel('epochs')
+    plt.ylabel('loss')
+    plt.title(name)
+    # plt.legend(loc='upper right')
+    plt.savefig(f"loss_{name}.png")
+    plt.clf()
+def doValidation(opt):
+    val_data_loader = CreateDataLoader(opt)
+    val_dataset_list = list()
+    for mode in range(len(val_data_loader)):
+        val_dataset_list.append(val_data_loader[mode].load_data())
+    
+    for mode in range(len(val_data_loader)):
+        print('#validating images = %d' % len(val_data_loader[mode]))
+    
+    # prediction
+    return val_dataset_list
+    
 if __name__ == "__main__":
 
     opt = TrainOptions().parse() # 讀取 cmd 的 train option param
@@ -19,6 +41,14 @@ if __name__ == "__main__":
     visualizer = Visualizer(opt)
     # 初始化 total_steps
     total_steps = 0
+    
+    # loss list
+    GAN_loss_list = []
+    G_L1_loss_list = []
+    D_loss_list = []
+    style_loss_list = []
+    content_loss_list = []
+    tv_loss_list = []
 
     # 開始訓練
     for epoch in range(opt.epoch_count, opt.niter + opt.niter_decay + 1): # opt.epoch_count default 1
@@ -89,10 +119,10 @@ if __name__ == "__main__":
                 #     visualizer.plot_current_losses(epoch, float(epoch_iter) / dataset_size, opt, losses)
             
             # 依照 save_latest_freq 去 save_networks
-            if total_steps % opt.save_latest_freq == 0:
-                print('saving the latest model (epoch %d, total_steps %d)' %
-                        (epoch, total_steps))
-                model.save_networks('latest')
+            # if total_steps % opt.save_latest_freq == 0:
+            #     print('saving the latest model (epoch %d, total_steps %d)' %
+            #             (epoch, total_steps))
+            #     model.save_networks('latest')
 
             # 取得現在時間放入 iter_data_time?
             iter_data_time = time.time()
@@ -105,9 +135,26 @@ if __name__ == "__main__":
             if not opt.only_lastest:
                 model.save_networks(epoch)
 
+            # doValidation(opt)
+        
+        loss_dict = model.get_current_losses()
+        GAN_loss_list.append(loss_dict['G_GAN'])
+        G_L1_loss_list.append(loss_dict['G_L1'])
+        D_loss_list.append(loss_dict['D'])
+        style_loss_list.append(loss_dict['style'])
+        content_loss_list.append(loss_dict['content'])
+        tv_loss_list.append(loss_dict['tv'])
+
         # print 一個 epoch 所花的時間
         print('End of epoch %d / %d \t Time Taken: %d sec' %
                 (epoch, opt.niter + opt.niter_decay, time.time() - epoch_start_time))
         
         model.update_learning_rate()
     
+    epoch_list = np.linspace(1, opt.niter, opt.niter).astype(int)
+    plot_loss(epoch_list, GAN_loss_list, 'GAN')
+    plot_loss(epoch_list, G_L1_loss_list, 'L1')
+    plot_loss(epoch_list, D_loss_list, 'D')
+    plot_loss(epoch_list, style_loss_list, 'style')
+    plot_loss(epoch_list, content_loss_list, 'content')
+    plot_loss(epoch_list, tv_loss_list, 'tv')
