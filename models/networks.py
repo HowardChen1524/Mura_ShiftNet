@@ -102,7 +102,7 @@ def define_G(input_nc, output_nc, ngf, which_model_netG, opt, mask_global, norm=
         # input_nc = 2, output_nc = 1, innerCos_list=[], shift_list=[], ngf=64
         # num_downs will be param, 8-> 6 because input size 256 -> 64
         # num_downs = 7 -> 128
-        netG = UnetGeneratorShiftTriple(input_nc, output_nc, 7, opt, innerCos_list, shift_list, mask_global, \
+        netG = UnetGeneratorShiftTriple(input_nc, output_nc, 6, opt, innerCos_list, shift_list, mask_global, \
                                                          ngf, norm_layer=norm_layer, use_spectral_norm=use_spectral_norm)
     elif which_model_netG == 'res_unet_shift_triple':
         netG = ResUnetGeneratorShiftTriple(input_nc, output_nc, 8, opt, innerCos_list, shift_list, mask_global, \

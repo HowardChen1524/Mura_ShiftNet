@@ -41,24 +41,14 @@ class CustomDatasetDataLoader(BaseDataLoader):
     def name(self):
         return 'CustomDatasetDataLoader'
 
-    def initialize(self, opt):
+    def initialize(self, opt, validate=False):
         BaseDataLoader.initialize(self, opt)
         self.dataset = CreateDataset(opt)
         
-        # # 06/05 add random choose from train dataset
-        # if self.opt.isTrain:
-        #     if not self.opt.continue_train: # if no continue train, save the random choosed filename           
-        #         self.random = random.sample(list(range(len(self.dataset))), self.opt.random_choose_num)
-        #         self.dataset = torch.utils.data.Subset(self.dataset, self.random)
-        #         recover_list = []
-        #         for i, data in enumerate(self.dataset):
-        #             print(i)
-        #             recover_list.append(data['A_paths'][len(self.opt.dataroot):].replace('.png','.bmp'))
-        #         recover_df = pd.DataFrame(recover_list, columns=['PIC_ID'])
-        #         recover_df.to_csv('./training_imgs.csv', index=False, columns=['PIC_ID'])
-        #         print("Success random choose!")
-        #     else:
-        #         print("Start continue train!")
+        if validate:
+            self.random = random.sample(list(range(len(self.dataset))), self.opt.validaton_num)
+            self.dataset = torch.utils.data.Subset(self.dataset, self.random)
+            print("random choose 200 validation data")
 
         self.dataloader = torch.utils.data.DataLoader(
             self.dataset,

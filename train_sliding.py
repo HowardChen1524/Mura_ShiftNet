@@ -15,16 +15,11 @@ def plot_loss(epochs, loss, name):
     # plt.legend(loc='upper right')
     plt.savefig(f"loss_{name}.png")
     plt.clf()
-def doValidation(opt):
-    val_data_loader = CreateDataLoader(opt)
-    val_dataset_list = list()
+def create_validate_dataset(opt):
+    val_data_loader = CreateDataLoader(opt, validate=True)
+    val_dataset_list = []
     for mode in range(len(val_data_loader)):
         val_dataset_list.append(val_data_loader[mode].load_data())
-    
-    for mode in range(len(val_data_loader)):
-        print('#validating images = %d' % len(val_data_loader[mode]))
-    
-    # prediction
     return val_dataset_list
     
 if __name__ == "__main__":
@@ -83,46 +78,17 @@ if __name__ == "__main__":
             data['M'] = data['M'].view(-1, c, h, w)
             # print(data['M'].shape)
 
-            
-            # for crop_id in range(opt.crop_image_num):
-            #     crop_data = {'A': torch.unsqueeze(data['A'][crop_id], 0), 
-            #                  'B': torch.unsqueeze(data['B'][crop_id], 0), 
-            #                  'M': data['M'], 
-            #                  'A_paths': data['A_paths']}
-
             # it not only sets the input data with mask, but also sets the latent mask.
             # 建立 input real_A & real_B
             model.set_input(data) 
-
-            # 依照 display_freq 去 set_show_map_true()？
-            # Additonal, should set it before 'optimize_parameters()'.
-            # if total_steps % opt.display_freq == 0:
-            #     if opt.show_flow: # 預設 False
-            #         model.set_show_map_true()
             
             model.optimize_parameters()
-
-            # 依照 display_freq 去 display_current_results
-            # if total_steps % opt.display_freq == 0:
-            #     save_result = total_steps % opt.update_html_freq == 0
-            #     if opt.show_flow:
-            #         model.set_flow_src()
-            #         model.set_show_map_false()
-            #     visualizer.display_current_results(model.get_current_visuals(), epoch, save_result)
             
             # 計算每 50 張大圖的時間
             if total_steps % opt.print_freq == 0:
                 losses = model.get_current_losses()
                 t = (time.time() - iter_start_time) / opt.batchSize 
                 visualizer.print_current_losses(epoch, epoch_iter, losses, t, t_data)
-                # if opt.display_id > 0:
-                #     visualizer.plot_current_losses(epoch, float(epoch_iter) / dataset_size, opt, losses)
-            
-            # 依照 save_latest_freq 去 save_networks
-            # if total_steps % opt.save_latest_freq == 0:
-            #     print('saving the latest model (epoch %d, total_steps %d)' %
-            #             (epoch, total_steps))
-            #     model.save_networks('latest')
 
             # 取得現在時間放入 iter_data_time?
             iter_data_time = time.time()
@@ -135,8 +101,57 @@ if __name__ == "__main__":
             if not opt.only_lastest:
                 model.save_networks(epoch)
 
-            # doValidation(opt)
-        
+        # if epoch % 10 == 0:
+        #     model.eval()
+        #     val_dataset_list = create_validate_dataset(opt)
+        #     print(f"Start validation")
+        #     n_mean_anomaly_score_log = None
+        #     s_mean_anomaly_score_log = None
+        #     for val_mode, val_dataset in enumerate(val_dataset_list): 
+        #         mean_anomaly_score_log = None
+        #         for val_i, val_data in enumerate(val_dataset):
+        #             # print(f"Image num: {val_i}")
+        #             bs, ncrops, c, h, w = val_data['A'].size()
+        #             val_data['A'] = val_data['A'].view(-1, c, h, w)
+        #             # print(data['A'].shape)
+
+        #             bs, ncrops, c, h, w = data['B'].size()
+        #             val_data['B'] = val_data['B'].view(-1, c, h, w)
+        #             # print(data['B'].shape)
+                    
+        #             bs, ncrops, c, h, w = data['M'].size()
+        #             val_data['M'] = val_data['M'].view(-1, c, h, w)
+        #             # print(data['M'].shape)
+
+        #             model.set_input(val_data) 
+        #             img_scores = model.validate()
+
+        #             mean_anomaly_score = np.mean(img_scores) # Anomaly mean
+        #             print(f"MSE Mean: {mean_anomaly_score}")
+
+        #             if val_i == 0:
+        #                 mean_anomaly_score_log = np.array(mean_anomaly_score)
+        #             else:
+        #                 mean_anomaly_score_log = np.append(mean_anomaly_score_log, mean_anomaly_score)
+
+        #         if mode == 0:
+        #             n_mean_anomaly_score_log = mean_anomaly_score_log.copy() # mean
+        #         else:
+        #             s_mean_anomaly_score_log = mean_anomaly_score_log.copy()
+            
+        #     all_mean_anomaly_score_log = np.concatenate([n_mean_anomaly_score_log, s_mean_anomaly_score_log])
+        #     true_label = [0]*n_mean_anomaly_score_log.shape[0]+[1]*s_mean_anomaly_score_log.shape[0]
+        #     fpr, tpr, _ = roc_curve(true_label, all_mean_anomaly_score_log)
+        #     current_auc = auc(fpr, tpr)
+    
+        #     if current_auc >= best_auc:
+        #         best_auc = current_auc
+        #         model.save_networks(f'best_{epoch}_{current_auc}')
+        #         print(f'Save the best AUC model = {current_auc}')
+        #     else:
+        #         print(f'Now AUC = {current_auc}')
+        #     model.train()
+
         loss_dict = model.get_current_losses()
         GAN_loss_list.append(loss_dict['G_GAN'])
         G_L1_loss_list.append(loss_dict['G_L1'])
@@ -158,3 +173,5 @@ if __name__ == "__main__":
     plot_loss(epoch_list, style_loss_list, 'style')
     plot_loss(epoch_list, content_loss_list, 'content')
     plot_loss(epoch_list, tv_loss_list, 'tv')
+
+    

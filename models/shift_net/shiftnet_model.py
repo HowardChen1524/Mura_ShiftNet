@@ -241,7 +241,17 @@ class ShiftNetModel(BaseModel):
         else:
             img = Image.fromarray(img,'L')
         img.save('./check_inpaint.png')
-        
+
+    # def validate(self): 
+    #     self.forward()
+    #     fake_B = self.fake_B.detach() # Inpaint
+    #     real_B = self.real_B.detach() # Original
+    #     crop_scores = []
+    #     for i in range(0,256):
+    #         crop_scores.append(self.criterionL2(real_B[i], fake_B[i]).detach().cpu().numpy())
+    #     crop_scores = np.array(crop_scores)
+    #     return crop_scores
+
     # 06/18 add for testing
     def test(self):
         # ======Inpainting method======

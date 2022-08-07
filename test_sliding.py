@@ -199,7 +199,7 @@ if __name__ == "__main__":
         
         score_log = None
         max_anomaly_score_log = None
-        s_mean_anomaly_score_log = None
+        mean_anomaly_score_log = None
         print(f"Mode(0:normal,1:smura): {mode}, {opt.how_many}")
         for i, data in enumerate(dataset):
             # 超過設定的測試張數就跳出

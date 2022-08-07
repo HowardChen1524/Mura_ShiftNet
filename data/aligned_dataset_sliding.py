@@ -34,7 +34,7 @@ class AlignedDatasetSliding(BaseDataset):
         elif (opt.isTrain) and (opt.continue_train):
             recover_list = []
             recover_df = pd.read_csv('./training_imgs.csv')
-            data_df = pd.read_csv('/home/sally/0527_512/data_merged.csv')
+            data_df = pd.read_csv('/home/levi/mura_data/d17/data_merged.csv')
             recover_fn = pd.merge(recover_df, data_df, on='PIC_ID', how='inner')['PIC_ID'].tolist()
             for fn in recover_fn:
                 recover_list.append(f"{self.dir_A}{fn.replace('bmp','png')}")
