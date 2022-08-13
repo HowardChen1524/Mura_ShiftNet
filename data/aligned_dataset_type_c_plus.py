@@ -9,7 +9,7 @@ from PIL import Image
 from collections import defaultdict
 import pandas as pd
 
-class AlignedDatasetCombined(BaseDataset):
+class AlignedDatasetTypeCPlus(BaseDataset):
     def initialize(self, opt):
         self.opt = opt
         self.s_dir_A = opt.testing_smura_dataroot
@@ -34,7 +34,7 @@ class AlignedDatasetCombined(BaseDataset):
         self.transform = transforms.Compose(transform_list)
         
         # type-c
-        self.smura_pos_df = pd.read_csv('./MURA_XY.csv')
+        self.smura_pos_df = pd.read_csv('./Mura_type_c_plus.csv')
         self.bounding_box = opt.loadSize
         
     def __getitem__(self, index):
@@ -98,4 +98,4 @@ class AlignedDatasetCombined(BaseDataset):
         return len(self.n_A_paths)
 
     def name(self):
-        return 'AlignedDatasetCombined'
+        return 'AlignedDatasetTypeC'

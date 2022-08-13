@@ -1,10 +1,10 @@
 #!/bin/bash
 
 python ./test_sliding.py --batchSize=1 --use_spectral_norm_D=1 --which_model_netD='basic' --which_model_netG='unet_shift_triple' --model='shiftnet' --shift_sz=1 --mask_thred=1 \
---loadSize=128 --fineSize=128 --overlap=0 --dataset_mode='aligned_sliding' --mask_type='center' --input_nc=3 --output_nc=3 --color_mode='RGB' \
---inpainting_mode='ShiftNet' --measure_mode='Mask_MSE_sliding' --which_epoch='latest' \
---normal_how_many=13272 --testing_normal_dataroot='/home/levi/Howard/Mura/mura_data/RGB/0527_512/test/normal/' \
---smura_how_many=3940 --testing_smura_dataroot='/home/levi/Howard/Mura/mura_data/RGB/0527_512/test/allsmura/'
+--loadSize=32 --fineSize=32 --overlap=0 --dataset_mode='aligned_sliding' --mask_type='center' --input_nc=3 --output_nc=3 --color_mode='RGB' \
+--inpainting_mode='ShiftNet' --measure_mode='MSE_sliding' --which_epoch='79' \
+--normal_how_many=13272 --testing_normal_dataroot='/home/levi/mura_data/d17/test/normal/' \
+--smura_how_many=3940 --testing_smura_dataroot='/home/levi/mura_data/d17/test/allsmura/'
 
 
 

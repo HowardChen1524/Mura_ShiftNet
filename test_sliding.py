@@ -35,8 +35,8 @@ def plot_roc_curve(fpr, tpr, name):
     plt.show()
     plt.clf()
 def plot_distance_distribution(n_scores, s_scores, name):
-    # bins = np.linspace(0.00001,0.0001) # MSE
-    bins = np.linspace(0.0001,0.001) # Mask MSE
+    bins = np.linspace(0.000008,0.00008) # MSE
+    # bins = np.linspace(0.0001,0.001) # Mask MSE
     # bins = np.linspace(0.00001,0.0001) # D score
     # bins = np.linspace(0.00001,0.0001) # 4k
     # bins = np.linspace(0.00001,0.001) # 8k
@@ -254,20 +254,20 @@ if __name__ == "__main__":
     print(f"Smura mean: {s_score_log.mean()}")
     print(f"Smura std: {s_score_log.std()}")
 
-    plot_distance_distribution(n_mean_anomaly_score_log, s_mean_anomaly_score_log, f"8k_{opt.measure_mode}_MEAN")
+    plot_distance_distribution(n_mean_anomaly_score_log, s_mean_anomaly_score_log, f"d17_no_d134_crop32_{opt.measure_mode}_MEAN")
     plot_distance_scatter(n_max_anomaly_score_log, s_max_anomaly_score_log, 
-                            n_mean_anomaly_score_log, s_mean_anomaly_score_log, f"8k_{opt.measure_mode}_Combined")
+                            n_mean_anomaly_score_log, s_mean_anomaly_score_log, f"d17_no_d134_crop32_{opt.measure_mode}_Combined")
     
     all_max_anomaly_score_log = np.concatenate([n_max_anomaly_score_log, s_max_anomaly_score_log])
     all_mean_anomaly_score_log = np.concatenate([n_mean_anomaly_score_log, s_mean_anomaly_score_log])
     true_label = [0]*n_mean_anomaly_score_log.shape[0]+[1]*s_mean_anomaly_score_log.shape[0]
 
     print("=====Anomaly Score Max=====")
-    prediction(true_label, all_max_anomaly_score_log, f"8k_{opt.measure_mode}_MAX")
+    prediction(true_label, all_max_anomaly_score_log, f"d17_no_d134_crop32_{opt.measure_mode}_MAX")
     print("=====Anomaly Score Mean=====")
-    prediction(true_label, all_mean_anomaly_score_log, f"8k_{opt.measure_mode}_MEAN")
+    prediction(true_label, all_mean_anomaly_score_log, f"d17_no_d134_crop32_{opt.measure_mode}_MEAN")
     print("=====Anomaly Score Conbined=====")
-    combined_prediction(true_label, all_max_anomaly_score_log, all_mean_anomaly_score_log, f"8k_{opt.measure_mode}_Combined")
+    combined_prediction(true_label, all_max_anomaly_score_log, all_mean_anomaly_score_log, f"d17_no_d134_crop32_{opt.measure_mode}_Combined")
     
     '''
     # create website

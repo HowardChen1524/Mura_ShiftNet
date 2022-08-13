@@ -102,7 +102,7 @@ def define_G(input_nc, output_nc, ngf, which_model_netG, opt, mask_global, norm=
         # input_nc = 2, output_nc = 1, innerCos_list=[], shift_list=[], ngf=64
         # num_downs will be param, 8-> 6 because input size 256 -> 64
         # num_downs = 7 -> 128
-        netG = UnetGeneratorShiftTriple(input_nc, output_nc, 6, opt, innerCos_list, shift_list, mask_global, \
+        netG = UnetGeneratorShiftTriple(input_nc, output_nc, 5, opt, innerCos_list, shift_list, mask_global, \
                                                          ngf, norm_layer=norm_layer, use_spectral_norm=use_spectral_norm)
     elif which_model_netG == 'res_unet_shift_triple':
         netG = ResUnetGeneratorShiftTriple(input_nc, output_nc, 8, opt, innerCos_list, shift_list, mask_global, \
@@ -136,8 +136,9 @@ def define_D(input_nc, ndf, which_model_netD,
     netD = None
     norm_layer = get_norm_layer(norm_type=norm)
 
+    # if input size 32*32
     if which_model_netD == 'basic':
-        netD = NLayerDiscriminator(input_nc, ndf, n_layers=3, norm_layer=norm_layer, use_sigmoid=use_sigmoid, use_spectral_norm=use_spectral_norm)
+        netD = NLayerDiscriminator(input_nc, ndf, n_layers=2, norm_layer=norm_layer, use_sigmoid=use_sigmoid, use_spectral_norm=use_spectral_norm)
 
     elif which_model_netD == 'n_layers':
         netD = NLayerDiscriminator(input_nc, ndf, n_layers_D, norm_layer=norm_layer, use_sigmoid=use_sigmoid, use_spectral_norm=use_spectral_norm)

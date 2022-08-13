@@ -21,10 +21,14 @@ def CreateDataset(opt):
         from data.aligned_dataset_sliding import AlignedDatasetSliding
         dataset = AlignedDatasetSliding()
 
-     # 07/30 add combined testing normal & smura
-    elif opt.dataset_mode == 'aligned_combined':
-        from data.aligned_dataset_combined import AlignedDatasetCombined
-        dataset = AlignedDatasetCombined()
+     # 07/30 add for type_c
+    elif opt.dataset_mode == 'aligned_type_c':
+        from data.aligned_dataset_type_c import AlignedDatasetTypeC
+        dataset = AlignedDatasetTypeC()
+
+    elif opt.dataset_mode == 'aligned_type_c':
+        from data.aligned_dataset_type_c_plus import AlignedDatasetTypeCPlus
+        dataset = AlignedDatasetTypeCPlus()
 
     elif opt.dataset_mode == 'single':
         from data.single_dataset import SingleDataset
@@ -41,14 +45,9 @@ class CustomDatasetDataLoader(BaseDataLoader):
     def name(self):
         return 'CustomDatasetDataLoader'
 
-    def initialize(self, opt, validate=False):
+    def initialize(self, opt):
         BaseDataLoader.initialize(self, opt)
         self.dataset = CreateDataset(opt)
-        
-        if validate:
-            self.random = random.sample(list(range(len(self.dataset))), self.opt.validaton_num)
-            self.dataset = torch.utils.data.Subset(self.dataset, self.random)
-            print("random choose 200 validation data")
 
         self.dataloader = torch.utils.data.DataLoader(
             self.dataset,
