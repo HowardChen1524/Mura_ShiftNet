@@ -32,7 +32,6 @@ def plot_roc_curve(fpr, tpr, name):
     plt.title('Receiver Operating Characteristic (ROC) Curve')
     plt.legend()
     plt.savefig(name+'_roc_curve.png')
-    plt.show()
     plt.clf()
 def plot_distance_distribution(n_scores, s_scores, name):
     bins = np.linspace(0.000008,0.00008) # MSE
@@ -47,7 +46,6 @@ def plot_distance_distribution(n_scores, s_scores, name):
     plt.title('Distribution')
     plt.legend(loc='upper right')
     plt.savefig(name + '_score.png')
-    plt.show()
     plt.clf()
 def plot_distance_scatter(n_max, s_max, n_mean, s_mean, name):
     # normal
@@ -172,12 +170,7 @@ if __name__ == "__main__":
     opt.loadSize = opt.fineSize  # Do not scale!
 
     data_loader = CreateDataLoader(opt)
-    dataset_list = list()
-    for mode in range(len(data_loader)):
-        dataset_list.append(data_loader[mode].load_data())
-    
-    for mode in range(len(data_loader)):
-        print('#testing images = %d' % len(data_loader[mode]))
+    dataset_list = [data_loader['normal'],data_loader['smura']]
     
     model = create_model(opt)
 
@@ -254,20 +247,20 @@ if __name__ == "__main__":
     print(f"Smura mean: {s_score_log.mean()}")
     print(f"Smura std: {s_score_log.std()}")
 
-    plot_distance_distribution(n_mean_anomaly_score_log, s_mean_anomaly_score_log, f"d17_no_d134_crop32_{opt.measure_mode}_MEAN")
+    plot_distance_distribution(n_mean_anomaly_score_log, s_mean_anomaly_score_log, f"typecplus_{opt.measure_mode}_MEAN")
     plot_distance_scatter(n_max_anomaly_score_log, s_max_anomaly_score_log, 
-                            n_mean_anomaly_score_log, s_mean_anomaly_score_log, f"d17_no_d134_crop32_{opt.measure_mode}_Combined")
+                            n_mean_anomaly_score_log, s_mean_anomaly_score_log, f"typecplus_{opt.measure_mode}_Combined")
     
     all_max_anomaly_score_log = np.concatenate([n_max_anomaly_score_log, s_max_anomaly_score_log])
     all_mean_anomaly_score_log = np.concatenate([n_mean_anomaly_score_log, s_mean_anomaly_score_log])
     true_label = [0]*n_mean_anomaly_score_log.shape[0]+[1]*s_mean_anomaly_score_log.shape[0]
 
     print("=====Anomaly Score Max=====")
-    prediction(true_label, all_max_anomaly_score_log, f"d17_no_d134_crop32_{opt.measure_mode}_MAX")
+    prediction(true_label, all_max_anomaly_score_log, f"typecplus_{opt.measure_mode}_MAX")
     print("=====Anomaly Score Mean=====")
-    prediction(true_label, all_mean_anomaly_score_log, f"d17_no_d134_crop32_{opt.measure_mode}_MEAN")
+    prediction(true_label, all_mean_anomaly_score_log, f"typecplus_{opt.measure_mode}_MEAN")
     print("=====Anomaly Score Conbined=====")
-    combined_prediction(true_label, all_max_anomaly_score_log, all_mean_anomaly_score_log, f"d17_no_d134_crop32_{opt.measure_mode}_Combined")
+    combined_prediction(true_label, all_max_anomaly_score_log, all_mean_anomaly_score_log, f"typecplus_{opt.measure_mode}_Combined")
     
     '''
     # create website

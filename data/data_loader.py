@@ -31,6 +31,6 @@ def CreateDataLoader(opt):
                 print(s_data_loader.name())
                 opt.dataroot = opt.testing_smura_dataroot
                 s_data_loader.initialize(opt)
-                loaders['smura'] = n_data_loader
+                loaders['smura'] = s_data_loader
             
         return loaders

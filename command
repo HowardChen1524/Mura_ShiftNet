@@ -38,3 +38,7 @@ python test_type_c.py --batchSize=1 --use_spectral_norm_D=1 --which_model_netD='
 --normal_how_many=0 --testing_normal_dataroot='' \
 --smura_how_many=239 --testing_smura_dataroot='/home/levi/Howard/Mura/mura_data/RGB/typec_4k_8k/4k/'
 # --smura_how_many=350 --testing_smura_dataroot='/home/levi/Howard/Mura/mura_data/RGB/typec_4k_8k/8k/'
+
+python ./test_type_c_plus.py --batchSize=1 --use_spectral_norm_D=1 --which_model_netD='basic' --which_model_netG='unet_shift_triple' --model='shiftnet' --shift_sz=1 --mask_thred=1 --loadSize=64 --fineSize=64 --overlap=0 --dataset_mode='aligned_sliding' --mask_type='center' --input_nc=3 --output_nc=3 --color_mode='RGB' --inpainting_mode='ShiftNet' --measure_mode='MSE_sliding' --which_epoch='250' --testing_normal_dataroot='' --testing_smura_dataroot='E:/CSE/AI/Mura/mura_data/typecplus/'
+
+python ./test_sliding.py --batchSize=1 --use_spectral_norm_D=1 --which_model_netD='basic' --which_model_netG='unet_shift_triple' --model='shiftnet' --shift_sz=1 --mask_thred=1 --loadSize=64 --fineSize=64 --overlap=0 --dataset_mode='aligned_sliding' --mask_type='center' --input_nc=3 --output_nc=3 --color_mode='RGB' --inpainting_mode='ShiftNet' --measure_mode='Mask_MSE_sliding' --which_epoch='250' --normal_how_many=31 --testing_normal_dataroot='E:/CSE/AI/Mura/mura_data/d17/test/normal_8k/' --smura_how_many=31 --testing_smura_dataroot='E:/CSE/AI/Mura/mura_data/typecplus/'

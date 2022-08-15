@@ -5,11 +5,13 @@ import torchvision.transforms as transforms
 import torch
 from data.base_dataset import BaseDataset
 from data.image_folder import make_dataset
-from PIL import Image
 
+from PIL import Image
+import cv2
 import pandas as pd
 import numpy as np
-ORISIZE = 512
+
+ORISIZE = (512, 512)
 
 class AlignedDatasetSliding(BaseDataset):
     def initialize(self, opt):
@@ -68,11 +70,14 @@ class AlignedDatasetSliding(BaseDataset):
 
     def __getitem__(self, index):
         A_path = self.A_paths[index]
-        A = Image.open(A_path).convert(self.opt.color_mode)
-
+        img = cv2.imread(A_path)  
+        img_size = img.shape[:2] # h, w, c
         # if not 512,512 -> resize
-        if A.size != (ORISIZE, ORISIZE):
-            A = A.resize((ORISIZE, ORISIZE), Image.BICUBIC)
+        if img_size != ORISIZE:
+            img = cv2.resize(img, ORISIZE, interpolation=cv2.INTER_AREA)
+
+        A = Image.fromarray(cv2.cvtColor(img,cv2.COLOR_BGR2RGB))  
+        A = A.convert(self.opt.color_mode)
 
         A_imgs = []
         if self.opt.isTrain:
@@ -88,31 +93,33 @@ class AlignedDatasetSliding(BaseDataset):
             for y in range(0, w, self.opt.crop_stride): # stride default 32
                 # print(f"y {y}")
 
-                y_end_crop = False
+                # y_end_crop = False
                 
                 for x in range(0, h, self.opt.crop_stride):
                     # print(f"x {x}")
 
-                    x_end_crop = False
+                    # x_end_crop = False
 
                     crop_y = y
                     if (y + self.opt.fineSize) > w:
-                        crop_y =  w - self.opt.fineSize
-                        y_end_crop = True
+                        # crop_y =  w - self.opt.fineSize
+                        # y_end_crop = True
+                        break
 
                     crop_x = x
                     if (x + self.opt.fineSize) > h:
-                        crop_x = h - self.opt.fineSize
-                        x_end_crop = True
+                        # crop_x = h - self.opt.fineSize
+                        # x_end_crop = True
+                        break
 
                     crop_img = transforms.functional.crop(A_img, crop_y, crop_x, self.opt.fineSize, self.opt.fineSize)
                     A_imgs.append(crop_img)
 
-                    if x_end_crop:
-                        break
+                    # if x_end_crop:
+                    #    break
 
-                if x_end_crop and y_end_crop:
-                    break
+                # if x_end_crop and y_end_crop:
+                    # break
 
         A = torch.stack(A_imgs)
 
