@@ -17,21 +17,20 @@ import cv2
 def draw_mura_position(fp, fn_series_list, crop_pos_list, stride):
     # 讀取大圖
     img = Image.open(fp)
-    
+    img = cv2.cvtColor(np.array(img),cv2.COLOR_RGB2BGR)
+    img = cv2.resize(img, (512,512), interpolation=cv2.INTER_AREA)
+    img = Image.fromarray(cv2.cvtColor(img,cv2.COLOR_BGR2RGB))
+
     # =====actual mura===== 
     actual_pos_list = []
     for i in range(0, fn_series_list.shape[0]):
         fn_series = fn_series_list.iloc[i]
-        actual_pos_list.append((fn_series['x0'], fn_series['y0'], fn_series['x1'], fn_series['y1']))
-        # actual_pos_list.append((fn_series['x0']//3.75, fn_series['y0']//2, fn_series['x1']// 3.75, fn_series['y1']//2))
-
+        # actual_pos_list.append((fn_series['x0'], fn_series['y0'], fn_series['x1'], fn_series['y1']))
+        actual_pos_list.append((int(fn_series['x0']/3.75), int(fn_series['y0']/2.109375), int(fn_series['x1']/ 3.75), int(fn_series['y1']/2.109375)))
+    
     for actual_pos in actual_pos_list:
         draw = ImageDraw.Draw(img)  
         draw.rectangle(actual_pos, outline ="yellow")
-    
-    img = cv2.cvtColor(np.array(img),cv2.COLOR_RGB2BGR)
-    img = cv2.resize(img, (512,512), interpolation=cv2.INTER_AREA)
-    img = Image.fromarray(cv2.cvtColor(img,cv2.COLOR_BGR2RGB))
     
     # =====predict mura=====
     bounding_box = (64,64)
