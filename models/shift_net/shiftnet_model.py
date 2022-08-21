@@ -242,16 +242,6 @@ class ShiftNetModel(BaseModel):
             img = Image.fromarray(img,'L')
         img.save('./check_inpaint.png')
 
-    # def validate(self): 
-    #     self.forward()
-    #     fake_B = self.fake_B.detach() # Inpaint
-    #     real_B = self.real_B.detach() # Original
-    #     crop_scores = []
-    #     for i in range(0,256):
-    #         crop_scores.append(self.criterionL2(real_B[i], fake_B[i]).detach().cpu().numpy())
-    #     crop_scores = np.array(crop_scores)
-    #     return crop_scores
-
     # 06/18 add for testing
     def test(self):
         # ======Inpainting method======
@@ -331,6 +321,7 @@ class ShiftNetModel(BaseModel):
 
         # ======Anomaly score======
         if self.opt.measure_mode == 'MSE':
+            # print(real_B.shape)
             return self.criterionL2(real_B, fake_B).detach().cpu().numpy()   
         elif self.opt.measure_mode == 'Mask_MSE':
             fake_B = fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
@@ -341,6 +332,7 @@ class ShiftNetModel(BaseModel):
             return self.criterionL2(real_B, fake_B).detach().cpu().numpy()   
         if self.opt.measure_mode == 'MSE_sliding':
             # return self.criterionL2(real_B, fake_B).detach().cpu().numpy()
+            print(fake_B.shape)
             crop_scores = []
             for i in range(0,225): # 196 for 128*128
                 crop_scores.append(self.criterionL2(real_B[i], fake_B[i]).detach().cpu().numpy())
@@ -353,7 +345,7 @@ class ShiftNetModel(BaseModel):
             real_B = real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
                                             self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]  
             crop_scores = []
-            # print(fake_B.shape)
+            print(fake_B.shape)
             for i in range(0,225):
                 crop_scores.append(self.criterionL2(real_B[i], fake_B[i]).detach().cpu().numpy())
             crop_scores = np.array(crop_scores)

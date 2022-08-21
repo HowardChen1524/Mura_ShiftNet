@@ -9,7 +9,6 @@
 # mask_thred number to decide whether a patch is masked
 
 python ./train_sliding.py --batchSize=1 --use_spectral_norm_D=1 --which_model_netD='basic' --which_model_netG='unet_shift_triple' --model='shiftnet' --shift_sz=1 --mask_thred=1 \
---loadSize=32 --fineSize=32 --overlap=0 --dataset_mode='aligned_sliding' --mask_type='center' --input_nc=3 --output_nc=3 --color_mode='RGB' \
---niter=124 --lr=0.0002657 --lr_policy=cosine --random_choose_num=10000 --crop_image_num=64 \
---dataroot='/home/levi/mura_data/d17/trainwo/' \
---continue_train
+--loadSize=64 --fineSize=64 --overlap=0 --dataset_mode='aligned_sliding' --mask_type='center' --input_nc=3 --output_nc=3 --color_mode='RGB' \
+--niter=250 --lr=0.0005 --lr_policy=cosine --random_choose_num=4835 --crop_image_num=64 \
+--dataroot='/home/levi/mura_data/d23/train/normal_8k/' \

@@ -136,7 +136,7 @@ def define_D(input_nc, ndf, which_model_netD,
     netD = None
     norm_layer = get_norm_layer(norm_type=norm)
 
-    # if input size 32*32
+    # if input size 32*32 nlayer = 2
     if which_model_netD == 'basic':
         netD = NLayerDiscriminator(input_nc, ndf, n_layers=3, norm_layer=norm_layer, use_sigmoid=use_sigmoid, use_spectral_norm=use_spectral_norm)
 
@@ -144,7 +144,7 @@ def define_D(input_nc, ndf, which_model_netD,
         netD = NLayerDiscriminator(input_nc, ndf, n_layers_D, norm_layer=norm_layer, use_sigmoid=use_sigmoid, use_spectral_norm=use_spectral_norm)
 
     elif which_model_netD == 'densenet':
-        netD = DenseNetDiscrimator(input_nc, ndf, n_layers=3, norm_layer=norm_layer, use_sigmoid=use_sigmoid, use_spectral_norm=use_spectral_norm)
+        netD = DenseNetDiscrimator(input_nc, ndf, n_layers=2, norm_layer=norm_layer, use_sigmoid=use_sigmoid, use_spectral_norm=use_spectral_norm)
 
     else:
         print('Discriminator model name [%s] is not recognized' %

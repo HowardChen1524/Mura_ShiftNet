@@ -15,12 +15,6 @@ def plot_loss(epochs, loss, name):
     # plt.legend(loc='upper right')
     plt.savefig(f"loss_{name}.png")
     plt.clf()
-def create_validate_dataset(opt):
-    val_data_loader = CreateDataLoader(opt, validate=True)
-    val_dataset_list = []
-    for mode in range(len(val_data_loader)):
-        val_dataset_list.append(val_data_loader[mode].load_data())
-    return val_dataset_list
     
 if __name__ == "__main__":
 
@@ -109,18 +103,20 @@ if __name__ == "__main__":
         content_loss_list.append(loss_dict['content'])
         tv_loss_list.append(loss_dict['tv'])
 
+        epoch_list = np.linspace(1, epoch, epoch).astype(int)
+        plot_loss(epoch_list, GAN_loss_list, 'GAN')
+        plot_loss(epoch_list, G_L1_loss_list, 'L1')
+        plot_loss(epoch_list, D_loss_list, 'D')
+        plot_loss(epoch_list, style_loss_list, 'style')
+        plot_loss(epoch_list, content_loss_list, 'content')
+        plot_loss(epoch_list, tv_loss_list, 'tv')
+
         # print 一個 epoch 所花的時間
         print('End of epoch %d / %d \t Time Taken: %d sec' %
                 (epoch, opt.niter + opt.niter_decay, time.time() - epoch_start_time))
         
         model.update_learning_rate()
     
-    epoch_list = np.linspace(1, opt.niter, opt.niter).astype(int)
-    plot_loss(epoch_list, GAN_loss_list, 'GAN')
-    plot_loss(epoch_list, G_L1_loss_list, 'L1')
-    plot_loss(epoch_list, D_loss_list, 'D')
-    plot_loss(epoch_list, style_loss_list, 'style')
-    plot_loss(epoch_list, content_loss_list, 'content')
-    plot_loss(epoch_list, tv_loss_list, 'tv')
+    
 
     
