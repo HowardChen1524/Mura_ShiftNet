@@ -9,6 +9,7 @@ import os
 import numpy as np
 from PIL import Image
 import cv2
+from piqa import SSIM
 
 class ShiftNetModel(BaseModel):
     def name(self):
@@ -37,7 +38,7 @@ class ShiftNetModel(BaseModel):
 
         # specify the training losses you want to print out. The program will call base_model.get_current_losses
         if self.opt.color_mode == 'RGB':
-            self.loss_names = ['G_GAN', 'G_L1', 'D', 'style', 'content', 'tv']
+            self.loss_names = ['G_GAN', 'G_L1', 'D', 'style', 'content', 'tv', 'ssim']
         else:
             self.loss_names = ['G_GAN', 'G_L1', 'D']
 
@@ -116,6 +117,8 @@ class ShiftNetModel(BaseModel):
                 self.criterionL2_content_loss = torch.nn.MSELoss()
                 # TV loss
                 self.tv_criterion = networks.TVLoss(self.opt.tv_weight)
+            self.criterionSSIM = SSIM().cuda()
+
 
             # initialize optimizers
             self.schedulers = []
@@ -440,23 +443,22 @@ class ShiftNetModel(BaseModel):
         fake_B = self.fake_B
         # Has been verfied, for square mask, let D discrinate masked patch, improves the results.
         if self.opt.mask_type == 'center' or self.opt.mask_sub_type == 'rect': 
-        # Using the cropped fake_B as the input of D.
             fake_B = self.fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
                                        self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
             real_B = self.real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
                                        self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
-        
         else:
             real_B = self.real_B
 
         pred_fake = self.netD(fake_B)
 
+        # adverial loss
         if self.opt.gan_type == 'wgan_gp':
             self.loss_G_GAN = -torch.mean(pred_fake)
         else:
             # default
             if self.opt.gan_type in ['vanilla', 'lsgan']:
-                self.loss_G_GAN = self.criterionGAN(pred_fake, True) * self.opt.gan_weight
+                self.loss_G_GAN = self.criterionGAN(pred_fake, True) * self.opt.gan_weight 
 
             elif self.opt.gan_type == 're_s_gan':
                 pred_real = self.netD(real_B)
@@ -470,6 +472,7 @@ class ShiftNetModel(BaseModel):
 
 
         # If we change the mask as 'center with random position', then we can replacing loss_G_L1_m with 'Discounted L1'.
+        # l1 loss, Discounting L1 loss
         self.loss_G_L1, self.loss_G_L1_m = 0, 0
         self.loss_G_L1 += self.criterionL1(self.fake_B, self.real_B) * self.opt.lambda_A # 100
         # calcuate mask construction loss
@@ -505,6 +508,11 @@ class ShiftNetModel(BaseModel):
 
             self.loss_G += (self.loss_style + self.loss_content + self.loss_tv)
 
+        # 08/23 new add SSIM loss
+        self.loss_ssim = 0
+        self.loss_ssim = 1 - self.criterionSSIM(self.fake_B, self.real_B)
+        self.loss_G += self.loss_ssim
+        
         self.loss_G.backward()
 
     def optimize_parameters(self):
