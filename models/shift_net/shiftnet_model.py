@@ -140,7 +140,6 @@ class ShiftNetModel(BaseModel):
                 self.schedulers.append(networks.get_scheduler(optimizer, opt))
         else:
             self.criterionL2 = torch.nn.MSELoss()
-            self.criterionL2_typecplus = torch.nn.MSELoss(reduction='none')
 
         if not self.isTrain or opt.continue_train:
             self.load_networks(opt.which_epoch)
@@ -353,16 +352,6 @@ class ShiftNetModel(BaseModel):
                 crop_scores.append(self.criterionL2(real_B[i], fake_B[i]).detach().cpu().numpy())
             crop_scores = np.array(crop_scores)
             return crop_scores
-        elif self.opt.measure_mode == 'MSE_sliding_TypecPlus':
-            # print(fake_B.shape)
-            crop_scores = []
-            for i in range(0,225): # 196 for 128*128
-                mse = self.criterionL2_typecplus(real_B[i], fake_B[i]).detach().cpu().numpy()
-                print(mse)
-                raise
-                # crop_scores.append()            
-            crop_scores = np.array(crop_scores)
-            return crop_scores 
         elif self.opt.measure_mode == 'D_model_score_sliding':
             # # input normal pred_fake 跟 pred_real 都接近 1
             # # input smura pred_fake 偏 normal，接近 1，pred_real 接近 0

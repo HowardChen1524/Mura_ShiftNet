@@ -97,11 +97,9 @@ if __name__ == "__main__":
 
         model.set_input(data) 
         crop_scores = model.test() # 225 張小圖的 score
-
         fp = data['A_paths'][0]
         fn = fp[len(opt.testing_smura_dataroot):]
         fn_series_list = df[df['fn']==fn]
-
 
         top_n = fn_series_list.shape[0]
         crop_pos_list = np.argsort(-crop_scores)[:top_n] # 取前 n 張
