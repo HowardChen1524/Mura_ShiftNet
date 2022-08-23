@@ -61,7 +61,7 @@ class UnetGeneratorShiftTriple(nn.Module):
                                              norm_layer=norm_layer, use_spectral_norm=use_spectral_norm)
         print(unet_block)
         self.model = unet_block
-        raise
+        
     def forward(self, input):
         # print(input.shape) # 1,2,64,64
         return self.model(input)

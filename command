@@ -49,3 +49,5 @@ python ./test_sliding.py --batchSize=1 --use_spectral_norm_D=1 --which_model_net
 
 python ./test_type_c_plus.py --batchSize=1 --use_spectral_norm_D=1 --which_model_netD='basic' --which_model_netG='unet_shift_triple' --model='shiftnet' --shift_sz=1 --mask_thred=1 --loadSize=64 --fineSize=64 --overlap=0 --dataset_mode='aligned_sliding' --mask_type='center' --input_nc=3 --output_nc=3 --color_mode='RGB' --inpainting_mode='ShiftNet' --measure_mode='MSE_sliding' --which_epoch='100' --testing_normal_dataroot='' --testing_smura_dataroot='E:/CSE/AI/Mura/mura_data/typecplus/'
 >>>>>>> 225a53c9874efd9c513d98066c1ac6e6f4481a26
+
+python ./train_sliding.py --batchSize=1 --use_spectral_norm_D=1 --which_model_netD='basic' --which_model_netG='unet_shift_triple' --model='shiftnet' --shift_sz=1 --mask_thred=1 --loadSize=64 --fineSize=64 --overlap=0 --dataset_mode='aligned_sliding' --mask_type='center' --input_nc=3 --output_nc=3 --color_mode='RGB' --niter=250 --lr=0.0005 --lr_policy=cosine --random_choose_num=4835 --crop_image_num=64 --dataroot='E:/CSE/AI/Mura/mura_data/d17/train/normal_8k/'

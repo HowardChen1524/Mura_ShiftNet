@@ -96,13 +96,14 @@ if __name__ == "__main__":
         # it not only sets the input data with mask, but also sets the latent mask.
 
         model.set_input(data) 
-        crop_scores = model.test() # 256 張小圖的 score
+        crop_scores = model.test() # 225 張小圖的 score
 
         fp = data['A_paths'][0]
         fn = fp[len(opt.testing_smura_dataroot):]
         fn_series_list = df[df['fn']==fn]
+
+
         top_n = fn_series_list.shape[0]
-        
         crop_pos_list = np.argsort(-crop_scores)[:top_n] # 取前 n 張
         
         # 畫圖 & 新增結果到 overlapping_df

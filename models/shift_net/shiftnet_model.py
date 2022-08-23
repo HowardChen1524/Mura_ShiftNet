@@ -140,6 +140,7 @@ class ShiftNetModel(BaseModel):
                 self.schedulers.append(networks.get_scheduler(optimizer, opt))
         else:
             self.criterionL2 = torch.nn.MSELoss()
+            self.criterionL2_typecplus = torch.nn.MSELoss(reduction='none')
 
         if not self.isTrain or opt.continue_train:
             self.load_networks(opt.which_epoch)
@@ -235,15 +236,15 @@ class ShiftNetModel(BaseModel):
         self.set_gt_latent() # real_B，不知道幹嘛用
         self.fake_B = self.netG(self.real_A) # real_A 當 input 進去做 inpaint
         
-        # print(self.fake_B.shape)
-        # if batchsize > 1，tensor2im 只會取第一張
-        img = util.tensor2im(self.fake_B)
+        # # print(self.fake_B.shape)
+        # # if batchsize > 1，tensor2im 只會取第一張
+        # img = util.tensor2im(self.fake_B)
 
-        if self.opt.color_mode == 'RGB':
-            img = Image.fromarray(img)
-        else:
-            img = Image.fromarray(img,'L')
-        img.save('./check_inpaint.png')
+        # if self.opt.color_mode == 'RGB':
+        #     img = Image.fromarray(img)
+        # else:
+        #     img = Image.fromarray(img,'L')
+        # img.save('./check_inpaint.png')
 
     # 06/18 add for testing
     def test(self):
@@ -333,14 +334,13 @@ class ShiftNetModel(BaseModel):
             real_B = real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
                                             self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]  
             return self.criterionL2(real_B, fake_B).detach().cpu().numpy()   
-        if self.opt.measure_mode == 'MSE_sliding':
-            # return self.criterionL2(real_B, fake_B).detach().cpu().numpy()
-            print(fake_B.shape)
+        elif self.opt.measure_mode == 'MSE_sliding':
+            # print(fake_B.shape)
             crop_scores = []
             for i in range(0,225): # 196 for 128*128
                 crop_scores.append(self.criterionL2(real_B[i], fake_B[i]).detach().cpu().numpy())
             crop_scores = np.array(crop_scores)
-            return crop_scores          
+            return crop_scores             
         elif self.opt.measure_mode == 'Mask_MSE_sliding':
             fake_B = fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
                                             self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
@@ -353,6 +353,16 @@ class ShiftNetModel(BaseModel):
                 crop_scores.append(self.criterionL2(real_B[i], fake_B[i]).detach().cpu().numpy())
             crop_scores = np.array(crop_scores)
             return crop_scores
+        elif self.opt.measure_mode == 'MSE_sliding_TypecPlus':
+            # print(fake_B.shape)
+            crop_scores = []
+            for i in range(0,225): # 196 for 128*128
+                mse = self.criterionL2_typecplus(real_B[i], fake_B[i]).detach().cpu().numpy()
+                print(mse)
+                raise
+                # crop_scores.append()            
+            crop_scores = np.array(crop_scores)
+            return crop_scores 
         elif self.opt.measure_mode == 'D_model_score_sliding':
             # # input normal pred_fake 跟 pred_real 都接近 1
             # # input smura pred_fake 偏 normal，接近 1，pred_real 接近 0
@@ -367,8 +377,7 @@ class ShiftNetModel(BaseModel):
             for i in range(0,256):
                 crop_scores.append(self.criterionL2(pred_real[i], pred_fake[i]).detach().cpu().numpy())
             crop_scores = np.array(crop_scores)
-            return crop_scores
-            
+            return crop_scores  
         elif self.opt.measure_mode == 'Mask_D_model_score_sliding':
             fake_B = fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
                                             self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
