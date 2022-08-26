@@ -55,7 +55,7 @@ def draw_mura_position(fp, fn_series_list, crop_pos_list, stride):
         draw = ImageDraw.Draw(img)  
         draw.rectangle(pred_pos, outline ="red")
 
-    img.save(f"./type_c_plus_smura_pos_img/{fn_series_list.iloc[0]['fn'][:-4]}_mura_pos.png")
+    img.save(f"./check_inpaint_img/{fn_series_list.iloc[0]['fn'][:-4]}/draw_smura_position.png")
 
 
 if __name__ == "__main__":
@@ -76,12 +76,12 @@ if __name__ == "__main__":
     s_score_log = []
     all_crop_scores = []
     
-    mkdir('./type_c_plus_smura_pos_img/')
     df = pd.read_csv('./Mura_type_c_plus.csv')
-    print(df.iloc[(df['h']+df['w']).argmax()])
-    print(df.iloc[(df['h']+df['w']).argmin()])
-
+    print(df.iloc[(df['h']+df['w']).argmax()][['fn','w','h']])
+    print(df.iloc[(df['h']+df['w']).argmin()][['fn','w','h']])
+    
     for i, data in enumerate(dataset):
+        print(f"img: {i}")
         # (1,mini-batch,c,h,w) -> (mini-batch,c,h,w)，會有多一個維度是因為 dataloader batchsize 設 1
         bs, ncrops, c, h, w = data['A'].size()
         data['A'] = data['A'].view(-1, c, h, w)
@@ -95,15 +95,21 @@ if __name__ == "__main__":
         # 建立 input real_A & real_B
         # it not only sets the input data with mask, but also sets the latent mask.
 
-        model.set_input(data) 
-        crop_scores = model.test() # 225 張小圖的 score
         fp = data['A_paths'][0]
         fn = fp[len(opt.testing_smura_dataroot):]
         fn_series_list = df[df['fn']==fn]
+        mkdir(f'./check_inpaint_img/{fn[:-4]}/')
 
+        model.set_input(data) 
+        crop_scores = model.test(fn) # 225 張小圖的 score
+        
         top_n = fn_series_list.shape[0]
         crop_pos_list = np.argsort(-crop_scores)[:top_n] # 取前 n 張
         
+        crop_pos_list_str = [f"{pos}\n" for pos in crop_pos_list]
+        with open(f"./check_inpaint_img/{fn[:-4]}/predicted_position.txt", 'w') as f:
+            f.writelines(crop_pos_list_str)
+
         # 畫圖 & 新增結果到 overlapping_df
         draw_mura_position(fp, fn_series_list, crop_pos_list, opt.crop_stride)
     

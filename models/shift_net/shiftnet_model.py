@@ -1,6 +1,7 @@
 import torch
 from torch.nn import functional as F
-import util.util as util
+from util import util
+from util.util import tensor2im, mkdir
 from models import networks
 from models.shift_net.base_model import BaseModel
 import time
@@ -231,27 +232,30 @@ class ShiftNetModel(BaseModel):
             self.netG(real_B) # input ground truth
 
 
-    def forward(self):
+    def forward(self, fn=None):
         self.set_gt_latent() # real_B，不知道幹嘛用
         self.fake_B = self.netG(self.real_A) # real_A 當 input 進去做 inpaint
         
-        # # print(self.fake_B.shape)
-        # # if batchsize > 1，tensor2im 只會取第一張
-        # img = util.tensor2im(self.fake_B)
-
-        # if self.opt.color_mode == 'RGB':
-        #     img = Image.fromarray(img)
-        # else:
-        #     img = Image.fromarray(img,'L')
-        # img.save('./check_inpaint.png')
-
+        # print(self.fake_B.shape)
+        # if batchsize > 1，tensor2im 只會取第一張
+        if ~(self.opt.isTrain) and (fn != None):
+            mkdir(f"./check_inpaint_img/{fn[:-4]}")
+            for i in range(0, self.fake_B.shape[0]): 
+                mkdir(f"./check_inpaint_img/{fn[:-4]}/{i}")
+                fake_img = tensor2im(torch.unsqueeze(self.fake_B[i],0))
+                fake_img = Image.fromarray(fake_img)
+                fake_img.save(f"./check_inpaint_img/{fn[:-4]}/{i}/inpaint.png")
+                real_img = tensor2im(torch.unsqueeze(self.real_B[i],0))
+                real_img = Image.fromarray(real_img)
+                real_img.save(f"./check_inpaint_img/{fn[:-4]}/{i}/origin.png")
+        
     # 06/18 add for testing
-    def test(self):
+    def test(self, fn=None):
         # ======Inpainting method======
         if self.opt.inpainting_mode == 'ShiftNet':
             # torch.no_grad() disables the gradient calculation，等於 torch.set_grad_enabled(False)                       
             with torch.no_grad():
-                self.forward()
+                self.forward(fn)
             fake_B = self.fake_B.detach() # Inpaint
             real_B = self.real_B # Original
         elif self.opt.inpainting_mode == 'OpenCV' and self.opt.color_mode != 'RGB':

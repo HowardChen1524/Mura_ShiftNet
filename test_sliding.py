@@ -34,11 +34,13 @@ def plot_roc_curve(fpr, tpr, name):
     plt.savefig(name+'_roc_curve.png')
     plt.clf()
 def plot_distance_distribution(n_scores, s_scores, name):
-    bins = np.linspace(0.000008,0.00005) # Mask MSE
-    plt.hist(s_scores, bins, alpha=0.5, density=True, label="smura")
-    plt.hist(n_scores, bins, alpha=0.5, density=True, label="normal")
+    # bins = np.linspace(0.000008,0.00005) # Mask MSE
+    # n_weights = np.ones_like(n_scores)/float(len(s_scores))
+    # s_weights = np.ones_like(s_scores)/float(len(s_scores))
+    plt.hist(s_scores, bins=30, alpha=0.5, density=False, label="smura")
+    plt.hist(n_scores, bins=30, alpha=0.5, density=False, label="normal")
     plt.xlabel('Anomaly Score')
-    plt.ylabel('Number')
+    plt.ylabel('Probability')
     plt.title('Distribution')
     plt.legend(loc='upper right')
     plt.savefig(name + '_score.png')
