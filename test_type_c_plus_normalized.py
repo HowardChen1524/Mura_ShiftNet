@@ -71,19 +71,41 @@ if __name__ == "__main__":
     opt.loadSize = opt.fineSize  # Do not scale!
 
     data_loader = CreateDataLoader(opt)
-    dataset = data_loader['smura'].load_data()
+    dataset = defaultdict()
+    dataset['normal'] = data_loader['normal'].load_data()
+    dataset['smura'] = data_loader['smura'].load_data()
     
     model = create_model(opt)
 
-    s_score_log = []
-    all_crop_scores = []
+    n_all_crop_scores = []
+    s_all_crop_scores = None
+
+    for i, data in enumerate(dataset['normal']):
+        print(f"img: {i}")
+        bs, ncrops, c, h, w = data['A'].size()
+        data['A'] = data['A'].view(-1, c, h, w)
+
+        bs, ncrops, c, h, w = data['B'].size()
+        data['B'] = data['B'].view(-1, c, h, w)
+
+        bs, ncrops, c, h, w = data['M'].size()
+        data['M'] = data['M'].view(-1, c, h, w)
+
+        model.set_input(data) 
+        crop_scores = model.test() # 225 張小圖的 score
+    
+        n_all_crop_scores.append(crop_scores)
+    n_all_crop_scores = np.array(n_all_crop_scores)
+    print(n_all_crop_scores.shape)
+    n_pos_mean = np.mean(n_all_crop_scores, axis=1)
+    n_pos_std = np.std(n_all_crop_scores, axis=1)
     
     df = pd.read_csv('./Mura_type_c_plus.csv')
     print(df.iloc[(df['h']+df['w']).argmax()][['fn','w','h']])
     print(df.iloc[(df['h']+df['w']).argmin()][['fn','w','h']])
     mkdir("./check_inpaint_img/")
     mkdir("./position/")
-    for i, data in enumerate(dataset):
+    for i, data in enumerate(dataset['smura']):
         print(f"img: {i}")
         # (1,mini-batch,c,h,w) -> (mini-batch,c,h,w)，會有多一個維度是因為 dataloader batchsize 設 1
         bs, ncrops, c, h, w = data['A'].size()
@@ -105,7 +127,10 @@ if __name__ == "__main__":
 
         model.set_input(data) 
         crop_scores = model.test(fn) # 225 張小圖的 score
+        for pos in range(0,crop_scores.shape[0]):
+            crop_scores[pos] = (crop_scores[pos]-n_pos_mean[pos])/n_pos_std[pos]
         
+        # print(crop_scores)
         top_n = fn_series_list.shape[0]
         crop_pos_list = np.argsort(-crop_scores)[:top_n] # 取前 n 張
         
@@ -118,14 +143,18 @@ if __name__ == "__main__":
     
         # append 每張小圖的 MSE
         if i == 0:
-            all_crop_scores = crop_scores.copy()
+            s_all_crop_scores = crop_scores.copy()
         else:
-            all_crop_scores = np.append(all_crop_scores, crop_scores)
+            s_all_crop_scores = np.append(s_all_crop_scores, crop_scores)
     
     # 計算所有圖片平均
-    s_mean = all_crop_scores.mean()
-    s_std = all_crop_scores.std()
+    n_mean = n_all_crop_scores.mean()
+    n_std = n_all_crop_scores.std()
+    s_mean = s_all_crop_scores.mean()
+    s_std = s_all_crop_scores.std()
 
+    print(f"Normal mean: {n_mean}")
+    print(f"Normal std: {n_std}")
     print(f"Smura mean: {s_mean}")
     print(f"Smura std: {s_std}")
 

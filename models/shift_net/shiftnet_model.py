@@ -338,7 +338,6 @@ class ShiftNetModel(BaseModel):
                                             self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]  
             return self.criterionL2(real_B, fake_B).detach().cpu().numpy()   
         elif self.opt.measure_mode == 'MSE_sliding':
-            # print(fake_B.shape)
             crop_scores = []
             for i in range(0,225): # 196 for 128*128
                 crop_scores.append(self.criterionL2(real_B[i], fake_B[i]).detach().cpu().numpy())

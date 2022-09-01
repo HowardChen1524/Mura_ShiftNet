@@ -75,7 +75,6 @@ class AlignedDatasetSliding(BaseDataset):
         # if not 512,512 -> resize
         if self.opt.resolution == 'resized':
             img = cv2.resize(img, ORISIZE, interpolation=cv2.INTER_AREA)
-        print(img.shape)
         A = Image.fromarray(cv2.cvtColor(img,cv2.COLOR_BGR2RGB))  
         A = A.convert(self.opt.color_mode)
 
