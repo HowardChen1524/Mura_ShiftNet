@@ -37,8 +37,8 @@ def plot_distance_distribution(n_scores, s_scores, name):
     # bins = np.linspace(0.000008,0.00005) # Mask MSE
     # n_weights = np.ones_like(n_scores)/float(len(s_scores))
     # s_weights = np.ones_like(s_scores)/float(len(s_scores))
-    plt.hist(s_scores, bins=30, alpha=0.5, density=False, label="smura")
-    plt.hist(n_scores, bins=30, alpha=0.5, density=False, label="normal")
+    plt.hist(s_scores, bins=30, alpha=0.5, density=True, label="smura")
+    plt.hist(n_scores, bins=30, alpha=0.5, density=True, label="normal")
     plt.xlabel('Anomaly Score')
     plt.ylabel('Probability')
     plt.title('Distribution')
@@ -105,7 +105,7 @@ def prediction(labels, scores, name):
     print("False Alarm Rate (FPR): ", FP/(FP+TN))
     print("Leakage Rate (FNR): ", FN/(FN+TP))
     print("F1-Score: ", f1_score(labels, pred_labels)) # sklearn ver: F1 = 2 * (precision * recall) / (precision + recall)
-def combined_prediction(labels, max_scores, mean_scores, name):
+def max_mean_prediction(labels, max_scores, mean_scores, name):
     # score = a*max + b*mean + c
     best_a, best_b, best_c = 0, 0, 0
     best_auc = 0
@@ -193,9 +193,6 @@ if __name__ == "__main__":
         mean_anomaly_score_log = None
         print(f"Mode(0:normal,1:smura): {mode}, {opt.how_many}")
         for i, data in enumerate(dataset):
-            # 超過設定的測試張數就跳出
-            if i >= opt.how_many:
-                break
             print(f"Image num: {i}")
             # (1,mini-batch,c,h,w) -> (mini-batch,c,h,w)，會有多一個維度是因為 dataloader batchsize 設 1
             bs, ncrops, c, h, w = data['A'].size()
@@ -257,8 +254,8 @@ if __name__ == "__main__":
     prediction(true_label, all_max_anomaly_score_log, f"d23_8k_{opt.measure_mode}_MAX")
     print("=====Anomaly Score Mean=====")
     prediction(true_label, all_mean_anomaly_score_log, f"d23_8k_{opt.measure_mode}_MEAN")
-    print("=====Anomaly Score Conbined=====")
-    combined_prediction(true_label, all_max_anomaly_score_log, all_mean_anomaly_score_log, f"d23_8k_{opt.measure_mode}_Combined")
+    print("=====Anomaly Score Max_Mean=====")
+    max_mean_prediction(true_label, all_max_anomaly_score_log, all_mean_anomaly_score_log, f"d23_8k_{opt.measure_mode}_max_mean")
     
     '''
     # create website
