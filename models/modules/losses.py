@@ -77,7 +77,7 @@ def spatial_discounting_mask(mask_width, mask_height, discounting_gamma, discoun
     Returns:
         tf.Tensor: spatial discounting mask
     """
-    gamma = discounting_gamma
+    gamma = discounting_gamma # 0.9
     shape = [1, 1, mask_width, mask_height]
     if discounting:
         print('Use spatial discounting l1 loss.')

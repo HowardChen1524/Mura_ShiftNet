@@ -34,11 +34,9 @@ def plot_roc_curve(fpr, tpr, name):
     plt.savefig(name+'_roc_curve.png')
     plt.clf()
 def plot_distance_distribution(n_scores, s_scores, name):
-    # bins = np.linspace(0.000008,0.00005) # Mask MSE
-    # n_weights = np.ones_like(n_scores)/float(len(s_scores))
-    # s_weights = np.ones_like(s_scores)/float(len(s_scores))
-    plt.hist(s_scores, bins=30, alpha=0.5, density=True, label="smura")
-    plt.hist(n_scores, bins=30, alpha=0.5, density=True, label="normal")
+    bins = np.linspace(-1,5) # Mask MSE
+    plt.hist(s_scores, bins=bins, alpha=0.5, density=True, label="smura")
+    plt.hist(n_scores, bins=bins, alpha=0.5, density=True, label="normal")
     plt.xlabel('Anomaly Score')
     plt.title('Distribution')
     plt.legend(loc='upper right')
@@ -78,30 +76,27 @@ def plot_distance_scatter(n_MSE, s_MSE, n_SSIM, s_SSIM, name):
     plt.savefig(name + '_scatter.png')
     plt.clf()
 def MSE_SSIM_prediction(labels, MSE_scores, SSIM_scores, name):
-    # score = a*MSE + b*SSIM + c
-    best_a, best_b, best_c = 0, 0, 0
+    # score = a*MSE + b*SSIM
+    best_a, best_b = 0, 0
     best_auc = 0
     for ten_a in range(0, 100, 1):
         a = ten_a/100.0
         for ten_b in range(0, 100, 1):
             b = ten_b/100.0
-            for ten_c in range(0, 100, 1):
-                c = ten_c/100.0
-                scores = a*MSE_scores + b*SSIM_scores + c
-                fpr, tpr, th = roc_curve(labels, scores)
-                current_auc = auc(fpr, tpr)
-                if current_auc >= best_auc:
-                    best_auc = current_auc
-                    best_a = a
-                    best_b = b
-                    best_c = c
+            scores = a*MSE_scores + b*SSIM_scores
+            fpr, tpr, th = roc_curve(labels, scores)
+            current_auc = auc(fpr, tpr)
+            if current_auc >= best_auc:
+                best_auc = current_auc
+                best_a = a
+                best_b = b
 
     print(best_auc)
     print(best_a)
     print(best_b)
-    print(best_c)
 
-    best_scores = best_a*MSE_scores + best_b*SSIM_scores + best_c
+    best_scores = best_a*MSE_scores + best_b*SSIM_scores
+    print(best_scores)
     pred_labels = [] 
     roc_auc, optimal_th = roc(labels, best_scores, name)
     for score in best_scores:
@@ -144,6 +139,37 @@ if __name__ == "__main__":
     
     model = create_model(opt)
 
+    n_MSE_pos_score_log = []
+    n_SSIM_pos_score_log = []
+
+    for i, data in enumerate(dataset_list[0]):
+        print(f"img: {i}, {data['A_paths'][0][len(opt.testing_smura_dataroot):]}")
+        
+        bs, ncrops, c, h, w = data['A'].size()
+        data['A'] = data['A'].view(-1, c, h, w)
+
+        bs, ncrops, c, h, w = data['B'].size()
+        data['B'] = data['B'].view(-1, c, h, w)
+
+        bs, ncrops, c, h, w = data['M'].size()
+        data['M'] = data['M'].view(-1, c, h, w)
+
+        model.set_input(data) 
+        crop_scores = model.test() # 225 張小圖的 score
+        # print(crop_scores) # 確認位置是正確的
+        
+        n_MSE_pos_score_log.append(crop_scores['MSE'])
+        n_SSIM_pos_score_log.append(crop_scores['SSIM'])
+        # raise
+        # print(n_pos_score_log)
+
+    n_MSE_pos_score_log = np.array(n_MSE_pos_score_log)
+    n_MSE_pos_mean = np.mean(n_MSE_pos_score_log, axis=0)
+    n_MSE_pos_std = np.std(n_MSE_pos_score_log, axis=0)
+    n_SSIM_pos_score_log = np.array(n_SSIM_pos_score_log)
+    n_SSIM_pos_mean = np.mean(n_SSIM_pos_score_log, axis=0)
+    n_SSIM_pos_std = np.std(n_SSIM_pos_score_log, axis=0)
+
     # 每張大圖的代表小圖
     n_MSE_anomaly_score_log = None
     n_SSIM_anomaly_score_log = None
@@ -174,6 +200,12 @@ if __name__ == "__main__":
             # it not only sets the input data with mask, but also sets the latent mask.
             model.set_input(data) 
             img_scores = model.test()
+            
+            for pos in range(0, img_scores['MSE'].shape[0]):
+                img_scores['MSE'][pos] = (img_scores['MSE'][pos]-n_MSE_pos_mean[pos])/n_MSE_pos_std[pos]
+            
+            for pos in range(0, img_scores['SSIM'].shape[0]):
+                img_scores['SSIM'][pos] = (img_scores['SSIM'][pos]-n_SSIM_pos_mean[pos])/n_SSIM_pos_mean[pos]
 
             MSE_anomaly_score = np.mean(img_scores['MSE']) # MSE
             SSIM_anomaly_score = np.mean(img_scores['SSIM']) # SSIM

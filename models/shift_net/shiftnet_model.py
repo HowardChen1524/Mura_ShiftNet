@@ -140,9 +140,18 @@ class ShiftNetModel(BaseModel):
             for optimizer in self.optimizers:
                 self.schedulers.append(networks.get_scheduler(optimizer, opt))
         else:
+            self.criterionGAN = networks.GANLoss(gan_type=opt.gan_type).to(self.device)
+            self.criterionL1 = torch.nn.L1Loss()
             self.criterionL2 = torch.nn.MSELoss()
             self.criterionSSIM = SSIM().cuda()
-
+            if self.opt.color_mode == 'RGB':
+                # VGG loss
+                self.criterionL2_style_loss = torch.nn.MSELoss()
+                self.criterionL2_content_loss = torch.nn.MSELoss()
+                # TV loss
+                self.tv_criterion = networks.TVLoss(self.opt.tv_weight)
+            self.criterionL1_mask = networks.Discounted_L1(opt).to(self.device)
+            
         if not self.isTrain or opt.continue_train:
             self.load_networks(opt.which_epoch)
  
@@ -338,7 +347,38 @@ class ShiftNetModel(BaseModel):
             real_B = real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
                                             self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]  
             return self.criterionL2(real_B, fake_B).detach().cpu().numpy()
+        
+        elif self.opt.measure_mode == 'MAE_sliding':
+            crop_scores = []
+            for i in range(0,225):
+                crop_scores.append(self.criterionL1(real_B[i], fake_B[i]).detach().cpu().numpy())
+            crop_scores = np.array(crop_scores)
+            return crop_scores    
 
+        elif self.opt.measure_mode == 'Mask_MAE_sliding':
+            fake_B = fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
+                                            self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
+
+            real_B = real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
+                                            self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]  
+            crop_scores = []
+            for i in range(0,225):
+                crop_scores.append(self.criterionL1(real_B[i], fake_B[i]).detach().cpu().numpy())
+            crop_scores = np.array(crop_scores)
+            return crop_scores
+        
+        elif self.opt.measure_mode == 'Discounted_L1_sliding':
+            fake_B = fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
+                                                self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
+            real_B = real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
+                                                self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
+                                        
+            crop_scores = []
+            for i in range(0,225):
+                crop_scores.append(self.criterionL1_mask(real_B[i], fake_B[i]).detach().cpu().numpy())
+            crop_scores = np.array(crop_scores)
+            return crop_scores
+            
         elif self.opt.measure_mode == 'MSE_sliding':
             crop_scores = []
             for i in range(0,225):
@@ -404,14 +444,35 @@ class ShiftNetModel(BaseModel):
             crop_scores['SSIM'] = np.array(SSIM_crop_scores)
             return crop_scores   
 
-        elif self.opt.measure_mode == 'D_model_score_sliding':
-            # # input normal pred_fake 跟 pred_real 都接近 1
-            # # input smura pred_fake 偏 normal，接近 1，pred_real 接近 0
-            # # pred_real shape 6*6
+        elif self.opt.measure_mode == 'ADV_sliding':
+            self.netD.eval()
+            with torch.no_grad():
+                pred_fake = self.netD(fake_B)
+
+            crop_scores = []
+            for i in range(0,225):
+                crop_scores.append(self.criterionGAN(pred_fake[i], True).detach().cpu().numpy())
+            crop_scores = np.array(crop_scores)
+            return crop_scores  
+
+        elif self.opt.measure_mode == 'Mask_ADV_sliding':
+            fake_B = fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
+                                            self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
 
             self.netD.eval()
             with torch.no_grad():
-                pred_fake = self.netD(fake_B.detach())
+                pred_fake = self.netD(fake_B)
+
+            crop_scores = []
+            for i in range(0,225):
+                crop_scores.append(self.criterionGAN(pred_fake[i], True).detach().cpu().numpy())
+            crop_scores = np.array(crop_scores)
+            return crop_scores  
+
+        elif self.opt.measure_mode == 'Dis_sliding':
+            self.netD.eval()
+            with torch.no_grad():
+                pred_fake = self.netD(fake_B)
                 pred_real = self.netD(real_B)
             # print(pred_fake.shape)
             crop_scores = []
@@ -420,19 +481,151 @@ class ShiftNetModel(BaseModel):
             crop_scores = np.array(crop_scores)
             return crop_scores  
 
-        elif self.opt.measure_mode == 'Mask_D_model_score_sliding':
+        elif self.opt.measure_mode == 'Mask_Dis_sliding':
             fake_B = fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
                                             self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
 
             real_B = real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
-                                            self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]  
-            pred_fake = self.netD(fake_B) # 0
-            pred_real = self.netD(real_B) # 1            
+                                            self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
+            self.netD.eval()
+            with torch.no_grad():
+                pred_fake = self.netD(fake_B)
+                pred_real = self.netD(real_B)
+            print(pred_fake.shape)
             crop_scores = []
             for i in range(0,225):
                 crop_scores.append(self.criterionL2(pred_real[i], pred_fake[i]).detach().cpu().numpy())
             crop_scores = np.array(crop_scores)
             return crop_scores
+
+        elif self.opt.measure_mode == 'Style_VGG16_sliding':
+            crop_scores = []
+            for i in range(0,225):
+                score = 0.0
+                vgg_ft_fakeB = self.vgg16_extractor(torch.unsqueeze(fake_B[i],0))
+                vgg_ft_realB = self.vgg16_extractor(torch.unsqueeze(real_B[i],0))
+                for j in range(3):
+                    score += self.criterionL2_style_loss(util.gram_matrix(vgg_ft_fakeB[j]), util.gram_matrix(vgg_ft_realB[j]))
+                crop_scores.append(score.detach().cpu().numpy())
+            crop_scores = np.array(crop_scores)
+            return crop_scores  
+
+        elif self.opt.measure_mode == 'Mask_Style_VGG16_sliding':
+            fake_B = fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
+                                            self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
+
+            real_B = real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
+                                            self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
+            crop_scores = []
+            for i in range(0,225):
+                score = 0.0
+                vgg_ft_fakeB = self.vgg16_extractor(torch.unsqueeze(fake_B[i],0))
+                vgg_ft_realB = self.vgg16_extractor(torch.unsqueeze(real_B[i],0))
+                for j in range(3):
+                    score += self.criterionL2_style_loss(util.gram_matrix(vgg_ft_fakeB[j]), util.gram_matrix(vgg_ft_realB[j]))
+                crop_scores.append(score.detach().cpu().numpy())
+            crop_scores = np.array(crop_scores)
+            return crop_scores  
+
+        elif self.opt.measure_mode == 'Content_VGG16_sliding':
+            crop_scores = []
+            for i in range(0,225):
+                score = 0.0
+                vgg_ft_fakeB = self.vgg16_extractor(torch.unsqueeze(fake_B[i],0))
+                vgg_ft_realB = self.vgg16_extractor(torch.unsqueeze(real_B[i],0))
+                for j in range(3):
+                    score += self.criterionL2(vgg_ft_realB[j], vgg_ft_fakeB[j])
+                crop_scores.append(score.detach().cpu().numpy())
+            crop_scores = np.array(crop_scores)
+            return crop_scores  
+
+        elif self.opt.measure_mode == 'Mask_Content_VGG16_sliding':
+            fake_B = fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
+                                            self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
+
+            real_B = real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
+                                            self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
+            crop_scores = []
+            for i in range(0,225):
+                score = 0.0
+                vgg_ft_fakeB = self.vgg16_extractor(torch.unsqueeze(fake_B[i],0))
+                vgg_ft_realB = self.vgg16_extractor(torch.unsqueeze(real_B[i],0))
+                for j in range(3):
+                    score += self.criterionL2(vgg_ft_realB[j], vgg_ft_fakeB[j])
+                crop_scores.append(score.detach().cpu().numpy())
+            crop_scores = np.array(crop_scores)
+            return crop_scores  
+
+        elif self.opt.measure_mode == 'G_loss_combined':
+            crop_scores = []
+
+            mask_fake_B = fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
+                                                self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
+            mask_real_B = real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
+                                                self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
+            print(self.opt.gan_weight)
+            print(self.opt.lambda_A)
+            print(self.opt.mask_weight_G)
+            print(self.opt.style_weight)
+            print(self.opt.content_weight)
+            for i in range(0,225):
+                score = 0
+                
+                # # adv
+                # self.netD.eval()
+                # with torch.no_grad():
+                #     pred_fake = self.netD(fake_B[i])
+                # adv_loss = (self.criterionGAN(pred_fake, True)*self.opt.gan_weight).detach().cpu().numpy()
+
+                # L1
+                l1_loss = (self.criterionL1(real_B[i], fake_B[i])*self.opt.lambda_A).detach().cpu().numpy()
+                
+                # D L1
+                D_l1_loss = (self.criterionL1_mask(mask_real_B[i], mask_fake_B[i])*self.opt.mask_weight_G).detach().cpu().numpy()
+
+                # SSIM
+                SSIM_loss = (1-self.criterionSSIM(torch.unsqueeze(real_B[i], 0), torch.unsqueeze(fake_B[i], 0))).detach().cpu().numpy()
+
+                # Content loss & style loss
+                content_loss, style_loss = 0, 0
+                vgg_ft_fakeB = self.vgg16_extractor(torch.unsqueeze(fake_B[i],0))
+                vgg_ft_realB = self.vgg16_extractor(torch.unsqueeze(real_B[i],0))
+                for j in range(3):
+                    style_loss += self.criterionL2_style_loss(util.gram_matrix(vgg_ft_fakeB[j]), util.gram_matrix(vgg_ft_realB[j]))
+                    content_loss += self.criterionL2(vgg_ft_realB[j], vgg_ft_fakeB[j])
+                style_loss = (style_loss*self.opt.style_weight).detach().cpu().numpy() 
+                content_loss = (content_loss*self.opt.content_weight).detach().cpu().numpy()
+                
+                score = l1_loss + D_l1_loss + SSIM_loss + style_loss + content_loss
+
+                crop_scores.append(score)
+            crop_scores = np.array(crop_scores)
+            return crop_scores
+
+        elif self.opt.measure_mode == 'R_square':
+            crop_scores = []
+            for i in range(0,225):
+                crop_scores.append((1-(self.criterionL2(real_B[i], fake_B[i])/torch.var(real_B[i], unbiased=False))).detach().cpu().numpy())
+            
+            crop_scores = np.array(crop_scores)
+            return crop_scores  
+
+        elif self.opt.measure_mode == 'Mask_R_square':
+            fake_B = fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
+                                            self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
+
+            real_B = real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
+                                            self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
+
+            crop_scores = []
+            for i in range(0,225):
+                print(self.criterionL2(real_B[i], fake_B[i]))
+                print(torch.var(real_B[i], unbiased=False))
+                crop_scores.append((1-(self.criterionL2(real_B[i], fake_B[i])/torch.var(real_B[i], unbiased=False))).detach().cpu().numpy())
+                print(crop_scores)
+                raise
+            crop_scores = np.array(crop_scores)
+            return crop_scores 
 
         else:
             raise ValueError("Please choose one measure mode!")

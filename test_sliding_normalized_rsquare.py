@@ -34,12 +34,11 @@ def plot_roc_curve(fpr, tpr, name):
     plt.savefig(name+'_roc_curve.png')
     plt.clf()
 def plot_distance_distribution(n_scores, s_scores, name):
-    # bins = np.linspace(0.000008,0.00005) # Mask MSE
-    # n_weights = np.ones_like(n_scores)/float(len(s_scores))
-    # s_weights = np.ones_like(s_scores)/float(len(s_scores))
-    plt.hist(s_scores, bins=30, alpha=0.5, density=True, label="smura")
-    plt.hist(n_scores, bins=30, alpha=0.5, density=True, label="normal")
+    bins = np.linspace(-1,5) # Mask MSE
+    plt.hist(s_scores, bins=bins, alpha=0.5, density=True, label="smura")
+    plt.hist(n_scores, bins=bins, alpha=0.5, density=True, label="normal")
     plt.xlabel('Anomaly Score')
+    plt.ylabel('Probability')
     plt.title('Distribution')
     plt.legend(loc='upper right')
     plt.savefig(name + '_score.png')
@@ -105,31 +104,34 @@ def prediction(labels, scores, name):
     print("Leakage Rate (FNR): ", FN/(FN+TP))
     print("F1-Score: ", f1_score(labels, pred_labels)) # sklearn ver: F1 = 2 * (precision * recall) / (precision + recall)
 def max_mean_prediction(labels, max_scores, mean_scores, name):
-    # score = a*max + b*mean
-    best_a, best_b = 0, 0
+    # score = a*max + b*mean + c
+    best_a, best_b, best_c = 0, 0, 0
     best_auc = 0
     for ten_a in range(0, 10, 1):
         a = ten_a/10.0
         for ten_b in range(0, 10, 1):
             b = ten_b/10.0
-            scores = a*max_scores + b*mean_scores
-            fpr, tpr, th = roc_curve(labels, scores)
-            current_auc = auc(fpr, tpr)
-            if current_auc >= best_auc:
-                best_auc = current_auc
-                best_a = a
-                best_b = b
+            for ten_thousand_c in range(-10, 5, 1): # y -0.0001~0.00005
+                c = ten_thousand_c/100000
+                scores = a*max_scores + b*mean_scores + c
+                fpr, tpr, th = roc_curve(labels, scores)
+                current_auc = auc(fpr, tpr)
+                if current_auc >= best_auc:
+                    best_auc = current_auc
+                    best_a = a
+                    best_b = b
+                    best_c = c
 
     print(best_auc)
     print(best_a)
     print(best_b)
+    print(best_c)
 
-    best_scores = best_a*max_scores + best_b*mean_scores
+    best_scores = best_a*max_scores + best_b*mean_scores + best_c
     pred_labels = [] 
     roc_auc, optimal_th = roc(labels, best_scores, name)
     for score in best_scores:
-        # if score >= optimal_th:
-        if score < optimal_th:
+        if score >= optimal_th:
             pred_labels.append(1)
         else:
             pred_labels.append(0)
@@ -168,6 +170,48 @@ if __name__ == "__main__":
     
     model = create_model(opt)
 
+    n_pos_score_log = []
+
+    for i, data in enumerate(dataset_list[0]):
+        print(f"img: {i}, {data['A_paths'][0][len(opt.testing_smura_dataroot):]}")
+        
+        bs, ncrops, c, h, w = data['A'].size()
+        data['A'] = data['A'].view(-1, c, h, w)
+
+        bs, ncrops, c, h, w = data['B'].size()
+        data['B'] = data['B'].view(-1, c, h, w)
+
+        bs, ncrops, c, h, w = data['M'].size()
+        data['M'] = data['M'].view(-1, c, h, w)
+
+        model.set_input(data) 
+        crop_scores = model.test() # 225 張小圖的 score
+        # print(crop_scores) # 確認位置是正確的
+        
+        n_pos_score_log.append(crop_scores)
+        # raise
+        
+    # print(len(n_pos_score_log))
+    # mean_list = []
+    # for pos in range(len(n_pos_score_log[1])):
+    #     sum = 0
+    #     for id in range(len(n_pos_score_log[0])):
+    #         sum += n_pos_score_log[id][pos]
+    #     mean_list.append(sum/len(n_pos_score_log[0]))
+    # print(np.array(mean_list))
+    # print(np.array(mean_list).shape)
+    # print(np.array(mean_list).mean())
+
+    # print(n_pos_score_log)
+    n_pos_score_log = np.array(n_pos_score_log)
+    n_pos_mean = np.mean(n_pos_score_log, axis=0)
+    # print(n_pos_mean)
+    # print(n_pos_mean.shape)
+    # print(n_pos_mean.mean())
+    n_pos_std = np.std(n_pos_score_log, axis=0)
+    n_pos_var = np.var(n_pos_score_log, axis=0)
+
+    # raise
     # 所有小圖
     n_score_log = None
     s_score_log = None
@@ -208,10 +252,14 @@ if __name__ == "__main__":
             model.set_input(data) 
             img_scores = model.test()
 
-            max_anomaly_score = np.min(img_scores) # Anomaly max
+            for pos in range(0, img_scores.shape[0]):
+                img_scores[pos] = (img_scores[pos]-n_pos_mean[pos])/n_pos_std[pos] # normalized
+
+            max_anomaly_score = np.max(img_scores) # Anomaly max
             mean_anomaly_score = np.mean(img_scores) # Anomaly mean
-            print(f"MSE Max: {max_anomaly_score}")
-            print(f"MSE Mean: {mean_anomaly_score}")
+
+            print(f"Max: {max_anomaly_score}")
+            print(f"Mean: {mean_anomaly_score}")
 
             if i == 0:
                 score_log = img_scores.copy()
@@ -231,6 +279,9 @@ if __name__ == "__main__":
             s_max_anomaly_score_log = max_anomaly_score_log.copy()
             s_mean_anomaly_score_log = mean_anomaly_score_log.copy()
 
+    print(f"Normal mean: {n_pos_mean.mean()}")
+    print(f"Normal std: {n_pos_std.mean()}")
+    print(f"Normal var: {n_pos_var.mean()}")
     # 所有normal smura小圖的平均
     print(f"Normal mean: {n_score_log.mean()}")
     print(f"Normal std: {n_score_log.std()}")
@@ -238,21 +289,20 @@ if __name__ == "__main__":
     print(f"Smura mean: {s_score_log.mean()}")
     print(f"Smura std: {s_score_log.std()}")
 
-    plot_distance_distribution(n_mean_anomaly_score_log, s_mean_anomaly_score_log, f"d23_8k_{opt.measure_mode}_MEAN")
-    plot_distance_distribution(n_max_anomaly_score_log, s_max_anomaly_score_log, f"d23_8k_{opt.measure_mode}_Max")
+    plot_distance_distribution(n_mean_anomaly_score_log, s_mean_anomaly_score_log, f"d23_8k_{opt.measure_mode}_MEAN_normalize_dist")
     plot_distance_scatter(n_max_anomaly_score_log, s_max_anomaly_score_log, 
-                            n_mean_anomaly_score_log, s_mean_anomaly_score_log, f"d23_8k_{opt.measure_mode}_Combined")
+                            n_mean_anomaly_score_log, s_mean_anomaly_score_log, f"d23_8k_{opt.measure_mode}_max_mean_normalize")
     
     all_max_anomaly_score_log = np.concatenate([n_max_anomaly_score_log, s_max_anomaly_score_log])
     all_mean_anomaly_score_log = np.concatenate([n_mean_anomaly_score_log, s_mean_anomaly_score_log])
     true_label = [0]*n_mean_anomaly_score_log.shape[0]+[1]*s_mean_anomaly_score_log.shape[0]
-
+    
     print("=====Anomaly Score Max=====")
-    prediction(true_label, all_max_anomaly_score_log, f"d23_8k_{opt.measure_mode}_MAX")
+    prediction(true_label, all_max_anomaly_score_log, f"d23_8k_{opt.measure_mode}_MAX_normalize")
     print("=====Anomaly Score Mean=====")
-    prediction(true_label, all_mean_anomaly_score_log, f"d23_8k_{opt.measure_mode}_MEAN")
+    prediction(true_label, all_mean_anomaly_score_log, f"d23_8k_{opt.measure_mode}_MEAN_normalize")
     print("=====Anomaly Score Max_Mean=====")
-    max_mean_prediction(true_label, all_max_anomaly_score_log, all_mean_anomaly_score_log, f"d23_8k_{opt.measure_mode}_max_mean")
+    max_mean_prediction(true_label, all_max_anomaly_score_log, all_mean_anomaly_score_log, f"d23_8k_{opt.measure_mode}_max_mean_normalize")
     
     '''
     # create website
