@@ -14,6 +14,7 @@ from util.util import tensor2im, mkdir
 from collections import defaultdict
 import cv2
 
+
 def draw_mura_position(isMask, save_path, fp, fn_series_list, crop_pos_list, stride):
     # 讀取大圖
     img = Image.open(fp)
@@ -72,8 +73,8 @@ if __name__ == "__main__":
     opt.no_flip = True  # no flip
     opt.display_id = -1 # no visdom display
     opt.loadSize = opt.fineSize  # Do not scale!
-    save_path = f"./{opt.inpainting_mode}_{opt.measure_mode}/"
-    mkdir(save_path)
+    opt.result_dir = f"./exp_result/{opt.inpainting_mode}_SSIM_d23_8k/{opt.measure_mode}"
+    mkdir(opt.result_dir)
     data_loader = CreateDataLoader(opt)
     dataset = defaultdict()
     dataset['normal'] = data_loader['normal'].load_data()
@@ -109,8 +110,8 @@ if __name__ == "__main__":
     df = pd.read_csv('./Mura_type_c_plus.csv')
     print(df.iloc[(df['h']+df['w']).argmax()][['fn','w','h']])
     print(df.iloc[(df['h']+df['w']).argmin()][['fn','w','h']])
-    mkdir(f"{save_path}check_inpaint_img/")
-    mkdir(f"{save_path}position/")
+    mkdir(f"{opt.result_dir}/check_inpaint_img/")
+    mkdir(f"{opt.result_dir}/position/")
     for i, data in enumerate(dataset['smura']):
         print(f"img: {i}")
         # (1,mini-batch,c,h,w) -> (mini-batch,c,h,w)，會有多一個維度是因為 dataloader batchsize 設 1
@@ -129,7 +130,7 @@ if __name__ == "__main__":
         fp = data['A_paths'][0]
         fn = fp[len(opt.testing_smura_dataroot):]
         fn_series_list = df[df['fn']==fn]
-        mkdir(f'{save_path}check_inpaint_img/{fn[:-4]}/')
+        mkdir(f'{opt.result_dir}/check_inpaint_img/{fn[:-4]}/')
 
         model.set_input(data) 
         crop_scores = model.test(fn) # 225 張小圖的 score
@@ -141,14 +142,14 @@ if __name__ == "__main__":
         crop_pos_list = np.argsort(-crop_scores)[:top_n] # 取前 n 張
         
         crop_pos_list_str = [f"{pos}\n" for pos in crop_pos_list]
-        with open(f"{save_path}check_inpaint_img/{fn[:-4]}/predicted_position.txt", 'w') as f:
+        with open(f"{opt.result_dir}/check_inpaint_img/{fn[:-4]}/predicted_position.txt", 'w') as f:
             f.writelines(crop_pos_list_str)
 
         # 畫圖 & 新增結果到 overlapping_df
         if "Mask" in opt.measure_mode or "Discount" in opt.measure_mode:
-            draw_mura_position(True, save_path, fp, fn_series_list, crop_pos_list, opt.crop_stride)
+            draw_mura_position(True, opt.result_dir, fp, fn_series_list, crop_pos_list, opt.crop_stride)
         else:
-            draw_mura_position(False, save_path, fp, fn_series_list, crop_pos_list, opt.crop_stride)
+            draw_mura_position(False, opt.result_dir, fp, fn_series_list, crop_pos_list, opt.crop_stride)
         # append 每張小圖的 MSE
         if i == 0:
             s_all_crop_scores = crop_scores.copy()

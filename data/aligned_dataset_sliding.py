@@ -17,7 +17,6 @@ class AlignedDatasetSliding(BaseDataset):
     def initialize(self, opt):
         self.opt = opt # param
         self.dir_A = opt.dataroot
-        # create img path list
         # train
         if (opt.isTrain) and (not opt.continue_train):
             self.A_paths = make_dataset(self.dir_A) # return image path list (image_folder.py)
@@ -50,9 +49,8 @@ class AlignedDatasetSliding(BaseDataset):
         # preprocessing
         if opt.isTrain:
             if self.opt.color_mode=='RGB':
-                # pixel range -1~1
                 transform_list = [transforms.ToTensor(),
-                                transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+                                transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)), # pixel range -1~1
                                 transforms.RandomCrop(self.opt.fineSize)]
             else:
                 transform_list = [transforms.ToTensor(),
@@ -87,41 +85,22 @@ class AlignedDatasetSliding(BaseDataset):
             # print(A_imgs[0] == A_imgs[1])
         else:
             A_img = self.transform(A)
-            (c, w, h) = A_img.size()
-            y_end_crop, x_end_crop = False, False
-            for y in range(0, w, self.opt.crop_stride): # stride default 32
+            c, w, h = A_img.size()
+            for y in range(0, h, self.opt.crop_stride): # stride default 32
                 # print(f"y {y}")
-
-                # y_end_crop = False
-                
-                for x in range(0, h, self.opt.crop_stride):
+                crop_y = y
+                if (y + self.opt.fineSize) > h:
+                    break
+                for x in range(0, w, self.opt.crop_stride):
                     # print(f"x {x}")
-
-                    # x_end_crop = False
-
-                    crop_y = y
-                    if (y + self.opt.fineSize) > w:
-                        # crop_y =  w - self.opt.fineSize
-                        # y_end_crop = True
-                        break
-
                     crop_x = x
-                    if (x + self.opt.fineSize) > h:
-                        # crop_x = h - self.opt.fineSize
-                        # x_end_crop = True
+                    if (x + self.opt.fineSize) > w:
                         break
-
                     crop_img = transforms.functional.crop(A_img, crop_y, crop_x, self.opt.fineSize, self.opt.fineSize)
                     A_imgs.append(crop_img)
 
-                    # if x_end_crop:
-                    #    break
-
-                # if x_end_crop and y_end_crop:
-                    # break
-
         A = torch.stack(A_imgs)
-
+        
         # Just zero the mask is fine if not offline_loading_mask.
         mask = A.clone().zero_()
         

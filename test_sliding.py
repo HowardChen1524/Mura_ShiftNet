@@ -1,182 +1,109 @@
 import time
 import os
+from collections import defaultdict
+
 from options.test_options import TestOptions
 from data.data_loader import CreateDataLoader
 from models import create_model
-from util.visualizer import save_images
-from util import html
 
+from util.utils_howard_old import mkdir, minmax_scaling, \
+                              plot_score_distribution, plot_score_scatter, \
+                              unsup_calc_metric, unsup_find_param_max_mean
+                              
 import numpy as np
-from sklearn.metrics import recall_score, accuracy_score, precision_score, f1_score, roc_curve, auc, confusion_matrix
-import matplotlib.pyplot as plt
-import torch
-from PIL import Image, ImageDraw
+from sklearn.preprocessing import MinMaxScaler
 
-def roc(labels, scores, name):
+def export_score(score_max, score_mean, path):
+  log_name = os.path.join(path, 'score_max_log.txt')
+  np.savetxt(log_name, score_max, delimiter=",")
+  log_name = os.path.join(path, 'score_mean_log.txt')
+  np.savetxt(log_name, score_mean, delimiter=",")
 
-    fpr, tpr, th = roc_curve(labels, scores)
-    
-    roc_auc = auc(fpr, tpr)
-    
-    optimal_th_index = np.argmax(tpr - fpr)
-    optimal_th = th[optimal_th_index]
+  print("save score finished!")
 
-    plot_roc_curve(fpr, tpr, name)
-    
-    return roc_auc, optimal_th
-def plot_roc_curve(fpr, tpr, name):
-    plt.plot(fpr, tpr, color='orange', label='ROC')
-    plt.plot([0, 1], [0, 1], color='darkblue', linestyle='--')
-    plt.xlabel('False Positive Rate')
-    plt.ylabel('True Positive Rate')
-    plt.title('Receiver Operating Characteristic (ROC) Curve')
-    plt.legend()
-    plt.savefig(name+'_roc_curve.png')
-    plt.clf()
-def plot_distance_distribution(n_scores, s_scores, name):
-    # bins = np.linspace(0.000008,0.00005) # Mask MSE
-    # n_weights = np.ones_like(n_scores)/float(len(s_scores))
-    # s_weights = np.ones_like(s_scores)/float(len(s_scores))
-    plt.hist(s_scores, bins=30, alpha=0.5, density=True, label="smura")
-    plt.hist(n_scores, bins=30, alpha=0.5, density=True, label="normal")
-    plt.xlabel('Anomaly Score')
-    plt.title('Distribution')
-    plt.legend(loc='upper right')
-    plt.savefig(name + '_score.png')
-    plt.clf()
-def plot_distance_scatter(n_max, s_max, n_mean, s_mean, name):
-    # normal
-    x1 = n_max
-    y1 = n_mean
-    # smura
-    x2 = s_max
-    y2 = s_mean
-    # 設定座標軸
-    # normal
-    plt.xlabel("max")
-    plt.ylabel("mean")
-    plt.title('scatter')
-    plt.scatter(x1, y1, s=5, c ="blue", alpha=0.3, label="normal")
-    plt.legend(loc='upper right')
-    plt.savefig(name + '_normal_scatter.png')
-    plt.clf()
-    # smura
-    plt.xlabel("max")
-    plt.ylabel("mean")
-    plt.title('scatter')
-    plt.scatter(x2, y2, s=5, c ="red", alpha=0.3, label="smura")
-    plt.legend(loc='upper right')
-    plt.savefig(name + '_smura_scatter.png')
-    plt.clf()
-    # all
-    plt.xlabel("max")
-    plt.ylabel("mean")
-    plt.title('scatter')
-    plt.scatter(x1, y1, s=5, c ="blue", alpha=0.3, label="normal")
-    plt.scatter(x2, y2, s=5, c ="red", alpha=0.3, label="smura")
-    plt.legend(loc='upper right')
-    plt.savefig(name + '_scatter.png')
-    plt.clf()
-def prediction(labels, scores, name):
-    pred_labels = [] 
-    roc_auc, optimal_th = roc(labels, scores, name)
-    for score in scores:
-        if score >= optimal_th:
-            pred_labels.append(1)
-        else:
-            pred_labels.append(0)
-    
-    cm = confusion_matrix(labels, pred_labels)
-    TP = cm[1][1]
-    FP = cm[0][1]
-    FN = cm[1][0]
-    TN = cm[0][0]
-    DATA_NUM = TN + FP + FN + TP
-    print("=====Prediction result=====")
-    print("Confusion Matrix (row1: TN,FP | row2: FN,TP):\n", cm)
-    print("AUC: ", roc_auc)
-    print("TPR-FPR Threshold: ", optimal_th)
-    print("Accuracy: ", (TP + TN)/DATA_NUM)
-    print("Recall (TPR): ", TP/(TP+FN))
-    print("TNR: ", TN/(FP+TN))
-    print("PPV: ", TP/(TP+FP))
-    print("NPV: ", TN/(FN+TN))
-    print("False Alarm Rate (FPR): ", FP/(FP+TN))
-    print("Leakage Rate (FNR): ", FN/(FN+TP))
-    print("F1-Score: ", f1_score(labels, pred_labels)) # sklearn ver: F1 = 2 * (precision * recall) / (precision + recall)
-def max_mean_prediction(labels, max_scores, mean_scores, name):
-    # score = a*max + b*mean
-    best_a, best_b = 0, 0
-    best_auc = 0
-    for ten_a in range(0, 10, 1):
-        a = ten_a/10.0
-        for ten_b in range(0, 10, 1):
-            b = ten_b/10.0
-            scores = a*max_scores + b*mean_scores
-            fpr, tpr, th = roc_curve(labels, scores)
-            current_auc = auc(fpr, tpr)
-            if current_auc >= best_auc:
-                best_auc = current_auc
-                best_a = a
-                best_b = b
+def show_and_save_result(score_unsup, minmax, path, name):
+  all_max_anomaly_score = np.concatenate([score_unsup['max']['n'], score_unsup['max']['s']])
+  all_mean_anomaly_score = np.concatenate([score_unsup['mean']['n'], score_unsup['mean']['s']])
+  true_label = [0]*score_unsup['mean']['n'].shape[0]+[1]*score_unsup['mean']['s'].shape[0]
+  
+  export_score(all_max_anomaly_score, all_mean_anomaly_score, path)
 
-    print(best_auc)
-    print(best_a)
-    print(best_b)
+  if minmax:
+    all_max_anomaly_score = minmax_scaling(all_max_anomaly_score)
+    score_unsup['max']['n'] =  all_max_anomaly_score[:score_unsup['max']['n'].shape[0]]
+    score_unsup['max']['s'] =  all_max_anomaly_score[score_unsup['max']['n'].shape[0]:]
 
-    best_scores = best_a*max_scores + best_b*mean_scores
-    pred_labels = [] 
-    roc_auc, optimal_th = roc(labels, best_scores, name)
-    for score in best_scores:
-        # if score >= optimal_th:
-        if score < optimal_th:
-            pred_labels.append(1)
-        else:
-            pred_labels.append(0)
+    all_mean_anomaly_score = minmax_scaling(all_mean_anomaly_score)
+    score_unsup['mean']['n'] =  all_mean_anomaly_score[:score_unsup['mean']['n'].shape[0]]
+    score_unsup['mean']['s'] =  all_mean_anomaly_score[score_unsup['mean']['n'].shape[0]:]
+
+  plot_score_distribution(score_unsup['mean']['n'], score_unsup['mean']['s'], path, name)
+  plot_score_scatter(score_unsup['max']['n'], score_unsup['max']['s'], score_unsup['mean']['n'], score_unsup['mean']['s'], path, name)
+
+  log_name = os.path.join(path, 'result_log.txt')
+  msg = ''
+  with open(log_name, "w") as log_file:
+    msg += f"=============== All small image mean & std =============\n"
+    msg += f"Normal mean: {score_unsup['all']['n'].mean()}\n"
+    msg += f"Normal std: {score_unsup['all']['n'].std()}\n"
+    msg += f"Smura mean: {score_unsup['all']['s'].mean()}\n"
+    msg += f"Smura std: {score_unsup['all']['s'].std()}\n"
+    msg += f"=============== Anomaly max prediction =================\n"    
+    msg += unsup_calc_metric(true_label, all_max_anomaly_score, path, f"{name}_max")
+    msg += f"=============== Anomaly mean prediction ================\n"
+    msg += unsup_calc_metric(true_label, all_mean_anomaly_score, path, f"{name}_mean")
+    msg += f"=============== Anomaly max & mean prediction ==========\n"
+    msg += unsup_find_param_max_mean(true_label, all_max_anomaly_score, all_mean_anomaly_score, path, f"{name}_max_mean")
     
-    cm = confusion_matrix(labels, pred_labels)
-    TP = cm[1][1]
-    FP = cm[0][1]
-    FN = cm[1][0]
-    TN = cm[0][0]
-    DATA_NUM = TN + FP + FN + TP
-    print("=====Prediction result=====")
-    print("Confusion Matrix (row1: TN,FP | row2: FN,TP):\n", cm)
-    print("AUC: ", roc_auc)
-    print("TPR-FPR Threshold: ", optimal_th)
-    print("Accuracy: ", (TP + TN)/DATA_NUM)
-    print("Recall (TPR): ", TP/(TP+FN))
-    print("TNR: ", TN/(FP+TN))
-    print("PPV: ", TP/(TP+FP))
-    print("NPV: ", TN/(FN+TN))
-    print("False Alarm Rate (FPR): ", FP/(FP+TN))
-    print("Leakage Rate (FNR): ", FN/(FN+TP))
-    print("F1-Score: ", f1_score(labels, pred_labels)) # sklearn ver: F1 = 2 * (precision * recall) / (precision + recall)
-             
+    log_file.write(msg)  
+ 
 if __name__ == "__main__":
     opt = TestOptions().parse()
     opt.nThreads = 1   # test code only supports nThreads = 1
     opt.batchSize = 1  # test code only supports batchSize = 1
-    # opt.serial_batches = True  # no shuffle
-    opt.serial_batches = False
+    opt.serial_batches = True  # no shuffle
+    # opt.serial_batches = False
     opt.no_flip = True  # no flip
     opt.display_id = -1 # no visdom display
     opt.loadSize = opt.fineSize  # Do not scale!
+    if opt.pos_normalize:
+        opt.result_dir = f"./exp_result/{opt.inpainting_mode}_SSIM_d23_8k/{opt.measure_mode}_pn"
+    else:
+        opt.result_dir = f"./exp_result/{opt.inpainting_mode}_SSIM_d23_8k/{opt.measure_mode}"
+    mkdir(opt.result_dir)
 
     data_loader = CreateDataLoader(opt)
-    dataset_list = [data_loader['normal'],data_loader['smura']]
     
     model = create_model(opt)
 
-    # 所有小圖
-    n_score_log = None
-    s_score_log = None
-    # 每張大圖的代表小圖
-    n_max_anomaly_score_log = None
-    n_mean_anomaly_score_log = None
-    s_max_anomaly_score_log = None
-    s_mean_anomaly_score_log = None
+    if opt.pos_normalize:
+        n_all_crop_scores = []
+        s_all_crop_scores = None
 
+        for i, data in enumerate(data_loader['normal']):
+            print(f"img: {i}")
+            bs, ncrops, c, h, w = data['A'].size()
+            data['A'] = data['A'].view(-1, c, h, w)
+
+            bs, ncrops, c, h, w = data['B'].size()
+            data['B'] = data['B'].view(-1, c, h, w)
+
+            bs, ncrops, c, h, w = data['M'].size()
+            data['M'] = data['M'].view(-1, c, h, w)
+
+            model.set_input(data) 
+            crop_scores = model.test() # 225 張小圖的 score
+        
+            n_all_crop_scores.append(crop_scores)
+            
+        n_all_crop_scores = np.array(n_all_crop_scores)
+        print(n_all_crop_scores.shape)
+        n_pos_mean = np.mean(n_all_crop_scores, axis=0)
+        n_pos_std = np.std(n_all_crop_scores, axis=0)
+    
+    res_unsup = defaultdict(dict)
+
+    dataset_list = [data_loader['normal'],data_loader['smura']]    
     for mode, dataset in enumerate(dataset_list): 
         
         if mode == 0:
@@ -207,11 +134,14 @@ if __name__ == "__main__":
             # it not only sets the input data with mask, but also sets the latent mask.
             model.set_input(data) 
             img_scores = model.test()
+            if opt.pos_normalize:
+                for pos in range(0,img_scores.shape[0]):
+                    img_scores[pos] = (img_scores[pos]-n_pos_mean[pos])/n_pos_std[pos]
 
-            max_anomaly_score = np.min(img_scores) # Anomaly max
+            max_anomaly_score = np.max(img_scores) # Anomaly max
             mean_anomaly_score = np.mean(img_scores) # Anomaly mean
-            print(f"MSE Max: {max_anomaly_score}")
-            print(f"MSE Mean: {mean_anomaly_score}")
+            print(f"{opt.measure_mode} Max: {max_anomaly_score}")
+            print(f"{opt.measure_mode} Mean: {mean_anomaly_score}")
 
             if i == 0:
                 score_log = img_scores.copy()
@@ -223,74 +153,13 @@ if __name__ == "__main__":
                 mean_anomaly_score_log = np.append(mean_anomaly_score_log, mean_anomaly_score)
 
         if mode == 0:
-            n_score_log = score_log.copy() # all 小圖
-            n_max_anomaly_score_log = max_anomaly_score_log.copy() # max
-            n_mean_anomaly_score_log = mean_anomaly_score_log.copy() # mean
+            res_unsup['all']['n'] = score_log.copy() # all 小圖
+            res_unsup['max']['n'] = max_anomaly_score_log.copy() # max
+            res_unsup['mean']['n'] = mean_anomaly_score_log.copy() # mean
         else:
-            s_score_log = score_log.copy()
-            s_max_anomaly_score_log = max_anomaly_score_log.copy()
-            s_mean_anomaly_score_log = mean_anomaly_score_log.copy()
-
-    # 所有normal smura小圖的平均
-    print(f"Normal mean: {n_score_log.mean()}")
-    print(f"Normal std: {n_score_log.std()}")
-
-    print(f"Smura mean: {s_score_log.mean()}")
-    print(f"Smura std: {s_score_log.std()}")
-
-    plot_distance_distribution(n_mean_anomaly_score_log, s_mean_anomaly_score_log, f"d23_8k_{opt.measure_mode}_MEAN")
-    plot_distance_distribution(n_max_anomaly_score_log, s_max_anomaly_score_log, f"d23_8k_{opt.measure_mode}_Max")
-    plot_distance_scatter(n_max_anomaly_score_log, s_max_anomaly_score_log, 
-                            n_mean_anomaly_score_log, s_mean_anomaly_score_log, f"d23_8k_{opt.measure_mode}_Combined")
+            res_unsup['all']['s'] = score_log.copy()
+            res_unsup['max']['s'] = max_anomaly_score_log.copy()
+            res_unsup['mean']['s'] = mean_anomaly_score_log.copy()
     
-    all_max_anomaly_score_log = np.concatenate([n_max_anomaly_score_log, s_max_anomaly_score_log])
-    all_mean_anomaly_score_log = np.concatenate([n_mean_anomaly_score_log, s_mean_anomaly_score_log])
-    true_label = [0]*n_mean_anomaly_score_log.shape[0]+[1]*s_mean_anomaly_score_log.shape[0]
-
-    print("=====Anomaly Score Max=====")
-    prediction(true_label, all_max_anomaly_score_log, f"d23_8k_{opt.measure_mode}_MAX")
-    print("=====Anomaly Score Mean=====")
-    prediction(true_label, all_mean_anomaly_score_log, f"d23_8k_{opt.measure_mode}_MEAN")
-    print("=====Anomaly Score Max_Mean=====")
-    max_mean_prediction(true_label, all_max_anomaly_score_log, all_mean_anomaly_score_log, f"d23_8k_{opt.measure_mode}_max_mean")
-    
-    '''
-    # create website
-    web_dir = os.path.join(opt.results_dir, opt.name, '%s_%s' % (opt.phase, opt.which_epoch))
-    webpage = html.HTML(web_dir, 'Experiment = %s, Phase = %s, Epoch = %s' % (opt.name, opt.phase, opt.which_epoch))
-
-    # test
-    for i, data in enumerate(dataset):
-        # 超過設定的測試張數就跳出
-        if i >= opt.how_many:
-            break
-        t1 = time.time()
-        model.set_input(data) # create real_A and real_B
-        model.test()
-        t2 = time.time()
-        # test 一張圖片的時間
-        #print(t2-t1)
-
-        visuals = model.get_current_visuals()
-        img_path = model.get_image_paths() # 取得圖片路徑
-        #print('process image... %s' % img_path)
-        # visualizer.py
-        save_images(webpage, visuals, img_path, aspect_ratio=opt.aspect_ratio, width=opt.display_winsize)
-    #webpage.save()
-    '''
-
-    '''
-    for OpenCV and Mean 待改
-    img_scores = [] 
-    for crop_id in range(256):
-        crop_data = {'A': torch.unsqueeze(data['A'][crop_id], 0), 
-                        'B': torch.unsqueeze(data['B'][crop_id], 0), 
-                        'M': torch.unsqueeze(data['M'][crop_id], 0), 
-                        'A_paths': data['A_paths']}
-        model.set_input(crop_data) 
-        crop_score = model.test()
-        img_scores.append(crop_score)
-    anomaly_score_log.extend(img_scores)
-    max_mse = np.max(img_scores)        
-    print(max_mse)
-    '''
+    names = f"{opt.inpainting_mode}_{opt.measure_mode}"
+    show_and_save_result(res_unsup, opt.minmax, opt.result_dir, names)

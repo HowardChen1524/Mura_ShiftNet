@@ -255,8 +255,6 @@ def cal_flag_given_mask_thred(mask, patch_size, stride, mask_thred):
 
     return flag
 
-
-
 def save_image(image_numpy, image_path):
     image_pil = Image.fromarray(image_numpy)
     image_pil.save(image_path)
@@ -539,3 +537,5 @@ def cal_gradient_penalty(netD, real_data, fake_data, device, type='mixed', const
         return gradient_penalty, gradients
     else:
         return 0.0, None
+
+

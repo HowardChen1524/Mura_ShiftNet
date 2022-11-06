@@ -57,15 +57,14 @@ class ShiftNetModel(BaseModel):
             self.model_names = ['G', 'D']
 
 
-        # batchsize should be 1 for mask_global
+        # batchsize should be 1 for mask_global，初始化 mask
         self.mask_global = torch.zeros((self.opt.batchSize, 1, \
                                  opt.fineSize, opt.fineSize), dtype=torch.bool)
-
-        # Here we need to set an artificial mask_global(center hole is ok.)
         self.mask_global.zero_() # 填滿 0
+        
         # 初始化預設 center
-        self.mask_global[:, :, int(self.opt.fineSize/4) + self.opt.overlap : int(self.opt.fineSize/2) + int(self.opt.fineSize/4) - self.opt.overlap,\
-                                int(self.opt.fineSize/4) + self.opt.overlap: int(self.opt.fineSize/2) + int(self.opt.fineSize/4) - self.opt.overlap] = 1
+        self.mask_global[:, :, int(self.opt.fineSize/4): int(self.opt.fineSize/2) + int(self.opt.fineSize/4),\
+                                int(self.opt.fineSize/4): int(self.opt.fineSize/2) + int(self.opt.fineSize/4)] = 1
 
         if len(opt.gpu_ids) > 0:
             self.mask_global = self.mask_global.to(self.device)
@@ -82,15 +81,6 @@ class ShiftNetModel(BaseModel):
         self.netG, self.ng_innerCos_list, self.ng_shift_list = networks.define_G(input_nc, opt.output_nc, opt.ngf,
                                       opt.which_model_netG, opt, self.mask_global, opt.norm, opt.use_spectral_norm_G, opt.init_type, self.gpu_ids, opt.init_gain)
         
-        # if self.isTrain:
-        #     use_sigmoid = False
-        #     if opt.gan_type == 'vanilla':
-        #         use_sigmoid = True  # only vanilla GAN using BCECriterion
-        #     # don't use cGAN
-        #     self.netD = networks.define_D(opt.input_nc, opt.ndf,
-        #                                   opt.which_model_netD,
-        #                                   opt.n_layers_D, opt.norm, use_sigmoid, opt.use_spectral_norm_D, opt.init_type, self.gpu_ids, opt.init_gain)
-        
         # 06/19 add for generator and discriminator
         use_sigmoid = False
         if opt.gan_type == 'vanilla':
@@ -104,8 +94,9 @@ class ShiftNetModel(BaseModel):
         if self.opt.color_mode == 'RGB':
             self.vgg16_extractor = util.VGG16FeatureExtractor()
             if len(opt.gpu_ids) > 0:
-                self.vgg16_extractor = self.vgg16_extractor.to(self.gpu_ids[0])
-                self.vgg16_extractor = torch.nn.DataParallel(self.vgg16_extractor, self.gpu_ids)
+                # self.vgg16_extractor = self.vgg16_extractor.to(self.gpu_ids[0])
+                self.vgg16_extractor = self.vgg16_extractor.to(self.device)
+                # self.vgg16_extractor = torch.nn.DataParallel(self.vgg16_extractor, self.gpu_ids) 多張 GPU 才需要
         
         if self.isTrain:
             self.old_lr = opt.lr
@@ -119,7 +110,7 @@ class ShiftNetModel(BaseModel):
                 self.criterionL2_content_loss = torch.nn.MSELoss()
                 # TV loss
                 self.tv_criterion = networks.TVLoss(self.opt.tv_weight)
-            self.criterionSSIM = SSIM().cuda()
+            self.criterionSSIM = SSIM().to(self.device)
 
             # initialize optimizers
             self.schedulers = []
@@ -143,7 +134,7 @@ class ShiftNetModel(BaseModel):
             self.criterionGAN = networks.GANLoss(gan_type=opt.gan_type).to(self.device)
             self.criterionL1 = torch.nn.L1Loss()
             self.criterionL2 = torch.nn.MSELoss()
-            self.criterionSSIM = SSIM().cuda()
+            self.criterionSSIM = SSIM().to(self.device)
             if self.opt.color_mode == 'RGB':
                 # VGG loss
                 self.criterionL2_style_loss = torch.nn.MSELoss()
@@ -178,9 +169,9 @@ class ShiftNetModel(BaseModel):
         if not self.opt.offline_loading_mask:
             if self.opt.mask_type == 'center':
                 self.mask_global.zero_()
-                self.mask_global[:, :, int(self.opt.fineSize/4) + self.opt.overlap : int(self.opt.fineSize/2) + int(self.opt.fineSize/4) - self.opt.overlap,\
-                                    int(self.opt.fineSize/4) + self.opt.overlap: int(self.opt.fineSize/2) + int(self.opt.fineSize/4) - self.opt.overlap] = 1
-                self.rand_t, self.rand_l = int(self.opt.fineSize/4) + self.opt.overlap, int(self.opt.fineSize/4) + self.opt.overlap
+                self.mask_global[:, :, int(self.opt.fineSize/4): int(self.opt.fineSize/2) + int(self.opt.fineSize/4),\
+                                    int(self.opt.fineSize/4): int(self.opt.fineSize/2) + int(self.opt.fineSize/4)] = 1
+                self.rand_t, self.rand_l = int(self.opt.fineSize/4), int(self.opt.fineSize/4)
                 # print(self.mask_global[0][torch.where(self.mask_global[0]==1)].size())
                 
             elif self.opt.mask_type == 'random':
@@ -249,15 +240,15 @@ class ShiftNetModel(BaseModel):
         # print(self.fake_B.shape)
         # if batchsize > 1，tensor2im 只會取第一張
         if ~(self.opt.isTrain) and (fn != None):
-            mkdir(f"./check_inpaint_img/{fn[:-4]}")
+            mkdir(f"{opt.result_dir}check_inpaint_img/{fn[:-4]}")
             for i in range(0, self.fake_B.shape[0]): 
-                mkdir(f"./check_inpaint_img/{fn[:-4]}/{i}")
+                mkdir(f"{self.opt.result_dir}check_inpaint_img/{fn[:-4]}/{i}")
                 fake_img = tensor2im(torch.unsqueeze(self.fake_B[i],0))
                 fake_img = Image.fromarray(fake_img)
-                fake_img.save(f"./check_inpaint_img/{fn[:-4]}/{i}/inpaint.png")
+                fake_img.save(f"{self.opt.result_dir}check_inpaint_img/{fn[:-4]}/{i}/inpaint.png")
                 real_img = tensor2im(torch.unsqueeze(self.real_B[i],0))
                 real_img = Image.fromarray(real_img)
-                real_img.save(f"./check_inpaint_img/{fn[:-4]}/{i}/origin.png")
+                real_img.save(f"{self.opt.result_dir}check_inpaint_img/{fn[:-4]}/{i}/origin.png")
         
     # 06/18 add for testing
     def test(self, fn=None):
@@ -341,11 +332,11 @@ class ShiftNetModel(BaseModel):
             return self.criterionL2(real_B, fake_B).detach().cpu().numpy()
 
         elif self.opt.measure_mode == 'Mask_MSE':
-            fake_B = fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
-                                            self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
+            fake_B = fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2, \
+                                            self.rand_l:self.rand_l+self.opt.fineSize//2]
 
-            real_B = real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
-                                            self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]  
+            real_B = real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2, \
+                                            self.rand_l:self.rand_l+self.opt.fineSize//2]  
             return self.criterionL2(real_B, fake_B).detach().cpu().numpy()
         
         elif self.opt.measure_mode == 'MAE_sliding':
@@ -356,11 +347,11 @@ class ShiftNetModel(BaseModel):
             return crop_scores    
 
         elif self.opt.measure_mode == 'Mask_MAE_sliding':
-            fake_B = fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
-                                            self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
+            fake_B = fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2, \
+                                            self.rand_l:self.rand_l+self.opt.fineSize//2]
 
-            real_B = real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
-                                            self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]  
+            real_B = real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2, \
+                                            self.rand_l:self.rand_l+self.opt.fineSize//2]  
             crop_scores = []
             for i in range(0,225):
                 crop_scores.append(self.criterionL1(real_B[i], fake_B[i]).detach().cpu().numpy())
@@ -368,10 +359,10 @@ class ShiftNetModel(BaseModel):
             return crop_scores
         
         elif self.opt.measure_mode == 'Discounted_L1_sliding':
-            fake_B = fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
-                                                self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
-            real_B = real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
-                                                self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
+            fake_B = fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2, \
+                                                self.rand_l:self.rand_l+self.opt.fineSize//2]
+            real_B = real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2, \
+                                                self.rand_l:self.rand_l+self.opt.fineSize//2]
                                         
             crop_scores = []
             for i in range(0,225):
@@ -387,11 +378,11 @@ class ShiftNetModel(BaseModel):
             return crop_scores    
 
         elif self.opt.measure_mode == 'Mask_MSE_sliding':
-            fake_B = fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
-                                            self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
+            fake_B = fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2, \
+                                            self.rand_l:self.rand_l+self.opt.fineSize//2]
 
-            real_B = real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
-                                            self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]  
+            real_B = real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2, \
+                                            self.rand_l:self.rand_l+self.opt.fineSize//2]  
             crop_scores = []
             for i in range(0,225):
                 crop_scores.append(self.criterionL2(real_B[i], fake_B[i]).detach().cpu().numpy())
@@ -406,11 +397,11 @@ class ShiftNetModel(BaseModel):
             return crop_scores   
 
         elif self.opt.measure_mode == 'Mask_SSIM_sliding':
-            fake_B = fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
-                                            self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
+            fake_B = fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2, \
+                                            self.rand_l:self.rand_l+self.opt.fineSize//2]
 
-            real_B = real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
-                                            self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]  
+            real_B = real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2, \
+                                            self.rand_l:self.rand_l+self.opt.fineSize//2]  
             crop_scores = []
             for i in range(0,225):
                 crop_scores.append((1-self.criterionSSIM(torch.unsqueeze(real_B[i], 0), torch.unsqueeze(fake_B[i], 0))).detach().cpu().numpy())
@@ -429,11 +420,11 @@ class ShiftNetModel(BaseModel):
             return crop_scores   
 
         elif self.opt.measure_mode == 'Mask_MSE_SSIM_sliding':
-            fake_B = fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
-                                            self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
+            fake_B = fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2, \
+                                            self.rand_l:self.rand_l+self.opt.fineSize//2]
 
-            real_B = real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
-                                            self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]  
+            real_B = real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2, \
+                                            self.rand_l:self.rand_l+self.opt.fineSize//2]  
             MSE_crop_scores = []
             SSIM_crop_scores = []
             for i in range(0,225):
@@ -456,8 +447,8 @@ class ShiftNetModel(BaseModel):
             return crop_scores  
 
         elif self.opt.measure_mode == 'Mask_ADV_sliding':
-            fake_B = fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
-                                            self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
+            fake_B = fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2, \
+                                            self.rand_l:self.rand_l+self.opt.fineSize//2]
 
             self.netD.eval()
             with torch.no_grad():
@@ -482,11 +473,11 @@ class ShiftNetModel(BaseModel):
             return crop_scores  
 
         elif self.opt.measure_mode == 'Mask_Dis_sliding':
-            fake_B = fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
-                                            self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
+            fake_B = fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2, \
+                                            self.rand_l:self.rand_l+self.opt.fineSize//2]
 
-            real_B = real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
-                                            self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
+            real_B = real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2, \
+                                            self.rand_l:self.rand_l+self.opt.fineSize//2]
             self.netD.eval()
             with torch.no_grad():
                 pred_fake = self.netD(fake_B)
@@ -511,11 +502,11 @@ class ShiftNetModel(BaseModel):
             return crop_scores  
 
         elif self.opt.measure_mode == 'Mask_Style_VGG16_sliding':
-            fake_B = fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
-                                            self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
+            fake_B = fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2, \
+                                            self.rand_l:self.rand_l+self.opt.fineSize//2]
 
-            real_B = real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
-                                            self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
+            real_B = real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2, \
+                                            self.rand_l:self.rand_l+self.opt.fineSize//2]
             crop_scores = []
             for i in range(0,225):
                 score = 0.0
@@ -540,11 +531,11 @@ class ShiftNetModel(BaseModel):
             return crop_scores  
 
         elif self.opt.measure_mode == 'Mask_Content_VGG16_sliding':
-            fake_B = fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
-                                            self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
+            fake_B = fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2, \
+                                            self.rand_l:self.rand_l+self.opt.fineSize//2]
 
-            real_B = real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
-                                            self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
+            real_B = real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2, \
+                                            self.rand_l:self.rand_l+self.opt.fineSize//2]
             crop_scores = []
             for i in range(0,225):
                 score = 0.0
@@ -559,10 +550,10 @@ class ShiftNetModel(BaseModel):
         elif self.opt.measure_mode == 'G_loss_combined':
             crop_scores = []
 
-            mask_fake_B = fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
-                                                self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
-            mask_real_B = real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
-                                                self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
+            mask_fake_B = fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2, \
+                                                self.rand_l:self.rand_l+self.opt.fineSize//2]
+            mask_real_B = real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2, \
+                                                self.rand_l:self.rand_l+self.opt.fineSize//2]
             print(self.opt.gan_weight)
             print(self.opt.lambda_A)
             print(self.opt.mask_weight_G)
@@ -611,11 +602,11 @@ class ShiftNetModel(BaseModel):
             return crop_scores  
 
         elif self.opt.measure_mode == 'Mask_R_square':
-            fake_B = fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
-                                            self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
+            fake_B = fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2, \
+                                            self.rand_l:self.rand_l+self.opt.fineSize//2]
 
-            real_B = real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
-                                            self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
+            real_B = real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2, \
+                                            self.rand_l:self.rand_l+self.opt.fineSize//2]
 
             crop_scores = []
             for i in range(0,225):
@@ -655,11 +646,11 @@ class ShiftNetModel(BaseModel):
         # Has been verfied, for square mask, let D discrinate masked patch, improves the results.
         if self.opt.mask_type == 'center' or self.opt.mask_sub_type == 'rect': 
             # Using the cropped fake_B as the input of D.
-            fake_B = self.fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
-                                            self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
+            fake_B = self.fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2, \
+                                            self.rand_l:self.rand_l+self.opt.fineSize//2]
 
-            real_B = self.real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
-                                            self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]  
+            real_B = self.real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2, \
+                                            self.rand_l:self.rand_l+self.opt.fineSize//2]  
             
         self.pred_fake = self.netD(fake_B.detach())
         self.pred_real = self.netD(real_B)
@@ -688,10 +679,10 @@ class ShiftNetModel(BaseModel):
         fake_B = self.fake_B
         # Has been verfied, for square mask, let D discrinate masked patch, improves the results.
         if self.opt.mask_type == 'center' or self.opt.mask_sub_type == 'rect': 
-            fake_B = self.fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
-                                       self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
-            real_B = self.real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
-                                       self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
+            fake_B = self.fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2, \
+                                       self.rand_l:self.rand_l+self.opt.fineSize//2]
+            real_B = self.real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2, \
+                                       self.rand_l:self.rand_l+self.opt.fineSize//2]
         else:
             real_B = self.real_B
 
@@ -724,10 +715,10 @@ class ShiftNetModel(BaseModel):
         # When mask_type is 'center' or 'random_with_rect', we can add additonal mask region construction loss (traditional L1).
         # Only when 'discounting_loss' is 1, then the mask region construction loss changes to 'discounting L1' instead of normal L1.
         if self.opt.mask_type == 'center' or self.opt.mask_sub_type == 'rect': 
-            mask_patch_fake = self.fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
-                                                self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
-            mask_patch_real = self.real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2-2*self.opt.overlap, \
-                                                self.rand_l:self.rand_l+self.opt.fineSize//2-2*self.opt.overlap]
+            mask_patch_fake = self.fake_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2, \
+                                                self.rand_l:self.rand_l+self.opt.fineSize//2]
+            mask_patch_real = self.real_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2, \
+                                                self.rand_l:self.rand_l+self.opt.fineSize//2]
                                         
             # Using Discounting L1 loss
             self.loss_G_L1_m += self.criterionL1_mask(mask_patch_fake, mask_patch_real)*self.opt.mask_weight_G # 400
@@ -774,20 +765,3 @@ class ShiftNetModel(BaseModel):
         self.optimizer_G.zero_grad()
         self.backward_G()
         self.optimizer_G.step()
-
-    # def optimize_parameters_sliding(self, end_batch=False):
-    #     self.forward() # forward propagation
-        
-    #     # update D
-    #     self.set_requires_grad(self.netD, True)
-    #     self.backward_D() # back propagation
-    #     if end_batch:
-    #         self.optimizer_D.step() # gradient update
-    #         self.optimizer_D.zero_grad() # 清空 gradient
-
-    #     # update G
-    #     self.set_requires_grad(self.netD, False)
-    #     self.backward_G()
-    #     if end_batch:
-    #         self.optimizer_G.step() # adam
-    #         self.optimizer_G.zero_grad()
