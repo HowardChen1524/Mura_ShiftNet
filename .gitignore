@@ -18,3 +18,5 @@ masks/
 resized_paris/
 fakeB/
 shifted/
+exp_result/
+supervised_model/model.pt

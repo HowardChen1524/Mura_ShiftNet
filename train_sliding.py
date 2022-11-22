@@ -13,7 +13,7 @@ def plot_loss(epochs, loss, name):
     plt.ylabel('loss')
     plt.title(name)
     # plt.legend(loc='upper right')
-    plt.savefig(f"loss_{name}.png")
+    plt.savefig(f"{opt.checkpoints}/{opt.model_version}/loss_{name}.png")
     plt.clf()
     
 if __name__ == "__main__":

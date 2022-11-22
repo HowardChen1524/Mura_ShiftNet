@@ -23,18 +23,16 @@ class BaseOptions():
         parser.add_argument('--model', type=str, default='shiftnet', \
                                  help='chooses which model to use. [shiftnet|res_shiftnet|patch_soft_shiftnet|res_patch_soft_shiftnet|test]')
         parser.add_argument('--triple_weight', type=float, default=1, help='The weight on the gradient of skip connections from the gradient of shifted')
-        parser.add_argument('--name', type=str, default='exp', help='name of the experiment. It decides where to store samples and models')
+        parser.add_argument('--model_version', type=str, default='exp', help='model_version name')
         parser.add_argument('--n_layers_D', type=int, default=3, help='only used if which_model_netD==n_layers')
         parser.add_argument('--gpu_ids', type=str, default='0', help='gpu ids: e.g. 0  0,1,2, 0,2, use \'-1 \' for cpu training/testing')
-        # parser.add_argument('--dataset_mode', type=str, default='aligned', help='chooses how datasets are loaded. [aligned|aligned_resized|single]')
-        parser.add_argument('--dataset_mode', type=str, default='aligned_resized', help='chooses how datasets are loaded. [aligned|aligned_resized|aligned_sliding|aligned_type_c|single]')
+        parser.add_argument('--dataset_mode', type=str, default='aligned_sliding', help='chooses how datasets are loaded. [aligned|aligned_resized|aligned_sliding|aligned_type_c|single]')
         parser.add_argument('--nThreads', default=2, type=int, help='# threads for loading data')
         parser.add_argument('--checkpoints_dir', type=str, default='./log', help='models are saved here')
         parser.add_argument('--norm', type=str, default='instance', help='[instance|batch|switchable] normalization')
         parser.add_argument('--serial_batches', action='store_true', help='if true, takes images in order to make batches, otherwise takes them randomly')
         parser.add_argument('--display_winsize', type=int, default=256,  help='display window size')
-        parser.add_argument('--suffix', default='', type=str, help='customized suffix: opt.name = opt.name + suffix: e.g., {model}_{which_model_netG}_size{loadSize}')
-
+        parser.add_argument('--suffix', default='', type=str, help='customized suffix: opt.model_version = opt.model_version + suffix: e.g., {model}_{which_model_netG}_size{loadSize}')
         parser.add_argument('--max_dataset_size', type=int, default=float("inf"), help='Maximum number of samples allowed per dataset. If the dataset directory contains more than max_dataset_size, only a subset is loaded.')
         parser.add_argument('--resize_or_crop', type=str, default='resize_and_crop', help='scaling and cropping of images at load time [resize_and_crop|crop|scale_width]')
         parser.add_argument('--no_flip', action='store_true', help='if specified, do not flip the images for data argumentation')
@@ -44,15 +42,12 @@ class BaseOptions():
         ## model specific
         parser.add_argument('--mask_type', type=str, default='center',
                             help='the type of mask you want to apply, \'center\' or \'random\'')
-        # parser.add_argument('--mask_sub_type', type=str, default='island',
-                            # help='the type of mask you want to apply, \'rect \' or \'fractal \' or \'island \'')
         parser.add_argument('--mask_sub_type', type=str, default='rect',
                             help='the type of mask you want to apply, \'rect \' or \'fractal \' or \'island \'')
         parser.add_argument('--lambda_A', type=int, default=100, help='weight on L1 term in objective')
         parser.add_argument('--stride', type=int, default=1, help='should be dense, 1 is a good option.')
         parser.add_argument('--shift_sz', type=int, default=1, help='shift_sz>1 only for \'soft_shift_patch\'.')
         parser.add_argument('--mask_thred', type=int, default=1, help='number to decide whether a patch is masked')
-        # parser.add_argument('--overlap', type=int, default=4, help='the overlap for center mask')
         parser.add_argument('--overlap', type=int, default=0, help='the overlap for center mask')
         parser.add_argument('--bottleneck', type=int, default=512, help='neurals of fc')
         parser.add_argument('--gp_lambda', type=float, default=10.0, help='gradient penalty coefficient')
@@ -69,7 +64,7 @@ class BaseOptions():
         parser.add_argument('--style_weight', type=float, default=10.0, help='the weight of style loss')
         parser.add_argument('--content_weight', type=float, default=1.0, help='the weight of content loss')
         parser.add_argument('--tv_weight', type=float, default=0.0, help='the weight of tv loss, you can set a small value, such as 0.1/0.01')
-        parser.add_argument('--offline_loading_mask', type=int, default=0, help='whether to load mask offline randomly')
+        # parser.add_argument('--offline_loading_mask', type=int, default=0, help='whether to load mask offline randomly')
         parser.add_argument('--mask_weight_G', type=float, default=400.0, help='the weight of mask part in ouput of G, you can try different mask_weight')
         parser.add_argument('--discounting', type=int, default=1, help='the loss type of mask part, whether using discounting l1 loss or normal l1')
         parser.add_argument('--use_spectral_norm_D', type=int, default=1, help='whether to add spectral norm to D, it helps improve results')
@@ -112,7 +107,7 @@ class BaseOptions():
         print(message)
 
         # save to the disk
-        expr_dir = os.path.join(opt.checkpoints_dir, opt.name)
+        expr_dir = os.path.join(opt.checkpoints_dir, opt.model_version)
         util.mkdirs(expr_dir)
         file_name = os.path.join(expr_dir, 'opt.txt')
         with open(file_name, 'wt') as opt_file:
@@ -127,7 +122,7 @@ class BaseOptions():
         # process opt.suffix
         if opt.suffix:
             suffix = ('_' + opt.suffix.format(**vars(opt))) if opt.suffix != '' else ''
-            opt.name = opt.name + suffix
+            opt.model_version = opt.model_version + suffix
 
         self.print_options(opt)
 

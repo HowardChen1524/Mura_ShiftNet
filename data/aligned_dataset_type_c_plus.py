@@ -84,7 +84,7 @@ class AlignedDatasetTypeCPlus(BaseDataset):
                 # print(f'x: {crop_x}')
                 # print(f'y: {crop_y}')
                 A = transforms.functional.crop(A, crop_y, crop_x, self.bounding_box, self.bounding_box)
-            # Just zero the mask is fine if not offline_loading_mask.
+
             mask = A.clone().zero_()
 
             # let B directly equals A

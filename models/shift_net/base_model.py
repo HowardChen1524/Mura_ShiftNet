@@ -12,7 +12,7 @@ class BaseModel():
         self.gpu_ids = opt.gpu_ids
         self.isTrain = opt.isTrain
         self.device = torch.device('cuda:{}'.format(self.gpu_ids[0])) if self.gpu_ids else torch.device('cpu')
-        self.save_dir = os.path.join(opt.checkpoints_dir, opt.name)
+        self.save_dir = os.path.join(opt.checkpoints_dir, opt.model_version)
         if opt.resize_or_crop != 'scale_width':
             torch.backends.cudnn.benchmark = True
         self.loss_names = []

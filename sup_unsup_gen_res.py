@@ -2,35 +2,47 @@ import time
 import os
 from collections import defaultdict
 
+import numpy as np
+import pandas as pd
+
+import torch
+import torch.nn as nn
+
 from options.test_options import TestOptions
 from data.data_loader import CreateDataLoader
 from models import create_model
 
-from util.utils_howard import mkdir, \
-                              plot_score_distribution, plot_score_scatter, \
-                              unsup_calc_metric, unsup_find_param_max_mean, set_seed
-                              
-import numpy as np
-import pandas as pd
+from util.utils_howard import mkdir, minmax_scaling, \
+                              get_data_info, make_test_dataloader, evaluate, get_line_threshold, \
+                              plot_score_distribution, plot_sup_unsup_scatter, plot_line_on_scatter, \
+                              sup_unsup_prediction_spec_th, sup_unsup_prediction_spec_multi_th, \
+                              sup_unsup_prediction_auto_th, sup_unsup_prediction_auto_multi_th, sup_unsup_svm, \
+                              sup_prediction_spec_th, get_value_threshold, set_seed
 
 def initail_setting():
-    opt = TestOptions().parse()
-    opt.nThreads = 1   # test code only supports nThreads = 1
-    opt.batchSize = 1  # test code only supports batchSize = 1
-    opt.serial_batches = True  # no shuffle
-    opt.no_flip = True  # no flip
-    opt.display_id = -1 # no visdom display
-    opt.loadSize = opt.fineSize  # Do not scale!
+  opt = TestOptions().parse()
+  opt.nThreads = 1   # test code only supports nThreads = 1
+  opt.batchSize = 1  # test code only supports batchSize = 1
+  opt.serial_batches = True  # no shuffle
+  opt.no_flip = True  # no flip
+  opt.display_id = -1 # no visdom display
+  opt.loadSize = opt.fineSize  # Do not scale!
+  
+  opt.results_dir = f"{opt.results_dir}/{opt.model_version}_with_SEResNeXt101_d23/{opt.data_version}/{opt.measure_mode}"
+  
+  mkdir(opt.results_dir)
 
-    opt.results_dir = f"{opt.results_dir}/{opt.model_version}/{opt.data_version}/{opt.measure_mode}"
+  set_seed(2022)
+  
+  return opt, opt.gpu_ids[0]
+  
+def export_conf_score(conf_sup, score_unsup, path):
+  sup_name = conf_sup['files_res']['all']
+  sup_conf = np.concatenate([conf_sup['preds_res']['n'], conf_sup['preds_res']['s']])
+  sup_label = [0]*len(conf_sup['preds_res']['n'])+[1]*len(conf_sup['preds_res']['s'])
+  df_sup = pd.DataFrame(list(zip(sup_name,sup_conf,sup_label)), columns=['name', 'conf', 'label'])
+  df_sup.to_csv(os.path.join(path, 'sup_conf.csv'))
 
-    mkdir(opt.results_dir)
-
-    set_seed(2022)
-
-    return opt, opt.gpu_ids[0]
-
-def export_score(score_unsup, path):
   unsup_name = score_unsup['fn']['n'] + score_unsup['fn']['s']
   unsup_label = [0]*score_unsup['mean']['n'].shape[0]+[1]*score_unsup['mean']['s'].shape[0]
 
@@ -46,57 +58,29 @@ def export_score(score_unsup, path):
   unsup_label_all = [0]*score_unsup['all']['n'].shape[0]+[1]*score_unsup['all']['s'].shape[0]
   df_unsup_all = pd.DataFrame(list(zip(unsup_score_all,unsup_label_all)), columns=['score', 'label'])
   df_unsup_all.to_csv(os.path.join(path, 'unsup_score_all.csv'), index=False)
-  print("save score finished!")
+  print("save conf score finished!")
 
-def show_and_save_result(score_unsup, path, name):
-  all_max_anomaly_score = np.concatenate([score_unsup['max']['n'], score_unsup['max']['s']])
-  all_mean_anomaly_score = np.concatenate([score_unsup['mean']['n'], score_unsup['mean']['s']])
-  true_label = [0]*score_unsup['mean']['n'].shape[0]+[1]*score_unsup['mean']['s'].shape[0]
+def supervised_model_prediction(opt, gpu):
+  image_info = pd.read_csv(opt.csv_path)
+  ds_sup = defaultdict(dict)
+  for x in ["test"]:
+      for y in ["mura", "normal"]:
+          if y == "mura":
+              label = 1
+          elif y == "normal":
+              label = 0
+          ds_sup[x][y] = get_data_info(x, label, image_info, opt.data_dir, opt.csv_path)
 
-  plot_score_distribution(score_unsup['mean']['n'], score_unsup['mean']['s'], path, name)
-  plot_score_scatter(score_unsup['max']['n'], score_unsup['max']['s'], score_unsup['mean']['n'], score_unsup['mean']['s'], path, name)
+  dataloaders = make_test_dataloader(ds_sup)
+  # read model
+  model_sup = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_se_resnext101_32x4d')
+  model_sup.fc = nn.Sequential(
+          nn.Linear(2048, 1),
+          nn.Sigmoid()
+      )
+  model_sup.load_state_dict(torch.load(opt.sup_model_path, map_location=torch.device(f"cuda:{gpu}")))  
   
-  log_name = os.path.join(path, 'result_log.txt')
-
-  msg = ''
-  with open(log_name, "w") as log_file:
-    msg += f"=============== All small image mean & std =============\n" 
-    msg += f"Normal mean: {score_unsup['all']['n'].mean()}\n"
-    msg += f"Normal std: {score_unsup['all']['n'].std()}\n"
-    msg += f"Smura mean: {score_unsup['all']['s'].mean()}\n"
-    msg += f"Smura std: {score_unsup['all']['s'].std()}\n"
-    msg += f"=============== Anomaly max prediction =================\n"    
-    msg += unsup_calc_metric(true_label, all_max_anomaly_score, path, f"{name}_max")
-    msg += f"=============== Anomaly mean prediction ================\n"
-    msg += unsup_calc_metric(true_label, all_mean_anomaly_score, path, f"{name}_mean")
-    msg += f"=============== Anomaly max & mean prediction ==========\n"
-    msg += unsup_find_param_max_mean(true_label, all_max_anomaly_score, all_mean_anomaly_score, path, f"{name}_max_mean")
-    
-    log_file.write(msg)  
-
-def model_prediction_using_record(opt):
-    res_unsup = defaultdict(dict)
-    for l in ['max', 'mean', 'label', 'fn']:
-        for t in ['n','s']:
-            res_unsup[l][t] = None
-
-    max_df = pd.read_csv(os.path.join(opt.results_dir, 'unsup_score_max.csv'))
-    mean_df = pd.read_csv(os.path.join(opt.results_dir, 'unsup_score_mean.csv'))
-    merge_df = max_df.merge(mean_df, left_on='name', right_on='name')
-    
-    normal_filter = (merge_df['label_x']==0) & (merge_df['label_y']==0)
-    smura_filter = (merge_df['label_x']==1) & (merge_df['label_y']==1)
-    for l, c in zip(['max', 'mean', 'label', 'fn'],['score_max', 'score_mean', 'label_y','name']):
-        for t, f in zip(['n', 's'],[normal_filter, smura_filter]):
-            res_unsup[l][t] = np.array(merge_df[c][f].tolist())
-
-    all_df = pd.read_csv(os.path.join(opt.results_dir, 'unsup_score_all.csv'))
-    normal_filter = (all_df['label']==0)
-    smura_filter = (all_df['label']==1)
-    res_unsup['all']['n'] = np.array(all_df['score'][normal_filter].tolist())
-    res_unsup['all']['s'] = np.array(all_df['score'][smura_filter].tolist())
-
-    return res_unsup
+  return evaluate(model_sup, dataloaders, opt.results_dir)
 
 def unsupervised_model_prediction(opt):
   res_unsup = defaultdict(dict)
@@ -144,7 +128,7 @@ def unsupervised_model_prediction(opt):
     print(f"Mode(0:normal,1:smura): {mode}, {opt.how_many}")
     for i, data in enumerate(dataset):
         if i >= opt.how_many:
-            break
+          break
         fn = data['A_paths'][0][fn_len:]
         print(f"Image num {i}: {fn}")
         fn_log.append(fn)
@@ -195,18 +179,15 @@ def unsupervised_model_prediction(opt):
         res_unsup['fn']['s'] = fn_log
   return res_unsup
 
-if __name__ == "__main__":
+if __name__ == '__main__':
+  
+  opt, gpu = initail_setting()  
+  
+  # ===== supervised =====
+  res_sup = supervised_model_prediction(opt, gpu)
+  
+  # ===== unsupervised =====
+  res_unsup = unsupervised_model_prediction(opt)
 
-    opt, gpu = initail_setting()  
-
-    # whether use record csv file to predict
-    if opt.using_record:
-        res_unsup = model_prediction_using_record(opt)
-    else:
-        res_unsup = unsupervised_model_prediction(opt)
-
-    names = f"{opt.measure_mode}"
-    show_and_save_result(res_unsup, opt.results_dir, names)
-
-    if not opt.using_record:
-        export_score(res_unsup, opt.results_dir)
+  export_conf_score(res_sup, res_unsup, opt.results_dir) # 記錄下來，防止每次都要重跑
+  

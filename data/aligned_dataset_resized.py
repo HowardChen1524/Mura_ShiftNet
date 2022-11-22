@@ -35,7 +35,6 @@ class AlignedDatasetResized(BaseDataset):
 
         A = self.transform(A)
 
-        # Just zero the mask is fine if not offline_loading_mask.
         mask = A.clone().zero_()
 
         # let B directly equals A

@@ -166,28 +166,24 @@ class ShiftNetModel(BaseModel):
         # raise
 
         # create mask online
-        if not self.opt.offline_loading_mask:
-            if self.opt.mask_type == 'center':
-                self.mask_global.zero_()
-                self.mask_global[:, :, int(self.opt.fineSize/4): int(self.opt.fineSize/2) + int(self.opt.fineSize/4),\
-                                    int(self.opt.fineSize/4): int(self.opt.fineSize/2) + int(self.opt.fineSize/4)] = 1
-                self.rand_t, self.rand_l = int(self.opt.fineSize/4), int(self.opt.fineSize/4)
-                # print(self.mask_global[0][torch.where(self.mask_global[0]==1)].size())
-                
-            elif self.opt.mask_type == 'random':
-                # 函数tensor1.type_as(tensor2)将1的数据类型转换为2的数据类型
-                self.mask_global = self.create_random_mask().type_as(self.mask_global).view(1, *self.mask_global.size()[-3:])
-                # ***重要***
-                # As generating random masks online are computation-heavy
-                # So just generate one ranodm mask for a batch images. 
-                self.mask_global = self.mask_global.expand(self.opt.batchSize, *self.mask_global.size()[-3:])
-            else:
-                raise ValueError("Mask_type [%s] not recognized." % self.opt.mask_type)
-        # For loading mask offline, we also need to change 'opt.mask_type' and 'opt.mask_sub_type'
-        # to avoid forgetting such settings.
+        
+        if self.opt.mask_type == 'center':
+            self.mask_global.zero_()
+            self.mask_global[:, :, int(self.opt.fineSize/4): int(self.opt.fineSize/2) + int(self.opt.fineSize/4),\
+                                int(self.opt.fineSize/4): int(self.opt.fineSize/2) + int(self.opt.fineSize/4)] = 1
+            self.rand_t, self.rand_l = int(self.opt.fineSize/4), int(self.opt.fineSize/4)
+            # print(self.mask_global[0][torch.where(self.mask_global[0]==1)].size())
+            
+        elif self.opt.mask_type == 'random':
+            # 函数tensor1.type_as(tensor2)将1的数据类型转换为2的数据类型
+            self.mask_global = self.create_random_mask().type_as(self.mask_global).view(1, *self.mask_global.size()[-3:])
+            # ***重要***
+            # As generating random masks online are computation-heavy
+            # So just generate one ranodm mask for a batch images. 
+            self.mask_global = self.mask_global.expand(self.opt.batchSize, *self.mask_global.size()[-3:])
         else:
-            self.opt.mask_type = 'random'
-            self.opt.mask_sub_type = 'island'
+            raise ValueError("Mask_type [%s] not recognized." % self.opt.mask_type)
+
 
         self.set_latent_mask(self.mask_global)
 

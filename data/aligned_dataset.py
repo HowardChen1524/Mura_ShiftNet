@@ -14,9 +14,9 @@ class AlignedDataset(BaseDataset):
         self.opt = opt
         self.dir_A = opt.dataroot
         self.A_paths = sorted(make_dataset(self.dir_A))
-        if self.opt.offline_loading_mask: # 預設 False, 用自己的 mask
-            self.mask_folder = self.opt.training_mask_folder if self.opt.isTrain else self.opt.testing_mask_folder
-            self.mask_paths = sorted(make_dataset(self.mask_folder))
+        # if self.opt.offline_loading_mask: # 預設 False, 用自己的 mask
+        #     self.mask_folder = self.opt.training_mask_folder if self.opt.isTrain else self.opt.testing_mask_folder
+        #     self.mask_paths = sorted(make_dataset(self.mask_folder))
 
         assert(opt.resize_or_crop == 'resize_and_crop')
 
@@ -67,13 +67,13 @@ class AlignedDataset(BaseDataset):
 
         # Just zero the mask is fine if not offline_loading_mask.
         mask = A.clone().zero_()
-        if self.opt.offline_loading_mask:
-            if self.opt.isTrain:
-                mask = Image.open(self.mask_paths[random.randint(0, len(self.mask_paths)-1)])
-            else:
-                mask = Image.open(self.mask_paths[index % len(self.mask_paths)])
-            mask = mask.resize((self.opt.fineSize, self.opt.fineSize), Image.NEAREST)
-            mask = transforms.ToTensor()(mask)
+        # if self.opt.offline_loading_mask:
+        #     if self.opt.isTrain:
+        #         mask = Image.open(self.mask_paths[random.randint(0, len(self.mask_paths)-1)])
+        #     else:
+        #         mask = Image.open(self.mask_paths[index % len(self.mask_paths)])
+        #     mask = mask.resize((self.opt.fineSize, self.opt.fineSize), Image.NEAREST)
+        #     mask = transforms.ToTensor()(mask)
     
         return {'A': A, 'B': B, 'A_F': A_flip, 'B_F': B_flip, 'M': mask,
                 'A_paths': A_path}

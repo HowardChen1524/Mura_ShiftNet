@@ -25,17 +25,14 @@ class TrainOptions(BaseOptions):
         parser.add_argument('--niter_decay', type=int, default=0, help='# of iter to linearly decay learning rate to zero')
         parser.add_argument('--beta1', type=float, default=0.5, help='momentum term of adam')
         parser.add_argument('--lr', type=float, default=0.0002, help='initial learning rate for adam')
-        parser.add_argument('--no_html', action='store_true', help='do not save intermediate training results to [opt.checkpoints_dir]/[opt.name]/web/')
+        parser.add_argument('--no_html', action='store_true', help='do not save intermediate training results to [opt.checkpoints_dir]/[opt.model_version]/web/')
         parser.add_argument('--lr_policy', type=str, default='lambda', help='learning rate policy: lambda|step|plateau|cosine')
         parser.add_argument('--lr_decay_iters', type=int, default=50, help='multiply by a gamma every lr_decay_iters iterations')
         parser.add_argument('--update_html_freq', type=int, default=1000, help='frequency of saving training results to html')
-        parser.add_argument('--training_mask_folder', type=str, default='masks/training_masks', help='prepared masks for training')
+        # parser.add_argument('--training_mask_folder', type=str, default='masks/training_masks', help='prepared masks for training')
         # New add
         parser.add_argument('--random_choose_num', type=int, default=10000, help='The number of training data')
         parser.add_argument('--crop_image_num', type=int, default=64, help='The number of cropping image')
-        parser.add_argument('--validate_normal_dataroot', type=str, default='', help='validation normal num')
-        parser.add_argument('--validate_smura_dataroot', type=str, default='', help='validation smura num')
-        parser.add_argument('--validaton_num', type=int, default=200, help='validation number')
 
         self.isTrain = True
 
