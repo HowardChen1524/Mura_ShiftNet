@@ -51,8 +51,9 @@ def export_score(score_unsup, path):
 def show_and_save_result(score_unsup, path, name):
   all_max_anomaly_score = np.concatenate([score_unsup['max']['n'], score_unsup['max']['s']])
   all_mean_anomaly_score = np.concatenate([score_unsup['mean']['n'], score_unsup['mean']['s']])
-  true_label = [0]*score_unsup['mean']['n'].shape[0]+[1]*score_unsup['mean']['s'].shape[0]
 
+  true_label = np.concatenate([score_unsup['label']['n'], score_unsup['label']['s']])
+  
   plot_score_distribution(score_unsup['mean']['n'], score_unsup['mean']['s'], path, name)
   plot_score_scatter(score_unsup['max']['n'], score_unsup['max']['s'], score_unsup['mean']['n'], score_unsup['mean']['s'], path, name)
   

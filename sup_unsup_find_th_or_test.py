@@ -67,7 +67,7 @@ def show_and_save_result(conf_sup, score_unsup, use_th, path, name):
     all_score_unsup = np.concatenate([score_unsup['score']['n'], score_unsup['score']['s']])
 
     true_label = np.concatenate([conf_sup['label']['n'], conf_sup['label']['s']])
-
+    
     plot_score_distribution(score_unsup['score']['n'], score_unsup['score']['s'], path, f"{name}_unsup")
     plot_sup_unsup_scatter(conf_sup, score_unsup, path, name)
     
@@ -149,13 +149,13 @@ def model_prediction_using_record(opt):
     
     for l, c in zip(['conf','label','files'],['conf','label_x','name']):
         for t, f in zip(['n', 's'],[normal_filter,smura_filter]):
-            res_sup[l][t] = merge_df[c][f].tolist()
-    print(res_sup['files']['n'][:10])
+            res_sup[l][t] = np.array(merge_df[c][f].tolist())
+    # print(res_sup['files']['n'][:10])
 
     for l, c in zip(['score','label','files'],['score_mean','label_y','name']):
         for t, f in zip(['n', 's'],[normal_filter, smura_filter]):
-            res_unsup[l][t] = merge_df[c][f].tolist()
-    print(res_unsup['files']['n'][:10])
+            res_unsup[l][t] = np.array(merge_df[c][f].tolist())
+    # print(res_unsup['files']['n'][:10])
     
     all_df = pd.read_csv(os.path.join(opt.results_dir, 'unsup_score_all.csv'))
     normal_filter = (all_df['label']==0)

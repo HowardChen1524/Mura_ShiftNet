@@ -44,17 +44,17 @@ smura_num=143
 # smura_num=85
 
 # only unsupervised model
-# for measure in ${measure_list[@]}
-# do
-#     python3 test_sliding.py \
-#     --batchSize=1 --use_spectral_norm_D=1 --which_model_netD="basic" --which_model_netG="unet_shift_triple" --model="shiftnet" --shift_sz=1 --mask_thred=1 \
-#     --loadSize=64 --fineSize=64 --crop_stride=32 --overlap=0 --dataset_mode="aligned_sliding" --mask_type="center" --input_nc=3 --output_nc=3 --color_mode="RGB" \
-#     --inpainting_mode="ShiftNet" --measure_mode=$measure --checkpoints_dir='./log' --model_version=$model_version --which_epoch="200" \
-#     --data_version=$dataset_version \
-#     --normal_how_many=$normal_num --testing_normal_dataroot=$unsup_test_normal_path \
-#     --smura_how_many=$smura_num --testing_smura_dataroot=$unsup_test_smura_path \
-#     --gpu_ids=0
-# done
+for measure in ${measure_list[@]}
+do
+    python3 test_sliding.py \
+    --batchSize=1 --use_spectral_norm_D=1 --which_model_netD="basic" --which_model_netG="unet_shift_triple" --model="shiftnet" --shift_sz=1 --mask_thred=1 \
+    --loadSize=64 --fineSize=64 --crop_stride=32 --overlap=0 --dataset_mode="aligned_sliding" --mask_type="center" --input_nc=3 --output_nc=3 --color_mode="RGB" \
+    --inpainting_mode="ShiftNet" --measure_mode=$measure --checkpoints_dir='./log' --model_version=$model_version --which_epoch="200" \
+    --data_version=$dataset_version \
+    --normal_how_many=$normal_num --testing_normal_dataroot=$unsup_test_normal_path \
+    --smura_how_many=$smura_num --testing_smura_dataroot=$unsup_test_smura_path \
+    --gpu_ids=0 --using_record
+done
 
 # supervised with unsupervised
 # for measure in ${measure_list[@]}
@@ -69,11 +69,11 @@ smura_num=143
 #     --sup_model_path="./supervised_model/model.pt" --data_dir=$sup_data_path --csv_path=$csv_path
 # done
 
-for measure in ${measure_list[@]}
-do
-    python3 sup_unsup_find_th_or_test.py \
-    --batchSize=1 --use_spectral_norm_D=1 --which_model_netD="basic" --which_model_netG="unet_shift_triple" --model="shiftnet" --shift_sz=1 --mask_thred=1 \
-    --loadSize=64 --fineSize=64 --crop_stride=32 --overlap=0 --dataset_mode="aligned_sliding" --mask_type="center" --input_nc=3 --output_nc=3 --color_mode="RGB" \
-    --inpainting_mode="ShiftNet" --measure_mode=$measure --checkpoints_dir='./log' --model_version=$model_version --which_epoch="200" \
-    --data_version $dataset_version
-done
+# for measure in ${measure_list[@]}
+# do
+#     python3 sup_unsup_find_th_or_test.py \
+#     --batchSize=1 --use_spectral_norm_D=1 --which_model_netD="basic" --which_model_netG="unet_shift_triple" --model="shiftnet" --shift_sz=1 --mask_thred=1 \
+#     --loadSize=64 --fineSize=64 --crop_stride=32 --overlap=0 --dataset_mode="aligned_sliding" --mask_type="center" --input_nc=3 --output_nc=3 --color_mode="RGB" \
+#     --inpainting_mode="ShiftNet" --measure_mode=$measure --checkpoints_dir='./log' --model_version=$model_version --which_epoch="200" \
+#     --data_version $dataset_version
+# done
