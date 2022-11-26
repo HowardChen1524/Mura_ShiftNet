@@ -17,7 +17,7 @@ from torch.utils.data import DataLoader
 import torchvision
 import tensorflow as tf
 import tensorflow_addons as tfa
-from PIL import Image
+from PIL import Image, ImageEnhance
 
 import matplotlib.pyplot as plt
 from sklearn import metrics
@@ -37,10 +37,19 @@ def mkdir(path):
     if not os.path.exists(path):
         os.makedirs(path)
 
-def minmax_scaling(scores):
-    scaler = MinMaxScaler(feature_range=(0, 1)).fit(scores.reshape(-1, 1))
-    minmax_scores = scaler.transform(scores.reshape(-1, 1)).reshape(-1,)
-    return minmax_scores
+def tensor2img(input_image):
+    if isinstance(input_image, torch.Tensor): 
+        image_tensor = input_image.detach().cpu()
+    else:
+        raise
+    transform = transforms.Compose([transforms.ToPILImage()])
+    image = transform((image_tensor+1) / 2.0)
+    return image
+
+def enhance_img(img,factor=5):
+  enh_con = ImageEnhance.Contrast(img)
+  new_img = enh_con.enhance(factor=factor)
+  return new_img
 
 def set_seed(seed, base=0, is_set=True):
   seed += base # 2022 + 0

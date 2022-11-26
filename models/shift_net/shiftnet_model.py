@@ -2,7 +2,7 @@ from collections import defaultdict
 import torch
 from torch.nn import functional as F
 from util import util
-from util.util import tensor2im, mkdir
+from util.utils_howard import tensor2img, mkdir, enhance_img
 from models import networks
 from models.shift_net.base_model import BaseModel
 import time
@@ -236,16 +236,26 @@ class ShiftNetModel(BaseModel):
         # print(self.fake_B.shape)
         # if batchsize > 1，tensor2im 只會取第一張
         if ~(self.opt.isTrain) and (fn != None):
-            mkdir(f"{opt.result_dir}check_inpaint_img/{fn[:-4]}")
-            for i in range(0, self.fake_B.shape[0]): 
-                mkdir(f"{self.opt.result_dir}check_inpaint_img/{fn[:-4]}/{i}")
-                fake_img = tensor2im(torch.unsqueeze(self.fake_B[i],0))
-                fake_img = Image.fromarray(fake_img)
-                fake_img.save(f"{self.opt.result_dir}check_inpaint_img/{fn[:-4]}/{i}/inpaint.png")
-                real_img = tensor2im(torch.unsqueeze(self.real_B[i],0))
-                real_img = Image.fromarray(real_img)
-                real_img.save(f"{self.opt.result_dir}check_inpaint_img/{fn[:-4]}/{i}/origin.png")
+            self.inpainting_path = os.path.join(self.opt.results_dir, 'check_inpaint')
+            self.export_inpaint_imgs(self.real_B, fn, self.inpainting_path, 0) # 0 true, 1 fake
+            self.export_inpaint_imgs(self.fake_B, fn, self.inpainting_path, 1) # 0 true, 1 fake
+    
+    def export_inpaint_imgs(self, output, name, path, img_type):
+        save_path = os.path.join(path, name)
         
+        if img_type == 0:
+            save_path =  os.path.join(save_path, 'real')
+
+        else:
+            save_path =  os.path.join(save_path, 'fake')
+
+        mkdir(save_path)
+        for idx, img in enumerate(output):
+            pil_img = tensor2img(img) 
+            pil_img.save(os.path.join(save_path,f"{idx}.png"))
+            pil_img_en = enhance_img(pil_img)
+            pil_img_en.save(os.path.join(save_path,f"en_{idx}.png"))
+
     # 06/18 add for testing
     def test(self, fn=None):
         # ======Inpainting method======
@@ -255,6 +265,7 @@ class ShiftNetModel(BaseModel):
                 self.forward(fn)
             fake_B = self.fake_B.detach() # Inpaint
             real_B = self.real_B # Original
+
         elif self.opt.inpainting_mode == 'OpenCV' and self.opt.color_mode != 'RGB':
             real_B = self.real_B # Original
             # print(real_B)
@@ -388,7 +399,7 @@ class ShiftNetModel(BaseModel):
         elif self.opt.measure_mode == 'SSIM_sliding':
             crop_scores = []
             for i in range(0,225):
-                crop_scores.append((1-self.criterionSSIM(torch.unsqueeze(real_B[i], 0), torch.unsqueeze(fake_B[i], 0))).detach().cpu().numpy())
+                crop_scores.append((self.criterionSSIM(torch.unsqueeze(real_B[i], 0), torch.unsqueeze(fake_B[i], 0))).detach().cpu().numpy())
             crop_scores = np.array(crop_scores)
             return crop_scores   
 
@@ -400,7 +411,7 @@ class ShiftNetModel(BaseModel):
                                             self.rand_l:self.rand_l+self.opt.fineSize//2]  
             crop_scores = []
             for i in range(0,225):
-                crop_scores.append((1-self.criterionSSIM(torch.unsqueeze(real_B[i], 0), torch.unsqueeze(fake_B[i], 0))).detach().cpu().numpy())
+                crop_scores.append((self.criterionSSIM(torch.unsqueeze(real_B[i], 0), torch.unsqueeze(fake_B[i], 0))).detach().cpu().numpy())
             crop_scores = np.array(crop_scores)
             return crop_scores
  

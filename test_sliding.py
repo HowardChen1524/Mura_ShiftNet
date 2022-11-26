@@ -49,32 +49,42 @@ def export_score(score_unsup, path):
   print("save score finished!")
 
 def show_and_save_result(score_unsup, path, name):
-  all_max_anomaly_score = np.concatenate([score_unsup['max']['n'], score_unsup['max']['s']])
-  all_mean_anomaly_score = np.concatenate([score_unsup['mean']['n'], score_unsup['mean']['s']])
+#   all_max_anomaly_score = np.concatenate([score_unsup['max']['n'], score_unsup['max']['s']])
+#   all_mean_anomaly_score = np.concatenate([score_unsup['mean']['n'], score_unsup['mean']['s']])
 
-  true_label = np.concatenate([score_unsup['label']['n'], score_unsup['label']['s']])
+#   true_label = np.concatenate([score_unsup['label']['n'], score_unsup['label']['s']])
   
-  plot_score_distribution(score_unsup['mean']['n'], score_unsup['mean']['s'], path, name)
-  plot_score_scatter(score_unsup['max']['n'], score_unsup['max']['s'], score_unsup['mean']['n'], score_unsup['mean']['s'], path, name)
+#   plot_score_distribution(score_unsup['mean']['n'], score_unsup['mean']['s'], path, name)
+#   plot_score_scatter(score_unsup['max']['n'], score_unsup['max']['s'], score_unsup['mean']['n'], score_unsup['mean']['s'], path, name)
   
-  log_name = os.path.join(path, 'result_log.txt')
+#   log_name = os.path.join(path, 'result_log.txt')
 
-  msg = ''
-  with open(log_name, "w") as log_file:
-    msg += f"=============== All small image mean & std =============\n" 
-    msg += f"Normal mean: {score_unsup['all']['n'].mean()}\n"
-    msg += f"Normal std: {score_unsup['all']['n'].std()}\n"
-    msg += f"Smura mean: {score_unsup['all']['s'].mean()}\n"
-    msg += f"Smura std: {score_unsup['all']['s'].std()}\n"
-    msg += f"=============== Anomaly max prediction =================\n"    
-    msg += unsup_calc_metric(true_label, all_max_anomaly_score, path, f"{name}_max")
-    msg += f"=============== Anomaly mean prediction ================\n"
-    msg += unsup_calc_metric(true_label, all_mean_anomaly_score, path, f"{name}_mean")
-    msg += f"=============== Anomaly max & mean prediction ==========\n"
-    msg += unsup_find_param_max_mean(true_label, all_max_anomaly_score, all_mean_anomaly_score, path, f"{name}_max_mean")
+#   msg = ''
+#   with open(log_name, "w") as log_file:
+#     msg += f"=============== All small image mean & std =============\n" 
+#     msg += f"Normal mean: {score_unsup['all']['n'].mean()}\n"
+#     msg += f"Normal std: {score_unsup['all']['n'].std()}\n"
+#     msg += f"Smura mean: {score_unsup['all']['s'].mean()}\n"
+#     msg += f"Smura std: {score_unsup['all']['s'].std()}\n"
+#     msg += f"=============== Anomaly max prediction =================\n"    
+#     msg += unsup_calc_metric(true_label, all_max_anomaly_score, path, f"{name}_max")
+#     msg += f"=============== Anomaly mean prediction ================\n"
+#     msg += unsup_calc_metric(true_label, all_mean_anomaly_score, path, f"{name}_mean")
+#     msg += f"=============== Anomaly max & mean prediction ==========\n"
+#     msg += unsup_find_param_max_mean(true_label, all_max_anomaly_score, all_mean_anomaly_score, path, f"{name}_max_mean")
     
-    log_file.write(msg)  
-
+#     log_file.write(msg)  
+    log_name = os.path.join(path, 'res_log.txt')
+    msg = ''
+    with open(log_name, "w") as log_file:
+        msg += f"=============== All small image mean & std =============\n"
+        msg += f"Normal mean: {score_unsup['all']['n'].mean()}\n"
+        msg += f"Normal std: {score_unsup['all']['n'].std()}\n"
+        msg += f"Smura mean: {score_unsup['all']['s'].mean()}\n"
+        msg += f"Smura std: {score_unsup['all']['s'].std()}\n"
+        
+        log_file.write(msg) 
+    
 def model_prediction_using_record(opt):
     res_unsup = defaultdict(dict)
     for l in ['max', 'mean', 'label', 'fn']:
@@ -165,8 +175,10 @@ def unsupervised_model_prediction(opt):
 
         # 建立 input real_A & real_B
         # it not only sets the input data with mask, but also sets the latent mask.
-        model.set_input(data) 
-        img_scores = model.test()
+        model.set_input(data)
+
+        img_scores = model.test(fn)
+        
         if opt.pos_normalize:
             for pos in range(0,img_scores.shape[0]):
                 img_scores[pos] = (img_scores[pos]-n_pos_mean[pos])/n_pos_std[pos]
