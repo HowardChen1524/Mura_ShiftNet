@@ -20,3 +20,4 @@ fakeB/
 shifted/
 exp_result/
 supervised_model/model.pt
+supervised_model/d23_8k_model.pt

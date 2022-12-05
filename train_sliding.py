@@ -13,7 +13,7 @@ def plot_loss(epochs, loss, name):
     plt.ylabel('loss')
     plt.title(name)
     # plt.legend(loc='upper right')
-    plt.savefig(f"{opt.checkpoints}/{opt.model_version}/loss_{name}.png")
+    plt.savefig(f"{opt.checkpoints_dir}/{opt.model_version}/loss_{name}.png")
     plt.clf()
     
 if __name__ == "__main__":
@@ -26,8 +26,10 @@ if __name__ == "__main__":
     
     # 建立 model
     model = create_model(opt)
+
     # 建立 visualizer
     visualizer = Visualizer(opt)
+
     # 初始化 total_steps
     total_steps = 0
     
@@ -38,7 +40,7 @@ if __name__ == "__main__":
     style_loss_list = []
     content_loss_list = []
     tv_loss_list = []
-    ssim_loss_list = []
+    # ssim_loss_list = []
 
     # 開始訓練
     for epoch in range(opt.epoch_count, opt.niter + opt.niter_decay + 1): # opt.epoch_count default 1
@@ -103,7 +105,7 @@ if __name__ == "__main__":
         style_loss_list.append(loss_dict['style'])
         content_loss_list.append(loss_dict['content'])
         tv_loss_list.append(loss_dict['tv'])
-        ssim_loss_list.append(loss_dict['ssim'])
+        # ssim_loss_list.append(loss_dict['ssim'])
 
         epoch_list = np.linspace(1, epoch, epoch).astype(int)
         plot_loss(epoch_list, GAN_loss_list, 'GAN')
@@ -112,7 +114,7 @@ if __name__ == "__main__":
         plot_loss(epoch_list, style_loss_list, 'style')
         plot_loss(epoch_list, content_loss_list, 'content')
         plot_loss(epoch_list, tv_loss_list, 'tv')
-        plot_loss(epoch_list, ssim_loss_list, 'ssim')
+        # plot_loss(epoch_list, ssim_loss_list, 'ssim')
         
         # print 一個 epoch 所花的時間
         print('End of epoch %d / %d \t Time Taken: %d sec' %

@@ -40,7 +40,8 @@ class ShiftNetModel(BaseModel):
 
         # specify the training losses you want to print out. The program will call base_model.get_current_losses
         if self.opt.color_mode == 'RGB':
-            self.loss_names = ['G_GAN', 'G_L1', 'D', 'style', 'content', 'tv', 'ssim']
+            # self.loss_names = ['G_GAN', 'G_L1', 'D', 'style', 'content', 'tv', 'ssim']
+            self.loss_names = ['G_GAN', 'G_L1', 'D', 'style', 'content', 'tv']
         else:
             self.loss_names = ['G_GAN', 'G_L1', 'D']
 
@@ -110,7 +111,7 @@ class ShiftNetModel(BaseModel):
                 self.criterionL2_content_loss = torch.nn.MSELoss()
                 # TV loss
                 self.tv_criterion = networks.TVLoss(self.opt.tv_weight)
-            self.criterionSSIM = SSIM().to(self.device)
+            # self.criterionSSIM = SSIM().to(self.device)
 
             # initialize optimizers
             self.schedulers = []
@@ -134,7 +135,7 @@ class ShiftNetModel(BaseModel):
             self.criterionGAN = networks.GANLoss(gan_type=opt.gan_type).to(self.device)
             self.criterionL1 = torch.nn.L1Loss()
             self.criterionL2 = torch.nn.MSELoss()
-            self.criterionSSIM = SSIM().to(self.device)
+            # self.criterionSSIM = SSIM().to(self.device)
             if self.opt.color_mode == 'RGB':
                 # VGG loss
                 self.criterionL2_style_loss = torch.nn.MSELoss()
@@ -145,7 +146,7 @@ class ShiftNetModel(BaseModel):
             
         if not self.isTrain or opt.continue_train:
             self.load_networks(opt.which_epoch)
- 
+            print('load model successful')
         self.print_networks(opt.verbose)
 
     def set_input(self, input):
@@ -229,40 +230,39 @@ class ShiftNetModel(BaseModel):
             self.netG(real_B) # input ground truth
 
 
-    def forward(self, fn=None):
+    def forward(self, mode, fn=None):
         self.set_gt_latent() # real_B，不知道幹嘛用
         self.fake_B = self.netG(self.real_A) # real_A 當 input 進去做 inpaint
         
         # print(self.fake_B.shape)
         # if batchsize > 1，tensor2im 只會取第一張
-        if ~(self.opt.isTrain) and (fn != None):
-            self.inpainting_path = os.path.join(self.opt.results_dir, 'check_inpaint')
-            self.export_inpaint_imgs(self.real_B, fn, self.inpainting_path, 0) # 0 true, 1 fake
-            self.export_inpaint_imgs(self.fake_B, fn, self.inpainting_path, 1) # 0 true, 1 fake
+        # if ~(self.opt.isTrain) and (fn != None):
+        #     self.inpainting_path = os.path.join(self.opt.results_dir, 'check_inpaint')
+        #     self.export_inpaint_imgs(self.real_B, mode, fn, self.inpainting_path, 0) # 0 true, 1 fake
+        #     self.export_inpaint_imgs(self.fake_B, mode, fn, self.inpainting_path, 1) # 0 true, 1 fake
     
-    def export_inpaint_imgs(self, output, name, path, img_type):
-        save_path = os.path.join(path, name)
+    def export_inpaint_imgs(self, output, mode, name, path, img_type):
+        save_path = os.path.join(path, f'{mode}/{name}')
         
         if img_type == 0:
             save_path =  os.path.join(save_path, 'real')
-
         else:
             save_path =  os.path.join(save_path, 'fake')
 
         mkdir(save_path)
         for idx, img in enumerate(output):
             pil_img = tensor2img(img) 
-            pil_img.save(os.path.join(save_path,f"{idx}.png"))
+            # pil_img.save(os.path.join(save_path,f"{idx}.png"))
             pil_img_en = enhance_img(pil_img)
             pil_img_en.save(os.path.join(save_path,f"en_{idx}.png"))
 
     # 06/18 add for testing
-    def test(self, fn=None):
+    def test(self, mode, fn=None):
         # ======Inpainting method======
         if self.opt.inpainting_mode == 'ShiftNet':
             # torch.no_grad() disables the gradient calculation，等於 torch.set_grad_enabled(False)                       
             with torch.no_grad():
-                self.forward(fn)
+                self.forward(mode, fn)
             fake_B = self.fake_B.detach() # Inpaint
             real_B = self.real_B # Original
 
@@ -752,9 +752,9 @@ class ShiftNetModel(BaseModel):
             self.loss_G += (self.loss_style + self.loss_content + self.loss_tv)
 
         # 08/23 new add SSIM loss
-        self.loss_ssim = 0
-        self.loss_ssim = 1 - self.criterionSSIM(self.fake_B, self.real_B)
-        self.loss_G += self.loss_ssim
+        # self.loss_ssim = 0
+        # self.loss_ssim = 1-self.criterionSSIM(self.fake_B, self.real_B)
+        # self.loss_G += self.loss_ssim
         
         self.loss_G.backward()
 

@@ -947,7 +947,7 @@ def plot_score_distribution(n_scores, s_scores, path, name):
     plt.xlabel('Anomaly Score')
     plt.title('Score Distribution')
     plt.legend(loc='upper right')
-    plt.savefig(f"{path}/{name}_dist_mean.png")
+    plt.savefig(f"{path}/{name}_dist.png")
     plt.clf()
 
 def plot_score_scatter(n_max, s_max, n_mean, s_mean, path, name):

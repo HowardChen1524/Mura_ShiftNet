@@ -2,28 +2,47 @@
 # /hcds_vol/private/howard/mura_data/typecplus/img/
 
 declare -a measure_list=(
-                        #  "MSE_sliding"
-                        #  "Mask_MSE_sliding"
-                         "SSIM_sliding"
-                         "Mask_SSIM_sliding"
+                         "MSE_sliding"
+                         "Mask_MSE_sliding"
+                        #  "SSIM_sliding"
+                        #  "Mask_SSIM_sliding"
                         #  "Dis_sliding"
                         #  "Mask_Dis_sliding"
                         #  "Style_VGG16_sliding"
                         #  "Mask_Style_VGG16_sliding"
-                        #  "Content_VGG16_sliding"
-                        #  "Mask_Content_VGG16_sliding"
+                         "Content_VGG16_sliding"
+                         "Mask_Content_VGG16_sliding"
                         )
 
 model_version="ShiftNet_SSIM_d23_4k"
 # model_version="ShiftNet_SSIM_d23_8k"
+# model_version="ShiftNet_d23_8k"
 
 dataset_version="mura_d23_4k"
 sup_data_path="/hcds_vol/private/howard/mura_data/d23_merge/" # for supervised model
 sup_csv_path="/hcds_vol/private/howard/mura_data/d23_merge/data_merged.csv" # for supervised model
 unsup_test_normal_path="/hcds_vol/private/howard/mura_data/d23_merge/test/test_normal_4k/" # for unsupervised model
 unsup_test_smura_path="/hcds_vol/private/howard/mura_data/d23_merge/test/test_smura_4k/" # for unsupervised model
+normal_num=5
+smura_num=5
 normal_num=16295
 smura_num=181
+
+# dataset_version="mura_d23_4k_typec"
+# sup_data_path="/hcds_vol/private/howard/mura_data/d23_merge/" # for supervised model
+# sup_csv_path="/hcds_vol/private/howard/mura_data/d23_merge/data_merged.csv" # for supervised model
+# unsup_test_normal_path="/hcds_vol/private/howard/mura_data/d23_merge/test/test_normal_4k/" # for unsupervised model
+# unsup_test_smura_path="/hcds_vol/private/howard/mura_data/typec_4k_8k/4k/" # for unsupervised model
+# normal_num=239
+# smura_num=239
+
+# dataset_version="d23_8k_typecplus"
+# sup_data_path="/hcds_vol/private/howard/mura_data/d23_merge/" # for supervised model
+# csv_path="/hcds_vol/private/howard/mura_data/d23_merge/data_merged.csv" # for supervised model
+# unsup_test_normal_path="/hcds_vol/private/howard/mura_data/d23_merge/test/test_normal_8k/" # for unsupervised model
+# unsup_test_smura_path="/hcds_vol/private/howard/mura_data/typecplus/img/" # for unsupervised model
+# normal_num=1
+# smura_num=31
 
 # d23 test
 # dataset_version="d23_8k"
@@ -53,7 +72,7 @@ do
     --data_version=$dataset_version \
     --normal_how_many=$normal_num --testing_normal_dataroot=$unsup_test_normal_path \
     --smura_how_many=$smura_num --testing_smura_dataroot=$unsup_test_smura_path \
-    --gpu_ids=1
+    --gpu_ids=0 --using_record
 done
 
 # supervised with unsupervised
