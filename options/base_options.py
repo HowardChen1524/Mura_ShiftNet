@@ -76,7 +76,7 @@ class BaseOptions():
         # New add
         parser.add_argument('--color_mode', type=str, default='RGB', help='[RGB|L], PIL Image convert')
         parser.add_argument('--resolution', type=str, default='resized', help='[origin, resized], default resize 512*512')
-   
+        parser.add_argument('--crop_stride', type=int, default=32, help='slding crop stride')
         self.initialized = True
         return parser
 

@@ -40,7 +40,7 @@ if __name__ == "__main__":
     style_loss_list = []
     content_loss_list = []
     tv_loss_list = []
-    # ssim_loss_list = []
+    ssim_loss_list = []
 
     # 開始訓練
     for epoch in range(opt.epoch_count, opt.niter + opt.niter_decay + 1): # opt.epoch_count default 1
@@ -49,6 +49,10 @@ if __name__ == "__main__":
         epoch_iter = 0
         
         for i, data in enumerate(dataset): # enumerate(dataset)每次都會讀入一個 batch 的資料
+            if i >= opt.fix_step:
+                print('Limit Step 5000')
+                break
+
             iter_start_time = time.time()
 
             # 計算此 epoch 訓練的累積時間，default 每 50 張大圖 print 一次
@@ -59,9 +63,11 @@ if __name__ == "__main__":
             visualizer.reset()
             
             # batchSize default 1
-            total_steps += opt.batchSize
-            epoch_iter += opt.batchSize
-            
+            # total_steps += opt.batchSize
+            # epoch_iter += opt.batchSize
+            total_steps += 1
+            epoch_iter += 1
+
             # (1,mini-batch,c,h,w) -> (mini-batch,c,h,w)，會有多一個維度是因為 dataloader batchsize 設 1
             bs, ncrops, c, h, w = data['A'].size()
             data['A'] = data['A'].view(-1, c, h, w)
@@ -105,7 +111,7 @@ if __name__ == "__main__":
         style_loss_list.append(loss_dict['style'])
         content_loss_list.append(loss_dict['content'])
         tv_loss_list.append(loss_dict['tv'])
-        # ssim_loss_list.append(loss_dict['ssim'])
+        ssim_loss_list.append(loss_dict['ssim'])
 
         epoch_list = np.linspace(1, epoch, epoch).astype(int)
         plot_loss(epoch_list, GAN_loss_list, 'GAN')
@@ -114,7 +120,7 @@ if __name__ == "__main__":
         plot_loss(epoch_list, style_loss_list, 'style')
         plot_loss(epoch_list, content_loss_list, 'content')
         plot_loss(epoch_list, tv_loss_list, 'tv')
-        # plot_loss(epoch_list, ssim_loss_list, 'ssim')
+        plot_loss(epoch_list, ssim_loss_list, 'ssim')
         
         # print 一個 epoch 所花的時間
         print('End of epoch %d / %d \t Time Taken: %d sec' %

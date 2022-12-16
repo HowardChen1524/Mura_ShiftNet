@@ -40,8 +40,8 @@ class ShiftNetModel(BaseModel):
 
         # specify the training losses you want to print out. The program will call base_model.get_current_losses
         if self.opt.color_mode == 'RGB':
-            # self.loss_names = ['G_GAN', 'G_L1', 'D', 'style', 'content', 'tv', 'ssim']
-            self.loss_names = ['G_GAN', 'G_L1', 'D', 'style', 'content', 'tv']
+            self.loss_names = ['G_GAN', 'G_L1', 'D', 'style', 'content', 'tv', 'ssim']
+            # self.loss_names = ['G_GAN', 'G_L1', 'D', 'style', 'content', 'tv']
         else:
             self.loss_names = ['G_GAN', 'G_L1', 'D']
 
@@ -111,7 +111,7 @@ class ShiftNetModel(BaseModel):
                 self.criterionL2_content_loss = torch.nn.MSELoss()
                 # TV loss
                 self.tv_criterion = networks.TVLoss(self.opt.tv_weight)
-            # self.criterionSSIM = SSIM().to(self.device)
+            self.criterionSSIM = SSIM().to(self.device)
 
             # initialize optimizers
             self.schedulers = []
@@ -135,7 +135,7 @@ class ShiftNetModel(BaseModel):
             self.criterionGAN = networks.GANLoss(gan_type=opt.gan_type).to(self.device)
             self.criterionL1 = torch.nn.L1Loss()
             self.criterionL2 = torch.nn.MSELoss()
-            # self.criterionSSIM = SSIM().to(self.device)
+            self.criterionSSIM = SSIM().to(self.device)
             if self.opt.color_mode == 'RGB':
                 # VGG loss
                 self.criterionL2_style_loss = torch.nn.MSELoss()
@@ -230,7 +230,7 @@ class ShiftNetModel(BaseModel):
             self.netG(real_B) # input ground truth
 
 
-    def forward(self, mode, fn):
+    def forward(self, mode=None, fn=None):
         self.set_gt_latent() # real_B，不知道幹嘛用
         self.fake_B = self.netG(self.real_A) # real_A 當 input 進去做 inpaint
         
@@ -752,9 +752,9 @@ class ShiftNetModel(BaseModel):
             self.loss_G += (self.loss_style + self.loss_content + self.loss_tv)
 
         # 08/23 new add SSIM loss
-        # self.loss_ssim = 0
-        # self.loss_ssim = 1-self.criterionSSIM(self.fake_B, self.real_B)
-        # self.loss_G += self.loss_ssim
+        self.loss_ssim = 0
+        self.loss_ssim = 1-self.criterionSSIM(self.fake_B, self.real_B)
+        self.loss_G += self.loss_ssim
         
         self.loss_G.backward()
 

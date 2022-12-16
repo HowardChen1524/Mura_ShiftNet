@@ -17,67 +17,79 @@ class AlignedDatasetSliding(BaseDataset):
     def initialize(self, opt):
         self.opt = opt # param
         self.dir_A = opt.dataroot
-        # train
-        if (opt.isTrain) and (not opt.continue_train):
-            self.A_paths = make_dataset(self.dir_A) # return image path list (image_folder.py)
-            random.shuffle(self.A_paths) # shffle path list
-            self.A_paths = self.A_paths[:opt.random_choose_num]
+        self.A_paths = make_dataset(self.dir_A) # return image path list (image_folder.py)
+        print(f"Take all img: {len(self.A_paths)}")
+        self.edge_index_list = [0, 105, 210, 14, 119, 224]
+        # Deprecate random choose
+        # # train
+        # if (opt.isTrain) and (not opt.continue_train):
+        #     self.A_paths = make_dataset(self.dir_A) # return image path list (image_folder.py)
+        #     random.shuffle(self.A_paths) # shuffle path list
 
-            # save filename
-            recover_list = []
-            for i, path in enumerate(self.A_paths):
-                # print(i)
-                recover_list.append(path[len(self.dir_A):].replace('.png','.bmp'))
-            recover_df = pd.DataFrame(recover_list, columns=['PIC_ID'])
-            recover_df.to_csv('./training_imgs.csv', index=False, columns=['PIC_ID'])
-            print(f"Record {len(self.A_paths)} filename successful!")
-        # continue train
-        elif (opt.isTrain) and (opt.continue_train):
-            self.A_paths = make_dataset(self.dir_A) # return image path list (image_folder.py)
-            random.shuffle(self.A_paths) # shffle path list
-            self.A_paths = self.A_paths[:opt.random_choose_num]
+        #     self.A_paths = self.A_paths[:opt.random_choose_num]
 
-            # save filename
-            expr_dir = os.path.join(opt.checkpoints_dir, opt.model_version)
-            recover_list = []
-            for i, path in enumerate(self.A_paths):
-                # print(i)
-                recover_list.append(path[len(self.dir_A):].replace('.png','.bmp'))
-            recover_df = pd.DataFrame(recover_list, columns=['PIC_ID'])
-            recover_df.to_csv(os.path.join(expr_dir, 'training_imgs.csv'), index=False, columns=['PIC_ID'])
-            print(f"Record {len(self.A_paths)} filename successful!")
+        #     # save filename
+        #     recover_list = []
+        #     for i, path in enumerate(self.A_paths):
+        #         # print(i)
+        #         recover_list.append(path[len(self.dir_A):].replace('.png','.bmp'))
+        #     recover_df = pd.DataFrame(recover_list, columns=['PIC_ID'])
+        #     recover_df.to_csv('./training_imgs.csv', index=False, columns=['PIC_ID'])
+        #     print(f"Record {len(self.A_paths)} filename successful!")
+        # # continue train
+        # elif (opt.isTrain) and (opt.continue_train):
+        #     self.A_paths = make_dataset(self.dir_A) # return image path list (image_folder.py)
+        #     random.shuffle(self.A_paths) # shffle path list
+        #     self.A_paths = self.A_paths[:opt.random_choose_num]
 
-            # recover_list = []
-            # recover_df = pd.read_csv('./training_imgs.csv')
-            # data_df = pd.read_csv('/home/levi/mura_data/d17/data_merged.csv')
-            # recover_fn = pd.merge(recover_df, data_df, on='PIC_ID', how='inner')['PIC_ID'].tolist()
-            # for fn in recover_fn:
-            #     recover_list.append(f"{self.dir_A}{fn.replace('bmp','png')}")
-            # self.A_paths = recover_list
-            # print(f"Recover img num: {len(self.A_paths)}")
-        # test
-        else:
-            self.A_paths = make_dataset(self.dir_A) # return image path list (image_folder.py)
-            print(f"Take all img: {len(self.A_paths)}")
+        #     # save filename
+        #     expr_dir = os.path.join(opt.checkpoints_dir, opt.model_version)
+        #     recover_list = []
+        #     for i, path in enumerate(self.A_paths):
+        #         # print(i)
+        #         recover_list.append(path[len(self.dir_A):].replace('.png','.bmp'))
+        #     recover_df = pd.DataFrame(recover_list, columns=['PIC_ID'])
+        #     recover_df.to_csv(os.path.join(expr_dir, 'training_imgs.csv'), index=False, columns=['PIC_ID'])
+        #     print(f"Record {len(self.A_paths)} filename successful!")
+
+        #     recover_list = []
+        #     recover_df = pd.read_csv('./training_imgs.csv')
+        #     data_df = pd.read_csv('/home/levi/mura_data/d17/data_merged.csv')
+        #     recover_fn = pd.merge(recover_df, data_df, on='PIC_ID', how='inner')['PIC_ID'].tolist()
+        #     for fn in recover_fn:
+        #         recover_list.append(f"{self.dir_A}{fn.replace('bmp','png')}")
+        #     self.A_paths = recover_list
+        #     print(f"Recover img num: {len(self.A_paths)}")
+        # # test
+        # else:
+        #     self.A_paths = make_dataset(self.dir_A) # return image path list (image_folder.py)
+        #     print(f"Take all img: {len(self.A_paths)}")
         
         # preprocessing
-        if opt.isTrain:
-            if self.opt.color_mode=='RGB':
-                transform_list = [transforms.ToTensor(),
-                                transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)), # pixel range -1~1
-                                transforms.RandomCrop(self.opt.fineSize)]
-            else:
-                transform_list = [transforms.ToTensor(),
-                                transforms.Normalize((0.5), (0.5)),
-                                transforms.RandomCrop(self.opt.fineSize)]
+        # if opt.isTrain:
+        #     if self.opt.color_mode=='RGB':
+        #         transform_list = [transforms.ToTensor(),
+        #                         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)), # pixel range -1~1
+        #                         transforms.RandomCrop(self.opt.fineSize)]
+        #     else:
+        #         transform_list = [transforms.ToTensor(),
+        #                         transforms.Normalize((0.5), (0.5)),
+        #                         transforms.RandomCrop(self.opt.fineSize)]
+        # else:
+        #     if self.opt.color_mode=='RGB':
+        #         transform_list = [transforms.ToTensor(),
+        #                         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]
+        #     else:
+        #         transform_list = [transforms.ToTensor(),
+        #                         transforms.Normalize((0.5), (0.5))]
+
+        if self.opt.color_mode=='RGB':
+            transform_list = [transforms.ToTensor(),
+                            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]
         else:
-            if self.opt.color_mode=='RGB':
-                transform_list = [transforms.ToTensor(),
-                                transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]
-            else:
-                transform_list = [transforms.ToTensor(),
-                                transforms.Normalize((0.5), (0.5))]
-                                                    
+            transform_list = [transforms.ToTensor(),
+                            transforms.Normalize((0.5), (0.5))]
+                                                                             
         self.transform = transforms.Compose(transform_list)                                    
 
     def __getitem__(self, index):
@@ -91,28 +103,53 @@ class AlignedDatasetSliding(BaseDataset):
         A = A.convert(self.opt.color_mode)
 
         A_imgs = []
-        if self.opt.isTrain:
-            for i in range(self.opt.crop_image_num):
-                A_imgs.append(self.transform(A))
-            #     print(A_imgs[i].shape)
-            #     print(A_imgs[i])
-            # print(A_imgs[0] == A_imgs[1])
-        else:
-            A_img = self.transform(A)
-            c, w, h = A_img.size()
-            for y in range(0, h, self.opt.crop_stride): # stride default 32
-                # print(f"y {y}")
-                crop_y = y
-                if (y + self.opt.fineSize) > h:
-                    break
-                for x in range(0, w, self.opt.crop_stride):
-                    # print(f"x {x}")
-                    crop_x = x
-                    if (x + self.opt.fineSize) > w:
-                        break
-                    crop_img = transforms.functional.crop(A_img, crop_y, crop_x, self.opt.fineSize, self.opt.fineSize)
-                    A_imgs.append(crop_img)
 
+        # deprecate cropping, train:random, test:sliding
+        # if self.opt.isTrain:
+        #     for i in range(self.opt.crop_image_num):
+        #         A_imgs.append(self.transform(A))
+        #     #     print(A_imgs[i].shape)
+        #     #     print(A_imgs[i])
+        #     # print(A_imgs[0] == A_imgs[1])
+        # else:
+        #     A_img = self.transform(A)
+        #     c, w, h = A_img.size()
+        #     for y in range(0, h, self.opt.crop_stride): # stride default 32
+        #         # print(f"y {y}")
+        #         crop_y = y
+        #         if (y + self.opt.fineSize) > h:
+        #             break
+        #         for x in range(0, w, self.opt.crop_stride):
+        #             # print(f"x {x}")
+        #             crop_x = x
+        #             if (x + self.opt.fineSize) > w:
+        #                 break
+        #             crop_img = transforms.functional.crop(A_img, crop_y, crop_x, self.opt.fineSize, self.opt.fineSize)
+        #             A_imgs.append(crop_img)
+        A_img = self.transform(A)
+        c, w, h = A_img.size()
+        for y in range(0, h, self.opt.crop_stride): # stride default 32
+            # print(f"y {y}")
+            crop_y = y
+            if (y + self.opt.fineSize) > h:
+                break
+            for x in range(0, w, self.opt.crop_stride):
+                # print(f"x {x}")
+                crop_x = x
+                if (x + self.opt.fineSize) > w:
+                    break
+                crop_img = transforms.functional.crop(A_img, crop_y, crop_x, self.opt.fineSize, self.opt.fineSize)
+                A_imgs.append(crop_img)
+
+        if self.opt.isTrain: 
+            crop_index_list = []
+            for i in range(0,225):
+                if i not in self.edge_index_list:
+                    crop_index_list.append(i)
+            random.shuffle(crop_index_list)
+            crop_index_list = crop_index_list[:self.opt.crop_image_num-len(self.edge_index_list)] + self.edge_index_list
+            A_imgs = [A_imgs[crop_index] for crop_index in crop_index_list]
+            
         A = torch.stack(A_imgs)
         
         mask = A.clone().zero_()

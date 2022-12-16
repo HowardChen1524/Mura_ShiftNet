@@ -9,15 +9,17 @@
 # mask_thred number to decide whether a patch is masked
 
 # model_version="ShiftNet_SSIM_d23_4k"
+model_version="ShiftNet_SSIM_d23_4k_step_5000_change_cropping"
 # model_version="ShiftNet_SSIM_d23_8k"
+# model_version="ShiftNet_d23_8k"
 
-model_version="ShiftNet_d23_8k"
-# train_normal_path="/hcds_vol/private/howard/mura_data/d23_merge/train/normal_4k/"
-train_normal_path="/hcds_vol/private/howard/mura_data/d23/train/normal_8k/"
+train_normal_path="/hcds_vol/private/howard/mura_data/d23_merge/train/normal_4k/"
+# train_normal_path="/hcds_vol/private/howard/mura_data/d23/train/normal_8k/"
 
 python ./train_sliding.py \
 --batchSize=1 --use_spectral_norm_D=1 --which_model_netD='basic' --which_model_netG='unet_shift_triple' --model='shiftnet' --shift_sz=1 --mask_thred=1 \
---loadSize=64 --fineSize=64 --overlap=0 --dataset_mode='aligned_sliding' --mask_type='center' --input_nc=3 --output_nc=3 --color_mode='RGB' \
---niter=200 --lr=0.0001 --lr_policy=cosine --random_choose_num=4835 --crop_image_num=64 --resolution='resized' \
+--loadSize=64 --fineSize=64 --overlap=0 --dataset_mode='aligned_sliding' --mask_type='center' --input_nc=3 --output_nc=3 --color_mode='RGB' --resolution='resized' \
+--niter=20 --lr=0.0001 --lr_policy=cosine --fix_step=5 --crop_image_num=64 \
 --checkpoints_dir='./log'  --model_version=$model_version \
---dataroot=$train_normal_path --continue_train --which_epoch='latest'
+--gpu_id=0 --nThreads=4 \
+--dataroot=$train_normal_path
