@@ -230,16 +230,16 @@ class ShiftNetModel(BaseModel):
             self.netG(real_B) # input ground truth
 
 
-    def forward(self, mode, fn=None):
+    def forward(self, mode, fn):
         self.set_gt_latent() # real_B，不知道幹嘛用
         self.fake_B = self.netG(self.real_A) # real_A 當 input 進去做 inpaint
         
         # print(self.fake_B.shape)
         # if batchsize > 1，tensor2im 只會取第一張
-        # if ~(self.opt.isTrain) and (fn != None):
-        #     self.inpainting_path = os.path.join(self.opt.results_dir, 'check_inpaint')
-        #     self.export_inpaint_imgs(self.real_B, mode, fn, self.inpainting_path, 0) # 0 true, 1 fake
-        #     self.export_inpaint_imgs(self.fake_B, mode, fn, self.inpainting_path, 1) # 0 true, 1 fake
+        if ~(self.opt.isTrain) and (mode != None) and (fn != None):
+            self.inpainting_path = os.path.join(self.opt.results_dir, 'check_inpaint')
+            self.export_inpaint_imgs(self.real_B, mode, fn, self.inpainting_path, 0) # 0 true, 1 fake
+            self.export_inpaint_imgs(self.fake_B, mode, fn, self.inpainting_path, 1) # 0 true, 1 fake
     
     def export_inpaint_imgs(self, output, mode, name, path, img_type):
         save_path = os.path.join(path, f'{mode}/{name}')
@@ -257,7 +257,7 @@ class ShiftNetModel(BaseModel):
             pil_img_en.save(os.path.join(save_path,f"en_{idx}.png"))
 
     # 06/18 add for testing
-    def test(self, mode, fn=None):
+    def test(self, mode=None, fn=None):
         # ======Inpainting method======
         if self.opt.inpainting_mode == 'ShiftNet':
             # torch.no_grad() disables the gradient calculation，等於 torch.set_grad_enabled(False)                       

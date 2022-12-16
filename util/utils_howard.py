@@ -96,8 +96,10 @@ class tjwei_augumentation(object):
         img = tf.keras.preprocessing.image.img_to_array(img)
         img = tf.image.convert_image_dtype(img, tf.float32)
         img = tf.image.rgb_to_grayscale(img)
-        img2 = tf.image.sobel_edges(img[None, ...])
-        img = tf.concat([img, img2[0, :, :, 0]], 2)
+        img2 = tf.concat([img, img], 2)
+        img = tf.concat([img, img2], 2)
+        # img2 = tf.image.sobel_edges(img[None, ...])
+        # img = tf.concat([img, img2[0, :, :, 0]], 2)
         image_array = tf.keras.preprocessing.image.array_to_img(img)
         
         return image_array
@@ -106,19 +108,14 @@ class tjwei_augumentation(object):
 
 data_transforms = {
     "train": transforms.Compose([
-        # transforms.Resize([512, 512], interpolation=InterpolationMode.BILINEAR),
-        transforms.Resize([256, 256], interpolation=InterpolationMode.BILINEAR),
-        # transforms.CenterCrop(size=(224, 224)),
-        transforms.RandomHorizontalFlip(),
-        transforms.RandomVerticalFlip(),
-        tjwei_augumentation(),
-        transforms.ToTensor(),
+        # transforms.Resize([256, 256], interpolation=InterpolationMode.BILINEAR),
+        # transforms.RandomHorizontalFlip(),
+        # transforms.RandomVerticalFlip(),
+        # tjwei_augumentation(),
+        # transforms.ToTensor(),
     ]),
     "test": transforms.Compose([
-        # transforms.Resize([512, 512], interpolation=InterpolationMode.BILINEAR),
         transforms.Resize([256, 256], interpolation=InterpolationMode.BILINEAR),
-        # transforms.CenterCrop(size=(224, 224)),
-        # transforms.RandomHorizontalFlip(),
         tjwei_augumentation(),
         transforms.ToTensor()
     ])
@@ -247,10 +244,11 @@ def calc_matrix(labels_res, preds_res):
     
 def get_data_info(t, l, image_info, data_dir, csv_path):
     res = []
-    image_info = image_info[(image_info["train_type"] == t) & (image_info["label"] == l) & (image_info["PRODUCT_CODE"] == "T850MVR05")]
-    # image_info = image_info[(image_info["batch"] >= 24) & (image_info["batch"] <= 25) & (image_info["label"] == l) & (image_info["PRODUCT_CODE"] == "T850MVR05")]
-
-    for path, img, label, JND, t in zip(image_info["path"],image_info["name"],image_info["label"],image_info["MULTI_JND"],image_info["train_type"]):
+    # image_info = image_info[(image_info["train_type"] == t) & (image_info["label"] == l) & (image_info["PRODUCT_CODE"] == "T850MVR05")]
+    image_info = image_info[(image_info["batch"] >= 24) & (image_info["batch"] <= 25) & (image_info["label"] == l) & (image_info["PRODUCT_CODE"] == "T850MVR05")]
+    # print(image_info)
+    
+    for path, img, label, JND in zip(image_info["path"],image_info["name"],image_info["label"],image_info["MULTI_JND"]):
         img_path = os.path.join(os.path.join(data_dir), path, img)
         res.append([img_path, label, JND, t, img])
     X = []
@@ -262,6 +260,7 @@ def get_data_info(t, l, image_info, data_dir, csv_path):
         X.append(os.path.join(d[0]))
         Y.append(d[1])
         N.append(d[4])
+
     dataset = AI9_Dataset(feature=X,
                           target=Y,
                           name=N,
@@ -280,6 +279,7 @@ def evaluate(model, testloaders, save_path):
     with torch.no_grad():
       for idx, loader in enumerate(testloaders):
         for inputs, labels, names in tqdm(loader):
+            
           inputs = inputs.cuda()
           labels = labels.cuda()
           
@@ -312,7 +312,7 @@ def find_sup_th(res, save_path):
     # model_pred_result = predict_report(res['preds_res']['all'], res['labels_res']['all'], res['files_res']['all'])
     # model_pred_result.to_csv(os.path.join(save_path, "sup_model_pred_result.csv"), index=None)
     # print("model predict record finished!")
-    all_label = res['labels']['n'] + res['labels']['s']
+    all_label = res['label']['n'] + res['label']['s']
     all_conf = res['conf']['n'] + res['conf']['s']
     res, model_report, curve_df = calc_matrix(all_label, all_conf)
     model_report.to_csv(os.path.join(save_path, "sup_model_report.csv"))
@@ -555,7 +555,11 @@ def sup_unsup_prediction_auto_th(labels, all_conf_sup, all_score_unsup, path):
     # b 0~20 stride = 0.1
     start_time = time.time()
     for times_m in range(0, 501, 1): # 次數
+    # for times_m in range(0, 251, 1): # resunet
+    # for times_m in range(0, 1000, 1): # skipgan
         m = (100)*times_m
+        # m = (10)*times_m # resunet
+        # m = (100)*times_m # skipgan
         for times_b in range(0, 2001, 1): # 次數      
             b = (0.01)*times_b
             combined_scores = m*all_score_unsup + all_conf_sup
@@ -584,8 +588,14 @@ def sup_unsup_prediction_auto_multi_th(labels, all_conf_sup, all_score_unsup, pa
     start_time = time.time()
     for times_x in range(0, 11, 1): # 次數
         x = 0.0001 + (times_x*0.000005)
+        # x = 0.0006 + (times_x*0.00005) # resunet
+        # x = 0.000009 + (times_x*0.0000002) # skipgan
         for times_m in range(0, 51, 1): # 次數
+        # for times_m in range(0, 25, 1): # resunet
+        # for times_m in range(0, 100, 1): # skipgan
             m = (1000)*times_m
+            # m = (100)*times_m
+            # m = (1000)*times_m
             for times_b in range(0, 2001, 1): # 次數      
                 b = (0.01)*times_b
             
@@ -843,6 +853,7 @@ def plot_scatter(conf_sup, score_unsup):
     s_y = conf_sup['conf']['s']
     plt.clf()
     # plt.xlim(4e-05, 4e-04)
+    # plt.xlim(4.5e-05, 8e-05)
     plt.xlim(5e-05, 1.5e-04)
     plt.xlabel("score (Unsupervised)")
     plt.ylabel("Conf (Supervised)")
@@ -940,8 +951,9 @@ def plot_roc_curve(roc_auc, fpr, tpr, path, name):
 def plot_score_distribution(n_scores, s_scores, path, name):
     plt.clf()
     # plt.xlim(4e-05, 4e-04)
-    # plt.xlim(5e-05, 1.5e-04)
+    plt.xlim(5e-05, 1.5e-04)
     # plt.xlim(1e-05, 3.5e-05)
+    # plt.xlim(4.5e-05, 8e-05)
     plt.hist(n_scores, bins=50, alpha=0.5, density=True, label="normal")
     plt.hist(s_scores, bins=50, alpha=0.5, density=True, label="smura")
     plt.xlabel('Anomaly Score')
@@ -961,7 +973,8 @@ def plot_score_scatter(n_max, s_max, n_mean, s_mean, path, name):
     # normal
     plt.clf()
     # plt.xlim(4e-05, 4e-04)
-    # plt.xlim(5e-05, 1.5e-04)
+    plt.xlim(5e-05, 1.5e-04)
+    # plt.xlim(4.5e-05, 8e-05)
     plt.xlabel("max")
     plt.ylabel("mean")
     plt.title('scatter')
@@ -972,7 +985,8 @@ def plot_score_scatter(n_max, s_max, n_mean, s_mean, path, name):
     # smura
     plt.clf()
     # plt.xlim(4e-05, 4e-04)
-    # plt.xlim(5e-05, 1.5e-04)
+    plt.xlim(5e-05, 1.5e-04)
+    # plt.xlim(4.5e-05, 8e-05)
     plt.xlabel("max")
     plt.ylabel("mean")
     plt.title('scatter')
@@ -983,12 +997,13 @@ def plot_score_scatter(n_max, s_max, n_mean, s_mean, path, name):
     # all
     plt.clf()
     # plt.xlim(4e-05, 4e-04)
-    # plt.xlim(5e-05, 1.5e-04)
+    plt.xlim(5e-05, 1.5e-04)
+    # plt.xlim(4.5e-05, 8e-05)
     plt.xlabel("max")
     plt.ylabel("mean")
     plt.title('scatter')
-    plt.scatter(x1, y1, s=5, c ="blue", alpha=0.3, label="normal")
-    plt.scatter(x2, y2, s=5, c ="red", alpha=0.3, label="smura")
+    plt.scatter(x1, y1, s=5, c ="blue", alpha=0.5, label="normal")
+    plt.scatter(x2, y2, s=5, c ="red", alpha=0.5, label="smura")
     plt.legend(loc='upper right')
     plt.savefig(f"{path}/{name}__scatter.png")
     plt.clf()
@@ -1007,6 +1022,7 @@ def plot_sup_unsup_scatter(conf_sup, score_unsup, path, name):
     plt.clf()
     # plt.xlim(4e-05, 4e-04)
     plt.xlim(5e-05, 1.5e-04)
+    # plt.xlim(4.5e-05, 8e-05)
     plt.xlabel("score (Unsupervised)")
     plt.ylabel("Conf (Supervised)")
     plt.title('scatter')
@@ -1016,6 +1032,7 @@ def plot_sup_unsup_scatter(conf_sup, score_unsup, path, name):
     # smura
     # plt.xlim(4e-05, 4e-04)
     plt.xlim(5e-05, 1.5e-04)
+    # plt.xlim(4.5e-05, 8e-05)
     plt.xlabel("score (Unsupervised)")
     plt.ylabel("Conf (Supervised)")
     plt.title('scatter')
@@ -1025,6 +1042,7 @@ def plot_sup_unsup_scatter(conf_sup, score_unsup, path, name):
     # Both
     # plt.xlim(4e-05, 4e-04)
     plt.xlim(5e-05, 1.5e-04)
+    # plt.xlim(4.5e-05, 8e-05)
     plt.xlabel("score (Unsupervised)")
     plt.ylabel("Conf (Supervised)")
     plt.title('scatter')

@@ -12,7 +12,7 @@ from options.test_options import TestOptions
 from data.data_loader import CreateDataLoader
 from models import create_model
 
-from util.utils_howard import mkdir, minmax_scaling, \
+from util.utils_howard import mkdir, \
                               get_data_info, make_test_dataloader, evaluate, get_line_threshold, \
                               plot_score_distribution, plot_sup_unsup_scatter, plot_line_on_scatter, \
                               sup_unsup_prediction_spec_th, sup_unsup_prediction_spec_multi_th, \
@@ -28,8 +28,17 @@ def initail_setting():
   opt.no_flip = True  # no flip
   opt.display_id = -1 # no visdom display
   opt.loadSize = opt.fineSize  # Do not scale!
-  opt.results_dir = f"{opt.results_dir}/{opt.model_version}_with_SEResNeXt101_d23/{opt.data_version}/{opt.measure_mode}"
+#   opt.results_dir = f"{opt.results_dir}/{opt.model_version}_with_SEResNeXt101_d23/{opt.data_version}/{opt.measure_mode}"
+#   opt.results_dir = f"{opt.results_dir}/{opt.model_version}_with_SEResNeXt101_d23_RGB/{opt.data_version}/{opt.measure_mode}"
+  opt.results_dir = f"{opt.results_dir}/{opt.model_version}_with_SEResNeXt101_d23_8k_Gray/{opt.data_version}/{opt.measure_mode}"
+#   opt.results_dir = f"{opt.results_dir}/{opt.model_version}_with_SEResNeXt101_d23_8k_Gray_three/{opt.data_version}/{opt.measure_mode}"
 
+#   opt.results_dir = f"{opt.results_dir}/{opt.model_version}_with_SEResNeXt101_d23_8k/{opt.data_version}/{opt.measure_mode}"
+#   opt.results_dir = f"{opt.results_dir}/{opt.model_version}_with_ResNet50_d23_8k/{opt.data_version}/{opt.measure_mode}"
+#   opt.results_dir = f"{opt.results_dir}/{opt.model_version}_with_Xception_d23_8k/{opt.data_version}/{opt.measure_mode}"
+#   opt.results_dir = f"{opt.results_dir}/{opt.model_version}_with_ConVit_d23_8k/{opt.data_version}/{opt.measure_mode}"
+#   opt.results_dir = f"{opt.results_dir}/ResUnetGAN_with_SEResNeXt101_d23_8k/{opt.data_version}/"
+#   opt.results_dir = f"{opt.results_dir}/Skip-GANomaly_with_SEResNeXt101_d23_8k/{opt.data_version}/"
   mkdir(opt.results_dir)
 
   return opt, opt.gpu_ids[0]
@@ -149,7 +158,7 @@ def model_prediction_using_record(opt):
     
     for l, c in zip(['conf','label','files'],['conf','label_x','name']):
         for t, f in zip(['n', 's'],[normal_filter,smura_filter]):
-            res_sup[l][t] = np.array(merge_df[c][f].tolist())
+            res_sup[l][t] = merge_df[c][f].tolist()
     # print(res_sup['files']['n'][:10])
 
     for l, c in zip(['score','label','files'],['score_mean','label_y','name']):
@@ -157,20 +166,30 @@ def model_prediction_using_record(opt):
             res_unsup[l][t] = np.array(merge_df[c][f].tolist())
     # print(res_unsup['files']['n'][:10])
     
+    # temp
     all_df = pd.read_csv(os.path.join(opt.results_dir, 'unsup_score_all.csv'))
     normal_filter = (all_df['label']==0)
     smura_filter = (all_df['label']==1)
     res_unsup['all']['n'] = np.array(all_df['score'][normal_filter].tolist())
     res_unsup['all']['s'] = np.array(all_df['score'][smura_filter].tolist())
-
+    
     return res_sup, res_unsup
 
 if __name__ == '__main__':
   
     opt, _ = initail_setting()  
-
+    
     res_sup, res_unsup = model_prediction_using_record(opt)
-
-    result_name = f"{opt.measure_mode}_SEResNeXt101"
+    
+    # result_name = f"{opt.measure_mode}_SEResNeXt101"
+    # result_name = f"{opt.measure_mode}_SEResNeXt101_8k_RGB"
+    result_name = f"{opt.measure_mode}_SEResNeXt101_8k_Gray"
+    # result_name = f"{opt.measure_mode}_SEResNeXt101_8k_Gray_three"
+    # result_name = f"{opt.measure_mode}_SEResNeXt101_8k"
+    # result_name = f"{opt.measure_mode}_ResNet50_8k"
+    # result_name = f"{opt.measure_mode}_Xception_8k"
+    # result_name = f"{opt.measure_mode}_ConVit_8k"
+    # result_name = f"MSE_SEResNeXt101_8k"
+    
     show_and_save_result(res_sup, res_unsup, opt.using_threshold, opt.results_dir, result_name)
     

@@ -23,6 +23,8 @@ def initail_setting():
     opt.loadSize = opt.fineSize  # Do not scale!
 
     opt.results_dir = f"{opt.results_dir}/{opt.model_version}/{opt.data_version}/{opt.measure_mode}"
+    if opt.pos_normalize:
+        opt.results_dir = f"{opt.results_dir}_pn"
 
     mkdir(opt.results_dir)
 
@@ -111,17 +113,11 @@ def model_prediction_using_record(opt):
 
     return res_unsup
 
-def unsupervised_model_prediction(opt):
-  res_unsup = defaultdict(dict)
-  for l in ['all','max','mean', 'fn']:
-    for t in ['n','s']:
-      res_unsup[l][t] = None
-
-  model = create_model(opt)
-  data_loader = CreateDataLoader(opt)
-  if opt.pos_normalize:
+def unsupervised_normalized_compute(data_loader, normal_limit, model):
     n_all_crop_scores = []
-    for i, data in enumerate(data_loader['normal']):
+    for i, data in enumerate(data_loader):
+        if i >= normal_limit:
+            break
         print(f"img: {i}")
         bs, ncrops, c, h, w = data['A'].size()
         data['A'] = data['A'].view(-1, c, h, w)
@@ -138,9 +134,21 @@ def unsupervised_model_prediction(opt):
         n_all_crop_scores.append(crop_scores)
         
     n_all_crop_scores = np.array(n_all_crop_scores)
-    print(n_all_crop_scores.shape)
     n_pos_mean = np.mean(n_all_crop_scores, axis=0)
     n_pos_std = np.std(n_all_crop_scores, axis=0)
+    return n_pos_mean, n_pos_std
+
+def unsupervised_model_prediction(opt):
+  res_unsup = defaultdict(dict)
+  for l in ['all','max','mean', 'fn']:
+    for t in ['n','s']:
+      res_unsup[l][t] = None
+
+  model = create_model(opt)
+  data_loader = CreateDataLoader(opt)
+  if opt.pos_normalize:
+    normal_limit = opt.normal_how_many
+    n_pos_mean, n_pos_std = unsupervised_normalized_compute(data_loader['normal'], normal_limit, model)
 
   dataset_list = [data_loader['normal'],data_loader['smura']]
   for mode, dataset in enumerate(dataset_list): 
@@ -165,30 +173,27 @@ def unsupervised_model_prediction(opt):
         # (1,mini-batch,c,h,w) -> (mini-batch,c,h,w)，會有多一個維度是因為 dataloader batchsize 設 1
         bs, ncrops, c, h, w = data['A'].size()
         data['A'] = data['A'].view(-1, c, h, w)
-        # print(data['A'].shape)
 
         bs, ncrops, c, h, w = data['B'].size()
         data['B'] = data['B'].view(-1, c, h, w)
-        # print(data['B'].shape)
         
         bs, ncrops, c, h, w = data['M'].size()
         data['M'] = data['M'].view(-1, c, h, w)
-        # print(data['M'].shape)
 
         # 建立 input real_A & real_B
         # it not only sets the input data with mask, but also sets the latent mask.
         model.set_input(data)
         # if fn == '7A2D4CE4ZAZZ_20220423040728_0_L050P_resize.png':
-        img_scores = model.test(mode, fn)
+        # img_scores = model.test(mode, fn)
         # pos_list = [i for i in range(0, 225)]
         # inpainting_path = os.path.join(opt.results_dir, 'check_inpaint')
         # score_df = pd.DataFrame(list(zip(pos_list,img_scores)), columns=['pos','score'])
         # score_df.to_csv(os.path.join(inpainting_path, f'{mode}/{fn}/pos_score.csv'), index=False)
         
-        # else:
-            # img_scores = model.test()
+        img_scores = model.test()
+        
         if opt.pos_normalize:
-            for pos in range(0,img_scores.shape[0]):
+            for pos in range(0, img_scores.shape[0]):
                 img_scores[pos] = (img_scores[pos]-n_pos_mean[pos])/n_pos_std[pos]
                 
         max_anomaly_score = np.max(img_scores) # Anomaly max
