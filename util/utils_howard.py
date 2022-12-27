@@ -94,12 +94,12 @@ class wei_augumentation(object):
 
 class tjwei_augumentation(object):
     def __call__(self, img):
-        # img = tf.keras.preprocessing.image.img_to_array(img)
-        # img = tf.image.convert_image_dtype(img, tf.float32)
-        # img = tf.image.rgb_to_grayscale(img)
-        # img2 = tf.image.sobel_edges(img[None, ...])
-        # img = tf.concat([img, img2[0, :, :, 0]], 2)
-        # image_array = tf.keras.preprocessing.image.array_to_img(img)
+        img = tf.keras.preprocessing.image.img_to_array(img)
+        img = tf.image.convert_image_dtype(img, tf.float32)
+        img = tf.image.rgb_to_grayscale(img)
+        img2 = tf.image.sobel_edges(img[None, ...])
+        img = tf.concat([img, img2[0, :, :, 0]], 2)
+        image_array = tf.keras.preprocessing.image.array_to_img(img)
         
         # gray three
         # img = tf.keras.preprocessing.image.img_to_array(img)
@@ -110,10 +110,10 @@ class tjwei_augumentation(object):
         # image_array = tf.keras.preprocessing.image.array_to_img(img)
 
         # sobel
-        img = tf.keras.preprocessing.image.img_to_array(img)
-        img = cv2.Sobel(img, cv2.CV_64F, 1, 1)
-        img = tf.image.convert_image_dtype(img, tf.float32)
-        image_array = tf.keras.preprocessing.image.array_to_img(img)
+        # img = tf.keras.preprocessing.image.img_to_array(img)
+        # img = cv2.Sobel(img, cv2.CV_64F, 1, 1)
+        # img = tf.image.convert_image_dtype(img, tf.float32)
+        # image_array = tf.keras.preprocessing.image.array_to_img(img)
         return image_array
     def __repr__(self):
         return self.__class__.__name__+'()'
@@ -256,8 +256,8 @@ def calc_matrix(labels_res, preds_res):
     
 def get_data_info(t, l, image_info, data_dir, csv_path):
     res = []
-    image_info = image_info[(image_info["train_type"] == t) & (image_info["label"] == l) & (image_info["PRODUCT_CODE"] == "T850MVR05")]
-    # image_info = image_info[(image_info["batch"] >= 24) & (image_info["batch"] <= 25) & (image_info["label"] == l) & (image_info["PRODUCT_CODE"] == "T850MVR05")]
+    # image_info = image_info[(image_info["train_type"] == t) & (image_info["label"] == l) & (image_info["PRODUCT_CODE"] == "T850MVR05")]
+    image_info = image_info[(image_info["batch"] >= 24) & (image_info["batch"] <= 25) & (image_info["label"] == l) & (image_info["PRODUCT_CODE"] == "T850MVR05")]
     # print(image_info)
     
     for path, img, label, JND in zip(image_info["path"],image_info["name"],image_info["label"],image_info["MULTI_JND"]):
@@ -566,13 +566,16 @@ def sup_unsup_prediction_auto_th(labels, all_conf_sup, all_score_unsup, path):
     # m 0~-50000 stride = 0.01 
     # b 0~20 stride = 0.1
     start_time = time.time()
-    for times_m in range(0, 501, 1): # 次數
+    # for times_m in range(0, 501, 1): # 次數
     # for times_m in range(0, 251, 1): # resunet
     # for times_m in range(0, 1000, 1): # skipgan
-        m = (100)*times_m
+    for times_m in range(0, 101, 1): # pennet
+        # m = (100)*times_m
         # m = (10)*times_m # resunet
         # m = (100)*times_m # skipgan
-        for times_b in range(0, 2001, 1): # 次數      
+        m = (1000)*times_m # pennet
+        # for times_b in range(0, 2001, 1): # 次數
+        for times_b in range(0, 1201, 1): # pennet
             b = (0.01)*times_b
             combined_scores = m*all_score_unsup + all_conf_sup
             tn, fp, fn, tp = confusion_matrix(y_true=labels, y_pred=(combined_scores >= b)).ravel()
@@ -599,16 +602,18 @@ def sup_unsup_prediction_auto_multi_th(labels, all_conf_sup, all_score_unsup, pa
     # x axis score 0.000055~0.00007
     start_time = time.time()
     for times_x in range(0, 11, 1): # 次數
-        x = 0.0001 + (times_x*0.000005)
+        # x = 0.0001 + (times_x*0.000005)
         # x = 0.0006 + (times_x*0.00005) # resunet
         # x = 0.000009 + (times_x*0.0000002) # skipgan
-        for times_m in range(0, 51, 1): # 次數
+        x = 0.000055 + (times_x*0.000001) # pennet
+        # for times_m in range(0, 51, 1): # 次數
         # for times_m in range(0, 25, 1): # resunet
         # for times_m in range(0, 100, 1): # skipgan
+        for times_m in range(0, 101, 1): # pennet
             m = (1000)*times_m
             # m = (100)*times_m
-            # m = (1000)*times_m
-            for times_b in range(0, 2001, 1): # 次數      
+            # for times_b in range(0, 2001, 1): # 次數      
+            for times_b in range(0, 1201, 1): # pennet
                 b = (0.01)*times_b
             
                 pred_labels = [] 
@@ -864,9 +869,10 @@ def plot_scatter(conf_sup, score_unsup):
     s_x = score_unsup['score']['s']
     s_y = conf_sup['conf']['s']
     plt.clf()
-    # plt.xlim(4e-05, 4e-04)
-    # plt.xlim(4.5e-05, 8e-05)
-    plt.xlim(5e-05, 1.5e-04)
+    # plt.xlim(4e-05, 4e-04) # 小
+    # plt.xlim(4.5e-05, 8e-05) # 大
+    # plt.xlim(5e-05, 1.5e-04) # 中
+    plt.xlim(3e-05, 1.2e-04) # pennet
     plt.xlabel("score (Unsupervised)")
     plt.ylabel("Conf (Supervised)")
     plt.title('scatter')
@@ -963,8 +969,8 @@ def plot_roc_curve(roc_auc, fpr, tpr, path, name):
 def plot_score_distribution(n_scores, s_scores, path, name):
     plt.clf()
     # plt.xlim(4e-05, 4e-04)
-    plt.xlim(5e-05, 1.5e-04)
-    # plt.xlim(1e-05, 3.5e-05)
+    # plt.xlim(5e-05, 1.5e-04) # shiftnet
+    plt.xlim(3e-05, 1.2e-04) # pennet
     # plt.xlim(4.5e-05, 8e-05)
     plt.hist(n_scores, bins=50, alpha=0.5, density=True, label="normal")
     plt.hist(s_scores, bins=50, alpha=0.5, density=True, label="smura")
@@ -984,9 +990,10 @@ def plot_score_scatter(n_max, s_max, n_mean, s_mean, path, name):
     # 設定座標軸
     # normal
     plt.clf()
-    # plt.xlim(4e-05, 4e-04)
-    plt.xlim(5e-05, 1.5e-04)
+    
+    # plt.xlim(5e-05, 1.5e-04)
     # plt.xlim(4.5e-05, 8e-05)
+    plt.xlim(3e-05, 1.2e-04) # pennet
     plt.xlabel("max")
     plt.ylabel("mean")
     plt.title('scatter')
@@ -996,9 +1003,10 @@ def plot_score_scatter(n_max, s_max, n_mean, s_mean, path, name):
     plt.clf()
     # smura
     plt.clf()
-    # plt.xlim(4e-05, 4e-04)
-    plt.xlim(5e-05, 1.5e-04)
+ 
+    # plt.xlim(5e-05, 1.5e-04)
     # plt.xlim(4.5e-05, 8e-05)
+    plt.xlim(3e-05, 1.2e-04) # pennet
     plt.xlabel("max")
     plt.ylabel("mean")
     plt.title('scatter')
@@ -1008,9 +1016,10 @@ def plot_score_scatter(n_max, s_max, n_mean, s_mean, path, name):
     plt.clf()
     # all
     plt.clf()
-    # plt.xlim(4e-05, 4e-04)
-    plt.xlim(5e-05, 1.5e-04)
+    
+    # plt.xlim(5e-05, 1.5e-04)
     # plt.xlim(4.5e-05, 8e-05)
+    plt.xlim(3e-05, 1.2e-04) # pennet
     plt.xlabel("max")
     plt.ylabel("mean")
     plt.title('scatter')
@@ -1032,9 +1041,9 @@ def plot_sup_unsup_scatter(conf_sup, score_unsup, path, name):
     # 設定座標軸
     # normal
     plt.clf()
-    # plt.xlim(4e-05, 4e-04)
-    plt.xlim(5e-05, 1.5e-04)
+    # plt.xlim(5e-05, 1.5e-04)
     # plt.xlim(4.5e-05, 8e-05)
+    plt.xlim(3e-05, 1.2e-04) # pennet
     plt.xlabel("score (Unsupervised)")
     plt.ylabel("Conf (Supervised)")
     plt.title('scatter')
@@ -1042,9 +1051,9 @@ def plot_sup_unsup_scatter(conf_sup, score_unsup, path, name):
     plt.savefig(f"{path}/{name}_normal_scatter.png")
     plt.clf()
     # smura
-    # plt.xlim(4e-05, 4e-04)
-    plt.xlim(5e-05, 1.5e-04)
+    # plt.xlim(5e-05, 1.5e-04)
     # plt.xlim(4.5e-05, 8e-05)
+    plt.xlim(3e-05, 1.2e-04) # pennet
     plt.xlabel("score (Unsupervised)")
     plt.ylabel("Conf (Supervised)")
     plt.title('scatter')
@@ -1052,9 +1061,10 @@ def plot_sup_unsup_scatter(conf_sup, score_unsup, path, name):
     plt.savefig(f"{path}/{name}_smura_scatter.png")
     plt.clf()
     # Both
-    # plt.xlim(4e-05, 4e-04)
-    plt.xlim(5e-05, 1.5e-04)
+    # plt.xlim(4e-05, 4e-04) 
+    # plt.xlim(5e-05, 1.5e-04)
     # plt.xlim(4.5e-05, 8e-05)
+    plt.xlim(3e-05, 1.2e-04) # pennet
     plt.xlabel("score (Unsupervised)")
     plt.ylabel("Conf (Supervised)")
     plt.title('scatter')

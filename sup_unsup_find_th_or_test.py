@@ -29,53 +29,13 @@ def initail_setting():
     opt.display_id = -1 # no visdom display
     opt.loadSize = opt.fineSize  # Do not scale!
 
-    opt.results_dir = f"{opt.results_dir}/{opt.model_version}_with_SEResNeXt101_d23_8k_Sobel/{opt.data_version}/{opt.measure_mode}"
+    # opt.results_dir = f"{opt.results_dir}/{opt.model_version}_with_SEResNeXt101_d23/{opt.data_version}/{opt.measure_mode}"
+    opt.results_dir = f"{opt.results_dir}/{opt.model_version}_with_Ensemble_d23/{opt.data_version}/{opt.measure_mode}"
 
-    #   opt.results_dir = f"{opt.results_dir}/{opt.model_version}_with_SEResNeXt101_d23/{opt.data_version}/{opt.measure_mode}"
-    #   opt.results_dir = f"{opt.results_dir}/{opt.model_version}_with_SEResNeXt101_d23_RGB/{opt.data_version}/{opt.measure_mode}"
-    #   opt.results_dir = f"{opt.results_dir}/{opt.model_version}_with_SEResNeXt101_d23_8k_Gray/{opt.data_version}/{opt.measure_mode}"
-    #   opt.results_dir = f"{opt.results_dir}/{opt.model_version}_with_SEResNeXt101_d23_8k_Gray_three/{opt.data_version}/{opt.measure_mode}"
-
-    #   opt.results_dir = f"{opt.results_dir}/{opt.model_version}_with_SEResNeXt101_d23_8k/{opt.data_version}/{opt.measure_mode}"
-    # opt.results_dir = f"{opt.results_dir}/{opt.model_version}_with_SEResNeXt101_d23_8k/{opt.data_version}/{opt.measure_mode}_woflip"
-
-    #   opt.results_dir = f"{opt.results_dir}/{opt.model_version}_with_ResNet50_d23_8k/{opt.data_version}/{opt.measure_mode}"
-    #   opt.results_dir = f"{opt.results_dir}/{opt.model_version}_with_Xception_d23_8k/{opt.data_version}/{opt.measure_mode}"
-    #   opt.results_dir = f"{opt.results_dir}/{opt.model_version}_with_ConVit_d23_8k/{opt.data_version}/{opt.measure_mode}"
-    #   opt.results_dir = f"{opt.results_dir}/ResUnetGAN_with_SEResNeXt101_d23_8k/{opt.data_version}/"
-    #   opt.results_dir = f"{opt.results_dir}/Skip-GANomaly_with_SEResNeXt101_d23_8k/{opt.data_version}/"
     mkdir(opt.results_dir)
 
     return opt, opt.gpu_ids[0]
   
-def count_data_version(large_smura_name, small_smura_name, csv_path):
-    df_large_name = pd.DataFrame(large_smura_name, columns=['name'])
-    print(df_large_name)
-    df_small_name = pd.DataFrame(small_smura_name, columns=['name'])
-    print(df_small_name)
-
-    df_data = pd.read_csv(csv_path)
-
-    df_merge_large = df_data.merge(df_large_name, left_on='name', right_on='name')
-    dict_large = df_merge_large['batch'].value_counts().to_dict()
-    df_merge_small = df_data.merge(df_small_name, left_on='name', right_on='name')
-    dict_small = df_merge_small['batch'].value_counts().to_dict()
-    
-    keys = dict_large.keys()
-    values = dict_large.values()
-    plt.clf()
-
-    plt.bar(keys, values)
-    plt.savefig(f"./large.png")
-    plt.clf()
-
-    keys = dict_small.keys()
-    values = dict_small.values()
-    
-    plt.bar(keys, values)
-    plt.savefig(f"./small.png")
-    plt.clf()
-
 def show_and_save_result(conf_sup, score_unsup, use_th, path, name):
     all_conf_sup = np.concatenate([conf_sup['conf']['n'], conf_sup['conf']['s']])
     all_score_unsup = np.concatenate([score_unsup['score']['n'], score_unsup['score']['s']])
@@ -153,8 +113,8 @@ def model_prediction_using_record(opt):
         for t in ['n','s']:
             res_unsup[l][t] = None
 
-    sup_df = pd.read_csv(os.path.join(opt.results_dir, 'sup_conf.csv'))
-    unsup_df = pd.read_csv(os.path.join(opt.results_dir, 'unsup_score_mean.csv'))
+    sup_df = pd.read_csv(os.path.join(opt.conf_csv_dir, 'sup_conf.csv'))
+    unsup_df = pd.read_csv(os.path.join(opt.score_csv_dir, 'unsup_score_mean.csv'))
     merge_df = sup_df.merge(unsup_df, left_on='name', right_on='name')
     
     normal_filter = (merge_df['label_x']==0) & (merge_df['label_y']==0)
@@ -172,7 +132,7 @@ def model_prediction_using_record(opt):
     # print(res_unsup['files']['n'][:10])
     
     # temp
-    all_df = pd.read_csv(os.path.join(opt.results_dir, 'unsup_score_all.csv'))
+    all_df = pd.read_csv(os.path.join(opt.score_csv_dir, 'unsup_score_all.csv'))
     normal_filter = (all_df['label']==0)
     smura_filter = (all_df['label']==1)
     res_unsup['all']['n'] = np.array(all_df['score'][normal_filter].tolist())
@@ -187,15 +147,7 @@ if __name__ == '__main__':
     res_sup, res_unsup = model_prediction_using_record(opt)
     
     # result_name = f"{opt.measure_mode}_SEResNeXt101"
-    # result_name = f"{opt.measure_mode}_SEResNeXt101_8k_RGB"
-    # result_name = f"{opt.measure_mode}_SEResNeXt101_8k_Gray"
-    # result_name = f"{opt.measure_mode}_SEResNeXt101_8k_Gray_three"
-    result_name = f"{opt.measure_mode}_SEResNeXt101_8k_Sobel"
-    # result_name = f"{opt.measure_mode}_SEResNeXt101_8k"
-    # result_name = f"{opt.measure_mode}_ResNet50_8k"
-    # result_name = f"{opt.measure_mode}_Xception_8k"
-    # result_name = f"{opt.measure_mode}_ConVit_8k"
-    # result_name = f"MSE_SEResNeXt101_8k"
+    result_name = f"{opt.model_version}_{opt.measure_mode}_Ensemble"
     
     show_and_save_result(res_sup, res_unsup, opt.using_threshold, opt.results_dir, result_name)
     

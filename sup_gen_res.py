@@ -31,19 +31,8 @@ def initail_setting():
   opt.no_flip = True  # no flip
   opt.display_id = -1 # no visdom display
   opt.loadSize = opt.fineSize  # Do not scale!
-  
-  # opt.results_dir = f"{opt.results_dir}/{opt.model_version}_with_SEResNeXt101_d23/{opt.data_version}/{opt.measure_mode}"
-  opt.results_dir = f"{opt.results_dir}/{opt.model_version}_with_SEResNeXt101_d23_8k/{opt.data_version}/{opt.measure_mode}_2nd"
-  # opt.results_dir = f"{opt.results_dir}/{opt.model_version}_with_SEResNeXt101_d23_8k_RGB/{opt.data_version}/{opt.measure_mode}"
-  # opt.results_dir = f"{opt.results_dir}/{opt.model_version}_with_SEResNeXt101_d23_8k_Gray/{opt.data_version}/{opt.measure_mode}"
-  # opt.results_dir = f"{opt.results_dir}/{opt.model_version}_with_SEResNeXt101_d23_8k_Gray_three/{opt.data_version}/{opt.measure_mode}"
-
-  # opt.results_dir = f"{opt.results_dir}/{opt.model_version}_with_ResNet50_d23_8k/{opt.data_version}/{opt.measure_mode}"
-  # opt.results_dir = f"{opt.results_dir}/{opt.model_version}_with_Xception_d23_8k/{opt.data_version}/{opt.measure_mode}"
-  # opt.results_dir = f"{opt.results_dir}/{opt.model_version}_with_ConVit_d23_8k/{opt.data_version}/{opt.measure_mode}"
-
+  opt.results_dir = f"/home/ldap/sallylin/Howard/Mura_ShiftNet/exp_result/Supervised/{opt.sup_model_version}/{opt.data_version}/{opt.sup_model_path.split('/')[-1][:-3]}"
   mkdir(opt.results_dir)
-
   set_seed(2022)
   
   return opt, opt.gpu_ids[0]
@@ -74,51 +63,10 @@ def supervised_model_prediction(opt, gpu):
   # read model
   # seresnext101
   model_sup = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_se_resnext101_32x4d')
-  # model_sup.conv1 = nn.Conv2d(1, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
   model_sup.fc = nn.Sequential(
           nn.Linear(2048, 1),
           nn.Sigmoid()
       )
-  # resnet50
-  # model_sup = models.resnet50(pretrained=False)
-  # model_sup.add_module("fc",
-  #                 nn.Sequential(
-  #                     nn.Linear(in_features=2048, out_features=1000, bias=True),
-  #                     nn.ReLU(inplace=True),
-  #                     nn.Dropout(p=0.3, inplace=False),
-  #                     nn.Linear(in_features=1000, out_features=512, bias=True),
-  #                     nn.ReLU(inplace=True),
-  #                     nn.Dropout(p=0.3, inplace=False),
-  #                     nn.Linear(in_features=512, out_features=64, bias=True),
-  #                     nn.ReLU(),
-  #                     nn.Dropout(p=0.3, inplace=False),
-  #                     nn.Linear(in_features=64, out_features=1, bias=True),
-  #                     nn.Sigmoid()
-  #                 )
-  #             )
-  # xception
-  # model_sup = pretrainedmodels.models.xception(pretrained=False)
-  # model_sup.add_module("last_linear",
-  #                 nn.Sequential(
-  #                     nn.Linear(in_features=2048, out_features=1000, bias=True),
-  #                     nn.ReLU(inplace=True),
-  #                     nn.Dropout(p=0.3, inplace=False),
-  #                     nn.Linear(in_features=1000, out_features=512, bias=True),
-  #                     nn.ReLU(inplace=True),
-  #                     nn.Dropout(p=0.3, inplace=False),
-  #                     nn.Linear(in_features=512, out_features=64, bias=True),
-  #                     nn.ReLU(),
-  #                     nn.Dropout(p=0.3, inplace=False),
-  #                     nn.Linear(in_features=64, out_features=1, bias=True),
-  #                     nn.Sigmoid()
-  #                 ))
-  # convit
-  # model_name = 'convit_base'
-  # model_sup = timm.create_model(model_name, img_size=256, pretrained=False, num_classes=1)
-  # model_sup.head = nn.Sequential(
-  #     nn.Linear(in_features=768, out_features=1),
-  #     nn.Sigmoid()
-  # )
   print(opt.sup_model_path)
   model_sup.load_state_dict(torch.load(opt.sup_model_path, map_location=torch.device(f"cuda:{gpu}")))  
   
