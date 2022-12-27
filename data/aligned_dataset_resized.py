@@ -6,14 +6,16 @@ import torch
 from data.base_dataset import BaseDataset
 from data.image_folder import make_dataset
 from PIL import Image
+import cv2
 
-ORISIZE = 512
+ORISIZE = (512, 512)
 
 class AlignedDatasetResized(BaseDataset):
     def initialize(self, opt):
-        self.opt = opt
+        self.opt = opt # param
         self.dir_A = opt.dataroot
-        self.A_paths = sorted(make_dataset(self.dir_A))
+        self.A_paths = make_dataset(self.dir_A) # return image path list (image_folder.py)
+        print(f"Take all img: {len(self.A_paths)}")
 
         # preprocessing
         if self.opt.color_mode == 'RGB':
@@ -26,12 +28,20 @@ class AlignedDatasetResized(BaseDataset):
         self.transform = transforms.Compose(transform_list)
 
     def __getitem__(self, index):
-        A_path = self.A_paths[index]
-        A = Image.open(A_path).convert(self.opt.color_mode)
+        # A_path = self.A_paths[index]
+        # A = Image.open(A_path).convert(self.opt.color_mode)
 
+        # # if not 512,512 -> resize
+        # if A.size != (ORISIZE, ORISIZE):
+        #     A = A.resize((ORISIZE, ORISIZE), Image.BICUBIC)
+
+        A_path = self.A_paths[index]
+        img = cv2.imread(A_path)  
         # if not 512,512 -> resize
-        if A.size != (ORISIZE, ORISIZE):
-            A = A.resize((ORISIZE, ORISIZE), Image.BICUBIC)
+        if self.opt.resolution == 'resized':
+            img = cv2.resize(img, ORISIZE, interpolation=cv2.INTER_AREA)
+        A = Image.fromarray(cv2.cvtColor(img,cv2.COLOR_BGR2RGB))  
+        A = A.convert(self.opt.color_mode)
 
         A = self.transform(A)
 

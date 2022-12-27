@@ -24,6 +24,7 @@ from sklearn import metrics
 from sklearn.metrics import f1_score, roc_curve, auc, confusion_matrix
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.svm import LinearSVC
+import cv2
 
 # ***** convenient func *********************************************
 def mkdirs(paths):
@@ -93,15 +94,26 @@ class wei_augumentation(object):
 
 class tjwei_augumentation(object):
     def __call__(self, img):
-        img = tf.keras.preprocessing.image.img_to_array(img)
-        img = tf.image.convert_image_dtype(img, tf.float32)
-        img = tf.image.rgb_to_grayscale(img)
-        img2 = tf.concat([img, img], 2)
-        img = tf.concat([img, img2], 2)
+        # img = tf.keras.preprocessing.image.img_to_array(img)
+        # img = tf.image.convert_image_dtype(img, tf.float32)
+        # img = tf.image.rgb_to_grayscale(img)
         # img2 = tf.image.sobel_edges(img[None, ...])
         # img = tf.concat([img, img2[0, :, :, 0]], 2)
-        image_array = tf.keras.preprocessing.image.array_to_img(img)
+        # image_array = tf.keras.preprocessing.image.array_to_img(img)
         
+        # gray three
+        # img = tf.keras.preprocessing.image.img_to_array(img)
+        # img = tf.image.convert_image_dtype(img, tf.float32)
+        # img = tf.image.rgb_to_grayscale(img)
+        # img2 = tf.concat([img, img], 2)
+        # img = tf.concat([img, img2], 2)
+        # image_array = tf.keras.preprocessing.image.array_to_img(img)
+
+        # sobel
+        img = tf.keras.preprocessing.image.img_to_array(img)
+        img = cv2.Sobel(img, cv2.CV_64F, 1, 1)
+        img = tf.image.convert_image_dtype(img, tf.float32)
+        image_array = tf.keras.preprocessing.image.array_to_img(img)
         return image_array
     def __repr__(self):
         return self.__class__.__name__+'()'
@@ -244,8 +256,8 @@ def calc_matrix(labels_res, preds_res):
     
 def get_data_info(t, l, image_info, data_dir, csv_path):
     res = []
-    # image_info = image_info[(image_info["train_type"] == t) & (image_info["label"] == l) & (image_info["PRODUCT_CODE"] == "T850MVR05")]
-    image_info = image_info[(image_info["batch"] >= 24) & (image_info["batch"] <= 25) & (image_info["label"] == l) & (image_info["PRODUCT_CODE"] == "T850MVR05")]
+    image_info = image_info[(image_info["train_type"] == t) & (image_info["label"] == l) & (image_info["PRODUCT_CODE"] == "T850MVR05")]
+    # image_info = image_info[(image_info["batch"] >= 24) & (image_info["batch"] <= 25) & (image_info["label"] == l) & (image_info["PRODUCT_CODE"] == "T850MVR05")]
     # print(image_info)
     
     for path, img, label, JND in zip(image_info["path"],image_info["name"],image_info["label"],image_info["MULTI_JND"]):

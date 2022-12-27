@@ -242,8 +242,7 @@ class ShiftNetModel(BaseModel):
             self.export_inpaint_imgs(self.fake_B, mode, fn, self.inpainting_path, 1) # 0 true, 1 fake
     
     def export_inpaint_imgs(self, output, mode, name, path, img_type):
-        save_path = os.path.join(path, f'{mode}/{name}')
-        
+        save_path = os.path.join('/hcds_vol/private/howard/typec_4k_check_inpaint/d23_4k_5000_step', f'{mode}/{name}')
         if img_type == 0:
             save_path =  os.path.join(save_path, 'real')
         else:

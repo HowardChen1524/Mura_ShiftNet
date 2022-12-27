@@ -183,14 +183,14 @@ def unsupervised_model_prediction(opt):
         # 建立 input real_A & real_B
         # it not only sets the input data with mask, but also sets the latent mask.
         model.set_input(data)
-        # if fn == '7A2D4CE4ZAZZ_20220423040728_0_L050P_resize.png':
-        # img_scores = model.test(mode, fn)
-        # pos_list = [i for i in range(0, 225)]
-        # inpainting_path = os.path.join(opt.results_dir, 'check_inpaint')
-        # score_df = pd.DataFrame(list(zip(pos_list,img_scores)), columns=['pos','score'])
-        # score_df.to_csv(os.path.join(inpainting_path, f'{mode}/{fn}/pos_score.csv'), index=False)
-        
-        img_scores = model.test()
+        img_scores = model.test(mode, fn)
+        pos_list = [i for i in range(0, 225)]
+        inpainting_path = os.path.join(opt.results_dir, 'check_inpaint')
+        inpainting_path = os.path.join('/hcds_vol/private/howard/typec_4k_check_inpaint/d23_4k_5000_step', f'{mode}/{fn}/')
+        mkdir(inpainting_path)
+        score_df = pd.DataFrame(list(zip(pos_list,img_scores)), columns=['pos','score'])
+        score_df.to_csv(os.path.join(inpainting_path, 'pos_score.csv'), index=False)
+        # img_scores = model.test()
         
         if opt.pos_normalize:
             for pos in range(0, img_scores.shape[0]):

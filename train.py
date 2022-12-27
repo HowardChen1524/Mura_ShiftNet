@@ -68,19 +68,6 @@ if __name__ == "__main__":
             total_steps += 1
             epoch_iter += 1
 
-            # (1,mini-batch,c,h,w) -> (mini-batch,c,h,w)，會有多一個維度是因為 dataloader batchsize 設 1
-            bs, ncrops, c, h, w = data['A'].size()
-            data['A'] = data['A'].view(-1, c, h, w)
-            # print(data['A'].shape)
-
-            bs, ncrops, c, h, w = data['B'].size()
-            data['B'] = data['B'].view(-1, c, h, w)
-            # print(data['B'].shape)
-
-            bs, ncrops, c, h, w = data['M'].size()
-            data['M'] = data['M'].view(-1, c, h, w)
-            # print(data['M'].shape)
-
             # it not only sets the input data with mask, but also sets the latent mask.
             # 建立 input real_A & real_B
             model.set_input(data) 

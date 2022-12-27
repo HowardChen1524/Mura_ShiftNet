@@ -21,27 +21,32 @@ from util.utils_howard import mkdir, \
 import matplotlib.pyplot as plt
 
 def initail_setting():
-  opt = TestOptions().parse()
-  opt.nThreads = 1   # test code only supports nThreads = 1
-  opt.batchSize = 1  # test code only supports batchSize = 1
-  opt.serial_batches = True  # no shuffle
-  opt.no_flip = True  # no flip
-  opt.display_id = -1 # no visdom display
-  opt.loadSize = opt.fineSize  # Do not scale!
-#   opt.results_dir = f"{opt.results_dir}/{opt.model_version}_with_SEResNeXt101_d23/{opt.data_version}/{opt.measure_mode}"
-#   opt.results_dir = f"{opt.results_dir}/{opt.model_version}_with_SEResNeXt101_d23_RGB/{opt.data_version}/{opt.measure_mode}"
-  opt.results_dir = f"{opt.results_dir}/{opt.model_version}_with_SEResNeXt101_d23_8k_Gray/{opt.data_version}/{opt.measure_mode}"
-#   opt.results_dir = f"{opt.results_dir}/{opt.model_version}_with_SEResNeXt101_d23_8k_Gray_three/{opt.data_version}/{opt.measure_mode}"
+    opt = TestOptions().parse()
+    opt.nThreads = 1   # test code only supports nThreads = 1
+    opt.batchSize = 1  # test code only supports batchSize = 1
+    opt.serial_batches = True  # no shuffle
+    opt.no_flip = True  # no flip
+    opt.display_id = -1 # no visdom display
+    opt.loadSize = opt.fineSize  # Do not scale!
 
-#   opt.results_dir = f"{opt.results_dir}/{opt.model_version}_with_SEResNeXt101_d23_8k/{opt.data_version}/{opt.measure_mode}"
-#   opt.results_dir = f"{opt.results_dir}/{opt.model_version}_with_ResNet50_d23_8k/{opt.data_version}/{opt.measure_mode}"
-#   opt.results_dir = f"{opt.results_dir}/{opt.model_version}_with_Xception_d23_8k/{opt.data_version}/{opt.measure_mode}"
-#   opt.results_dir = f"{opt.results_dir}/{opt.model_version}_with_ConVit_d23_8k/{opt.data_version}/{opt.measure_mode}"
-#   opt.results_dir = f"{opt.results_dir}/ResUnetGAN_with_SEResNeXt101_d23_8k/{opt.data_version}/"
-#   opt.results_dir = f"{opt.results_dir}/Skip-GANomaly_with_SEResNeXt101_d23_8k/{opt.data_version}/"
-  mkdir(opt.results_dir)
+    opt.results_dir = f"{opt.results_dir}/{opt.model_version}_with_SEResNeXt101_d23_8k_Sobel/{opt.data_version}/{opt.measure_mode}"
 
-  return opt, opt.gpu_ids[0]
+    #   opt.results_dir = f"{opt.results_dir}/{opt.model_version}_with_SEResNeXt101_d23/{opt.data_version}/{opt.measure_mode}"
+    #   opt.results_dir = f"{opt.results_dir}/{opt.model_version}_with_SEResNeXt101_d23_RGB/{opt.data_version}/{opt.measure_mode}"
+    #   opt.results_dir = f"{opt.results_dir}/{opt.model_version}_with_SEResNeXt101_d23_8k_Gray/{opt.data_version}/{opt.measure_mode}"
+    #   opt.results_dir = f"{opt.results_dir}/{opt.model_version}_with_SEResNeXt101_d23_8k_Gray_three/{opt.data_version}/{opt.measure_mode}"
+
+    #   opt.results_dir = f"{opt.results_dir}/{opt.model_version}_with_SEResNeXt101_d23_8k/{opt.data_version}/{opt.measure_mode}"
+    # opt.results_dir = f"{opt.results_dir}/{opt.model_version}_with_SEResNeXt101_d23_8k/{opt.data_version}/{opt.measure_mode}_woflip"
+
+    #   opt.results_dir = f"{opt.results_dir}/{opt.model_version}_with_ResNet50_d23_8k/{opt.data_version}/{opt.measure_mode}"
+    #   opt.results_dir = f"{opt.results_dir}/{opt.model_version}_with_Xception_d23_8k/{opt.data_version}/{opt.measure_mode}"
+    #   opt.results_dir = f"{opt.results_dir}/{opt.model_version}_with_ConVit_d23_8k/{opt.data_version}/{opt.measure_mode}"
+    #   opt.results_dir = f"{opt.results_dir}/ResUnetGAN_with_SEResNeXt101_d23_8k/{opt.data_version}/"
+    #   opt.results_dir = f"{opt.results_dir}/Skip-GANomaly_with_SEResNeXt101_d23_8k/{opt.data_version}/"
+    mkdir(opt.results_dir)
+
+    return opt, opt.gpu_ids[0]
   
 def count_data_version(large_smura_name, small_smura_name, csv_path):
     df_large_name = pd.DataFrame(large_smura_name, columns=['name'])
@@ -183,8 +188,9 @@ if __name__ == '__main__':
     
     # result_name = f"{opt.measure_mode}_SEResNeXt101"
     # result_name = f"{opt.measure_mode}_SEResNeXt101_8k_RGB"
-    result_name = f"{opt.measure_mode}_SEResNeXt101_8k_Gray"
+    # result_name = f"{opt.measure_mode}_SEResNeXt101_8k_Gray"
     # result_name = f"{opt.measure_mode}_SEResNeXt101_8k_Gray_three"
+    result_name = f"{opt.measure_mode}_SEResNeXt101_8k_Sobel"
     # result_name = f"{opt.measure_mode}_SEResNeXt101_8k"
     # result_name = f"{opt.measure_mode}_ResNet50_8k"
     # result_name = f"{opt.measure_mode}_Xception_8k"
