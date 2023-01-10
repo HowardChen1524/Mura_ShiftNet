@@ -185,8 +185,8 @@ def unsupervised_model_prediction(opt):
         model.set_input(data)
         img_scores = model.test(mode, fn)
         pos_list = [i for i in range(0, 225)]
-        inpainting_path = os.path.join(opt.results_dir, 'check_inpaint')
-        inpainting_path = os.path.join('/hcds_vol/private/howard/typec_4k_check_inpaint/d23_4k_5000_step', f'{mode}/{fn}/')
+        
+        inpainting_path = os.path.join(opt.results_dir, f'check_inpaint/{fn}')
         mkdir(inpainting_path)
         score_df = pd.DataFrame(list(zip(pos_list,img_scores)), columns=['pos','score'])
         score_df.to_csv(os.path.join(inpainting_path, 'pos_score.csv'), index=False)
@@ -224,7 +224,7 @@ def unsupervised_model_prediction(opt):
 if __name__ == "__main__":
 
     opt, gpu = initail_setting()  
-
+    
     # whether use record csv file to predict
     if opt.using_record:
         res_unsup = model_prediction_using_record(opt)

@@ -237,12 +237,12 @@ class ShiftNetModel(BaseModel):
         # print(self.fake_B.shape)
         # if batchsize > 1，tensor2im 只會取第一張
         if ~(self.opt.isTrain) and (mode != None) and (fn != None):
-            self.inpainting_path = os.path.join(self.opt.results_dir, 'check_inpaint')
+            self.inpainting_path = os.path.join(self.opt.results_dir, f'check_inpaint/{fn}')
             self.export_inpaint_imgs(self.real_B, mode, fn, self.inpainting_path, 0) # 0 true, 1 fake
             self.export_inpaint_imgs(self.fake_B, mode, fn, self.inpainting_path, 1) # 0 true, 1 fake
     
-    def export_inpaint_imgs(self, output, mode, name, path, img_type):
-        save_path = os.path.join('/hcds_vol/private/howard/typec_4k_check_inpaint/d23_4k_5000_step', f'{mode}/{name}')
+    def export_inpaint_imgs(self, output, mode, name, save_path, img_type):
+        # save_path = os.path.join('/hcds_vol/private/howard/typec_4k_check_inpaint/d23_4k_5000_step', f'{mode}/{name}')
         if img_type == 0:
             save_path =  os.path.join(save_path, 'real')
         else:
