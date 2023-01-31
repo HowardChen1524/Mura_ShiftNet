@@ -2,7 +2,7 @@
 # /hcds_vol/private/howard/mura_data/typecplus/img/
 
 declare -a measure_list=(
-                         "MSE_sliding"
+                        #  "MSE_sliding"
                         #  "Mask_MSE_sliding"
                         #  "SSIM_sliding"
                         #  "Mask_SSIM_sliding"
@@ -10,7 +10,7 @@ declare -a measure_list=(
                         #  "Mask_Dis_sliding"
                         #  "Style_VGG16_sliding"
                         #  "Mask_Style_VGG16_sliding"
-                        #  "Content_VGG16_sliding"
+                         "Content_VGG16_sliding"
                         #  "Mask_Content_VGG16_sliding"
                         )
               
@@ -50,13 +50,11 @@ model_version="ShiftNet_SSIM_d23_8k_change_cropping"
 # normal_num=1
 # smura_num=3
 
-dataset_name="typecandplus8k"
-sup_data_path="/hcds_vol/private/howard/mura_data/d23_merge/" # for supervised model
-csv_path="/hcds_vol/private/howard/mura_data/d23_merge/data_merged.csv" # for supervised model
+dataset_name="typec+b1"
 unsup_test_normal_path="/home/sallylab/min/d23_merge/test/test_normal_8k/" # for unsupervised model
-unsup_test_smura_path="/home/sallylab/Howard/Mura_ShiftNet/imgs/typecandplus8k/" # for unsupervised model
-normal_num=1
-smura_num=3
+unsup_test_smura_path="/home/sallylab/min/typec+b1/img/" # for unsupervised model
+normal_num=0
+smura_num=31
 
 # d23 test
 # dataset_version="d23_8k"
@@ -102,7 +100,7 @@ do
     --data_version=$dataset_name \
     --normal_how_many=$normal_num --testing_normal_dataroot=$unsup_test_normal_path \
     --smura_how_many=$smura_num --testing_smura_dataroot=$unsup_test_smura_path \
-    --gpu_ids=0
+    --gpu_ids=0 
 done
 
 # supervised with unsupervised

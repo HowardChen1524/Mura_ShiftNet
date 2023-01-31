@@ -185,8 +185,7 @@ def unsupervised_model_prediction(opt):
         model.set_input(data)
         img_scores = model.test(mode, fn)
         pos_list = [i for i in range(0, 225)]
-        
-        inpainting_path = os.path.join(opt.results_dir, f'check_inpaint/{fn}')
+        inpainting_path = os.path.join(opt.results_dir, f'patch_diff_{opt.crop_stride}/{fn}')
         mkdir(inpainting_path)
         score_df = pd.DataFrame(list(zip(pos_list,img_scores)), columns=['pos','score'])
         score_df.to_csv(os.path.join(inpainting_path, 'pos_score.csv'), index=False)
@@ -210,15 +209,17 @@ def unsupervised_model_prediction(opt):
             max_anomaly_score_log = np.append(max_anomaly_score_log, max_anomaly_score)
             mean_anomaly_score_log = np.append(mean_anomaly_score_log, mean_anomaly_score)
     if mode == 0:
-        res_unsup['all']['n'] = score_log.copy() # all 小圖
-        res_unsup['max']['n'] = max_anomaly_score_log.copy() # max
-        res_unsup['mean']['n'] = mean_anomaly_score_log.copy() # mean
-        res_unsup['fn']['n'] = fn_log
+        if score_log != None:
+            res_unsup['all']['n'] = score_log.copy() # all 小圖
+            res_unsup['max']['n'] = max_anomaly_score_log.copy() # max
+            res_unsup['mean']['n'] = mean_anomaly_score_log.copy() # mean
+            res_unsup['fn']['n'] = fn_log
     else:
         res_unsup['all']['s'] = score_log.copy()
         res_unsup['max']['s'] = max_anomaly_score_log.copy()
         res_unsup['mean']['s'] = mean_anomaly_score_log.copy()
         res_unsup['fn']['s'] = fn_log
+
   return res_unsup
 
 if __name__ == "__main__":

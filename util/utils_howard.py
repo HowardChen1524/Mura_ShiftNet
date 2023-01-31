@@ -1073,4 +1073,16 @@ def plot_sup_unsup_scatter(conf_sup, score_unsup, path, name):
     plt.savefig(f"{path}/{name}_all_scatter.png")
     plt.clf()
 
-
+def plot_img_diff_hist(img_pixel_list, save_dir, isCenter):
+    # print(img_pixel_list.max())
+    # print(img_pixel_list.argmax())
+    # print(img_pixel_list.min())
+    # print(img_pixel_list.argmin())
+    # plt.hist(img_pixel_list, bins=50, range=[min(img_pixel_list), max(img_pixel_list)])
+    mkdir(save_dir)
+    plt.hist(img_pixel_list, bins=100, range=[0, 0.02])
+    if isCenter:
+        plt.savefig(os.path.join(save_dir, 'mask_diff_hist.png'))
+    else:
+        plt.savefig(os.path.join(save_dir, 'diff_hist.png'))
+    plt.clf()
