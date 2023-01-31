@@ -21,5 +21,5 @@ shifted/
 exp_result/
 supervised_model/model.pt
 supervised_model/d23_8k_model.pt
-./detect_position/deprecated
-./detect_position/typec+b1
+detect_position/deprecated
+detect_position/typec+b1
