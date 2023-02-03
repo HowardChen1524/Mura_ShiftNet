@@ -233,24 +233,37 @@ class ShiftNetModel(BaseModel):
         
         if ~(self.opt.isTrain) and (mode != None) and (fn != None):
             diff_B = torch.abs(self.real_B - self.fake_B)
-            mask_diff_B = diff_B[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2, \
+            position_res_dir = os.path.join(f'/home/sallylab/Howard/detect_position/{self.opt.data_version}/{self.opt.crop_stride}')            
+
+            self.export_inpaint_imgs(diff_B, mode, fn, os.path.join(position_res_dir, f'ori_diff_patches/{fn}'), 2) # 0 true, 1 fake
+            self.combine_patches(fn, diff_B, position_res_dir, 'union')
+            self.combine_patches(fn, diff_B, position_res_dir, 'mean')
+            # self.export_inpaint_imgs(self.real_B, mode, fn, self.position_res_dir, 0) # 0 true, 1 fake
+            # self.export_inpaint_imgs(self.fake_B, mode, fn, self.position_res_dir, 1) # 0 true, 1 fake
+
+    def combine_patches(self, fn, patches, save_dir, overlap_strategy):
+        if overlap_strategy == 'union':
+            threshold = 0.0275
+            save_dir = os.path.join(save_dir, 'union')
+            mask_patches = patches[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2, \
                                             self.rand_l:self.rand_l+self.opt.fineSize//2]
-            
-            self.inpainting_path = os.path.join(f'/home/sallylab/Howard/detect_position/{self.opt.data_version}/{self.opt.crop_stride}')            
-            plot_img_diff_hist(diff_B.flatten().detach().cpu().numpy(), os.path.join(self.inpainting_path, f'diff_hist/{fn}'), 0)
-            plot_img_diff_hist(mask_diff_B.flatten().detach().cpu().numpy(), os.path.join(self.inpainting_path, f'diff_hist/{fn}'), 1)
+
+            # plot patches threshold hist
+            plot_img_diff_hist(patches.flatten().detach().cpu().numpy(), os.path.join(save_dir, f'all_patches_diff_hist/{fn}'), 0)
+            plot_img_diff_hist(mask_patches.flatten().detach().cpu().numpy(), os.path.join(save_dir, f'all_patches_diff_hist/{fn}'), 1)
 
             # thresholding
-            diff_B[diff_B>=0.0175] = 1
-            diff_B[diff_B<0.0175] = -1
-            # print(diff_B[224] == diff_B.reshape(15,15,3,64,64)[14][14])
-            print(diff_B.shape)
+            patches[patches>=threshold] = 1
+            patches[patches<threshold] = -1
 
-            diff_B_reshape = diff_B.view(15,15,3,64,64)
-            print(diff_B_reshape.shape)
+            # print(patches[224] == patches.reshape(15,15,3,64,64)[14][14])
+            print(patches.shape)
+
+            patches_reshape = patches.view(15,15,3,64,64)
+            print(patches_reshape.shape)
             # create combined img template
-            diff_B_combined = torch.zeros((3, 512, 512), device=self.device)
-            print(diff_B_combined.shape)
+            patches_combined = torch.zeros((3, 512, 512), device=self.device)
+            print(patches_combined.shape)
             # fill combined img
             idy = 0
             for y in range(0, 512, self.opt.crop_stride): # stride default 32
@@ -265,56 +278,54 @@ class ShiftNetModel(BaseModel):
                     # 判斷是否 最上 y=0 & 最左=0 & 最右x=14
                     if idy == 0: # 只需考慮左右重疊
                         if idx == 0: # 最左邊直接先放
-                            diff_B_combined[:, y:y+self.opt.fineSize, x:x+self.opt.fineSize] = diff_B_reshape[idy][idx]
+                            patches_combined[:, y:y+self.opt.fineSize, x:x+self.opt.fineSize] = patches_reshape[idy][idx]
                         else: 
                             # 左半聯集 
                             # 先相加，value only 1, -1 結果只會有 2, -2, 0
-                            diff_B_combined[:, y:y+self.opt.fineSize, x:x+self.opt.crop_stride] = \
-                                            diff_B_combined[:, y:y+self.opt.fineSize, x:x+self.opt.crop_stride] + diff_B_reshape[idy][idx][:, :, :self.opt.crop_stride] 
+                            patches_combined[:, y:y+self.opt.fineSize, x:x+self.opt.crop_stride] = \
+                                            patches_combined[:, y:y+self.opt.fineSize, x:x+self.opt.crop_stride] + patches_reshape[idy][idx][:, :, :self.opt.crop_stride] 
                             # 0, 2 = 1 (or==True), -2 = -1 (or==False)
-                            # print(diff_B_combined[:, y:y+self.opt.fineSize, x:x+self.opt.crop_stride].shape)
-                            # print(diff_B_combined[:, y:y+self.opt.fineSize, x:x+self.opt.crop_stride])
-                            # print(diff_B_combined[:, y:y+self.opt.fineSize, x:x+self.opt.crop_stride].unique())
-                            diff_B_combined[:, y:y+self.opt.fineSize, x:x+self.opt.crop_stride][diff_B_combined[:, y:y+self.opt.fineSize, x:x+self.opt.crop_stride]!=-2] = 1 # or==True 0,2
-                            diff_B_combined[:, y:y+self.opt.fineSize, x:x+self.opt.crop_stride][diff_B_combined[:, y:y+self.opt.fineSize, x:x+self.opt.crop_stride]==-2] = -1  # or=False -2
-                            # print(diff_B_combined[:, y:y+self.opt.fineSize, x:x+self.opt.crop_stride].shape)
-                            # print(diff_B_combined[:, y:y+self.opt.fineSize, x:x+self.opt.crop_stride])
-                            # print(diff_B_combined[:, y:y+self.opt.fineSize, x:x+self.opt.crop_stride].unique())
+                            # print(patches_combined[:, y:y+self.opt.fineSize, x:x+self.opt.crop_stride].shape)
+                            # print(patches_combined[:, y:y+self.opt.fineSize, x:x+self.opt.crop_stride])
+                            # print(patches_combined[:, y:y+self.opt.fineSize, x:x+self.opt.crop_stride].unique())
+                            patches_combined[:, y:y+self.opt.fineSize, x:x+self.opt.crop_stride][patches_combined[:, y:y+self.opt.fineSize, x:x+self.opt.crop_stride]!=-2] = 1 # or==True 0,2
+                            patches_combined[:, y:y+self.opt.fineSize, x:x+self.opt.crop_stride][patches_combined[:, y:y+self.opt.fineSize, x:x+self.opt.crop_stride]==-2] = -1  # or=False -2
+                            # print(patches_combined[:, y:y+self.opt.fineSize, x:x+self.opt.crop_stride].shape)
+                            # print(patches_combined[:, y:y+self.opt.fineSize, x:x+self.opt.crop_stride])
+                            # print(patches_combined[:, y:y+self.opt.fineSize, x:x+self.opt.crop_stride].unique())
                             # 右半，直接放
-                            diff_B_combined[:, y:y+self.opt.fineSize, x+self.opt.crop_stride:x+self.opt.fineSize] = \
-                                            diff_B_reshape[idy][idx][:, :, self.opt.crop_stride:self.opt.fineSize]                           
+                            patches_combined[:, y:y+self.opt.fineSize, x+self.opt.crop_stride:x+self.opt.fineSize] = \
+                                            patches_reshape[idy][idx][:, :, self.opt.crop_stride:self.opt.fineSize]                           
                     else: # 還需考慮上下重疊
                         if idx == 0: 
                             # 上方聯集
-                            diff_B_combined[:, y:y+self.opt.crop_stride, x:x+self.opt.fineSize] = \
-                                            diff_B_combined[:, y:y+self.opt.crop_stride, x:x+self.opt.fineSize] + diff_B_reshape[idy][idx][:, :self.opt.crop_stride, :] 
-                            diff_B_combined[:, y:y+self.opt.crop_stride, x:x+self.opt.fineSize][diff_B_combined[:, y:y+self.opt.crop_stride, x:x+self.opt.fineSize]!=-2] = 1 # or==True 0,2
-                            diff_B_combined[:, y:y+self.opt.crop_stride, x:x+self.opt.fineSize][diff_B_combined[:, y:y+self.opt.crop_stride, x:x+self.opt.fineSize]==-2] = -1  # or=False -2
+                            patches_combined[:, y:y+self.opt.crop_stride, x:x+self.opt.fineSize] = \
+                                            patches_combined[:, y:y+self.opt.crop_stride, x:x+self.opt.fineSize] + patches_reshape[idy][idx][:, :self.opt.crop_stride, :] 
+                            patches_combined[:, y:y+self.opt.crop_stride, x:x+self.opt.fineSize][patches_combined[:, y:y+self.opt.crop_stride, x:x+self.opt.fineSize]!=-2] = 1 # or==True 0,2
+                            patches_combined[:, y:y+self.opt.crop_stride, x:x+self.opt.fineSize][patches_combined[:, y:y+self.opt.crop_stride, x:x+self.opt.fineSize]==-2] = -1  # or=False -2
                             # 下方，直接放
-                            diff_B_combined[:, y+self.opt.crop_stride:y+self.opt.fineSize, x:x+self.opt.fineSize] = \
-                                            diff_B_reshape[idy][idx][:, self.opt.crop_stride:self.opt.fineSize, :]
+                            patches_combined[:, y+self.opt.crop_stride:y+self.opt.fineSize, x:x+self.opt.fineSize] = \
+                                            patches_reshape[idy][idx][:, self.opt.crop_stride:self.opt.fineSize, :]
                         else:
                             # 上方聯集
-                            diff_B_combined[:, y:y+self.opt.crop_stride, x:x+self.opt.fineSize] = \
-                                            diff_B_combined[:, y:y+self.opt.crop_stride, x:x+self.opt.fineSize] + diff_B_reshape[idy][idx][:, :self.opt.crop_stride, :] 
-                            diff_B_combined[:, y:y+self.opt.crop_stride, x:x+self.opt.fineSize][diff_B_combined[:, y:y+self.opt.crop_stride, x:x+self.opt.fineSize]!=-2] = 1 # or==True 0,2
-                            diff_B_combined[:, y:y+self.opt.crop_stride, x:x+self.opt.fineSize][diff_B_combined[:, y:y+self.opt.crop_stride, x:x+self.opt.fineSize]==-2] = -1  # or=False -2
+                            patches_combined[:, y:y+self.opt.crop_stride, x:x+self.opt.fineSize] = \
+                                            patches_combined[:, y:y+self.opt.crop_stride, x:x+self.opt.fineSize] + patches_reshape[idy][idx][:, :self.opt.crop_stride, :] 
+                            patches_combined[:, y:y+self.opt.crop_stride, x:x+self.opt.fineSize][patches_combined[:, y:y+self.opt.crop_stride, x:x+self.opt.fineSize]!=-2] = 1 # or==True 0,2
+                            patches_combined[:, y:y+self.opt.crop_stride, x:x+self.opt.fineSize][patches_combined[:, y:y+self.opt.crop_stride, x:x+self.opt.fineSize]==-2] = -1  # or=False -2
                             # 下左聯集
-                            diff_B_combined[:, y+self.opt.crop_stride:y+self.opt.fineSize, x:x+self.opt.crop_stride] = \
-                                            diff_B_combined[:, y+self.opt.crop_stride:y+self.opt.fineSize, x:x+self.opt.crop_stride] + diff_B_reshape[idy][idx][:, self.opt.crop_stride:self.opt.fineSize, :self.opt.crop_stride] 
-                            diff_B_combined[:, y+self.opt.crop_stride:y+self.opt.fineSize, x:x+self.opt.crop_stride][diff_B_combined[:, y+self.opt.crop_stride:y+self.opt.fineSize, x:x+self.opt.crop_stride]!=-2] = 1 # or==True 0,2
-                            diff_B_combined[:, y+self.opt.crop_stride:y+self.opt.fineSize, x:x+self.opt.crop_stride][diff_B_combined[:, y+self.opt.crop_stride:y+self.opt.fineSize, x:x+self.opt.crop_stride]==-2] = -1  # or=False -2
+                            patches_combined[:, y+self.opt.crop_stride:y+self.opt.fineSize, x:x+self.opt.crop_stride] = \
+                                            patches_combined[:, y+self.opt.crop_stride:y+self.opt.fineSize, x:x+self.opt.crop_stride] + patches_reshape[idy][idx][:, self.opt.crop_stride:self.opt.fineSize, :self.opt.crop_stride] 
+                            patches_combined[:, y+self.opt.crop_stride:y+self.opt.fineSize, x:x+self.opt.crop_stride][patches_combined[:, y+self.opt.crop_stride:y+self.opt.fineSize, x:x+self.opt.crop_stride]!=-2] = 1 # or==True 0,2
+                            patches_combined[:, y+self.opt.crop_stride:y+self.opt.fineSize, x:x+self.opt.crop_stride][patches_combined[:, y+self.opt.crop_stride:y+self.opt.fineSize, x:x+self.opt.crop_stride]==-2] = -1  # or=False -2
                             # 下右半直接放
-                            diff_B_combined[:, y+self.opt.crop_stride:y+self.opt.fineSize, x+self.opt.crop_stride:x+self.opt.fineSize] = \
-                                            diff_B_reshape[idy][idx][:, self.opt.crop_stride:self.opt.fineSize, self.opt.crop_stride:self.opt.fineSize]   
+                            patches_combined[:, y+self.opt.crop_stride:y+self.opt.fineSize, x+self.opt.crop_stride:x+self.opt.fineSize] = \
+                                            patches_reshape[idy][idx][:, self.opt.crop_stride:self.opt.fineSize, self.opt.crop_stride:self.opt.fineSize]   
                     idx+=1
                 idy+=1
             
-            self.export_combined_diff_img(diff_B_combined, fn, os.path.join(self.inpainting_path, 'diff_pos/'))
-            
-            # self.export_inpaint_imgs(self.real_B, mode, fn, self.inpainting_path, 0) # 0 true, 1 fake
-            # self.export_inpaint_imgs(self.fake_B, mode, fn, self.inpainting_path, 1) # 0 true, 1 fake
-            self.export_inpaint_imgs(diff_B, mode, fn, os.path.join(self.inpainting_path, f'diff_patches/{fn}'), 2) # 0 true, 1 fake
+            self.export_combined_diff_img(patches_combined, fn, os.path.join(save_dir, f'{threshold:.4f}_diff_pos/'))
+        elif overlap_strategy == 'mean':
+            pass
 
     def export_combined_diff_img(self, img, name, save_path):
         mkdir(save_path)       
@@ -334,10 +345,10 @@ class ShiftNetModel(BaseModel):
         mkdir(save_path)
         for idx, img in enumerate(output):
             pil_img = tensor2img(img) 
-            pil_img = pil_img.convert('L')           
+            # pil_img = pil_img.convert('L')           
             pil_img.save(os.path.join(save_path,f"{idx}.png"))
-            # pil_img_en = enhance_img(pil_img)
-            # pil_img_en.save(os.path.join(save_path,f"en_{idx}.png"))
+            pil_img_en = enhance_img(pil_img)
+            pil_img_en.save(os.path.join(save_path,f"en_{idx}.png"))
 
     # 06/18 add for testing
     def test(self, mode=None, fn=None):
