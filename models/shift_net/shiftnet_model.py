@@ -265,67 +265,95 @@ class ShiftNetModel(BaseModel):
             patches_combined = torch.zeros((3, 512, 512), device=self.device)
             print(patches_combined.shape)
             # fill combined img
+            ps = self.opt.fineSize # crop patch size
+            sd = self.opt.crop_stride # crop stride
             idy = 0
-            for y in range(0, 512, self.opt.crop_stride): # stride default 32
+            for y in range(0, 512, sd): # stride default 32
                 # print(f"y {y}")
-                if (y + self.opt.fineSize) > 512:
+                if (y + ps) > 512:
                     break
                 idx = 0
-                for x in range(0, 512, self.opt.crop_stride):
+                for x in range(0, 512, sd):
                     # print(f"x {x}")
-                    if (x + self.opt.fineSize) > 512:
+                    if (x + ps) > 512:
                         break
                     # 判斷是否 最上 y=0 & 最左=0 & 最右x=14
                     if idy == 0: # 只需考慮左右重疊
                         if idx == 0: # 最左邊直接先放
-                            patches_combined[:, y:y+self.opt.fineSize, x:x+self.opt.fineSize] = patches_reshape[idy][idx]
+                            patches_combined[:, y:y+ps, x:x+ps] = patches_reshape[idy][idx]
                         else: 
                             # 左半聯集 
                             # 先相加，value only 1, -1 結果只會有 2, -2, 0
-                            patches_combined[:, y:y+self.opt.fineSize, x:x+self.opt.crop_stride] = \
-                                            patches_combined[:, y:y+self.opt.fineSize, x:x+self.opt.crop_stride] + patches_reshape[idy][idx][:, :, :self.opt.crop_stride] 
+                            patches_combined[:, y:y+ps, x:x+sd] = \
+                                            patches_combined[:, y:y+ps, x:x+sd] + patches_reshape[idy][idx][:, :, :sd] 
                             # 0, 2 = 1 (or==True), -2 = -1 (or==False)
-                            # print(patches_combined[:, y:y+self.opt.fineSize, x:x+self.opt.crop_stride].shape)
-                            # print(patches_combined[:, y:y+self.opt.fineSize, x:x+self.opt.crop_stride])
-                            # print(patches_combined[:, y:y+self.opt.fineSize, x:x+self.opt.crop_stride].unique())
-                            patches_combined[:, y:y+self.opt.fineSize, x:x+self.opt.crop_stride][patches_combined[:, y:y+self.opt.fineSize, x:x+self.opt.crop_stride]!=-2] = 1 # or==True 0,2
-                            patches_combined[:, y:y+self.opt.fineSize, x:x+self.opt.crop_stride][patches_combined[:, y:y+self.opt.fineSize, x:x+self.opt.crop_stride]==-2] = -1  # or=False -2
-                            # print(patches_combined[:, y:y+self.opt.fineSize, x:x+self.opt.crop_stride].shape)
-                            # print(patches_combined[:, y:y+self.opt.fineSize, x:x+self.opt.crop_stride])
-                            # print(patches_combined[:, y:y+self.opt.fineSize, x:x+self.opt.crop_stride].unique())
+                            # print(patches_combined[:, y:y+ps, x:x+sd].shape)
+                            # print(patches_combined[:, y:y+ps, x:x+sd])
+                            # print(patches_combined[:, y:y+ps, x:x+sd].unique())
+                            patches_combined[:, y:y+ps, x:x+sd][patches_combined[:, y:y+ps, x:x+sd]!=-2] = 1 # or==True 0,2
+                            patches_combined[:, y:y+ps, x:x+sd][patches_combined[:, y:y+ps, x:x+sd]==-2] = -1  # or=False -2
+                            # print(patches_combined[:, y:y+ps, x:x+sd].shape)
+                            # print(patches_combined[:, y:y+ps, x:x+sd])
+                            # print(patches_combined[:, y:y+ps, x:x+sd].unique())
                             # 右半，直接放
-                            patches_combined[:, y:y+self.opt.fineSize, x+self.opt.crop_stride:x+self.opt.fineSize] = \
-                                            patches_reshape[idy][idx][:, :, self.opt.crop_stride:self.opt.fineSize]                           
+                            patches_combined[:, y:y+ps, x+sd:x+ps] = \
+                                            patches_reshape[idy][idx][:, :, sd:ps]                           
                     else: # 還需考慮上下重疊
                         if idx == 0: 
                             # 上方聯集
-                            patches_combined[:, y:y+self.opt.crop_stride, x:x+self.opt.fineSize] = \
-                                            patches_combined[:, y:y+self.opt.crop_stride, x:x+self.opt.fineSize] + patches_reshape[idy][idx][:, :self.opt.crop_stride, :] 
-                            patches_combined[:, y:y+self.opt.crop_stride, x:x+self.opt.fineSize][patches_combined[:, y:y+self.opt.crop_stride, x:x+self.opt.fineSize]!=-2] = 1 # or==True 0,2
-                            patches_combined[:, y:y+self.opt.crop_stride, x:x+self.opt.fineSize][patches_combined[:, y:y+self.opt.crop_stride, x:x+self.opt.fineSize]==-2] = -1  # or=False -2
+                            patches_combined[:, y:y+sd, x:x+ps] = \
+                                            patches_combined[:, y:y+sd, x:x+ps] + patches_reshape[idy][idx][:, :sd, :] 
+                            patches_combined[:, y:y+sd, x:x+ps][patches_combined[:, y:y+sd, x:x+ps]!=-2] = 1 # or==True 0,2
+                            patches_combined[:, y:y+sd, x:x+ps][patches_combined[:, y:y+sd, x:x+ps]==-2] = -1  # or=False -2
                             # 下方，直接放
-                            patches_combined[:, y+self.opt.crop_stride:y+self.opt.fineSize, x:x+self.opt.fineSize] = \
-                                            patches_reshape[idy][idx][:, self.opt.crop_stride:self.opt.fineSize, :]
+                            patches_combined[:, y+sd:y+ps, x:x+ps] = \
+                                            patches_reshape[idy][idx][:, sd:ps, :]
                         else:
                             # 上方聯集
-                            patches_combined[:, y:y+self.opt.crop_stride, x:x+self.opt.fineSize] = \
-                                            patches_combined[:, y:y+self.opt.crop_stride, x:x+self.opt.fineSize] + patches_reshape[idy][idx][:, :self.opt.crop_stride, :] 
-                            patches_combined[:, y:y+self.opt.crop_stride, x:x+self.opt.fineSize][patches_combined[:, y:y+self.opt.crop_stride, x:x+self.opt.fineSize]!=-2] = 1 # or==True 0,2
-                            patches_combined[:, y:y+self.opt.crop_stride, x:x+self.opt.fineSize][patches_combined[:, y:y+self.opt.crop_stride, x:x+self.opt.fineSize]==-2] = -1  # or=False -2
+                            patches_combined[:, y:y+sd, x:x+ps] = \
+                                            patches_combined[:, y:y+sd, x:x+ps] + patches_reshape[idy][idx][:, :sd, :] 
+                            patches_combined[:, y:y+sd, x:x+ps][patches_combined[:, y:y+sd, x:x+ps]!=-2] = 1 # or==True 0,2
+                            patches_combined[:, y:y+sd, x:x+ps][patches_combined[:, y:y+sd, x:x+ps]==-2] = -1  # or=False -2
                             # 下左聯集
-                            patches_combined[:, y+self.opt.crop_stride:y+self.opt.fineSize, x:x+self.opt.crop_stride] = \
-                                            patches_combined[:, y+self.opt.crop_stride:y+self.opt.fineSize, x:x+self.opt.crop_stride] + patches_reshape[idy][idx][:, self.opt.crop_stride:self.opt.fineSize, :self.opt.crop_stride] 
-                            patches_combined[:, y+self.opt.crop_stride:y+self.opt.fineSize, x:x+self.opt.crop_stride][patches_combined[:, y+self.opt.crop_stride:y+self.opt.fineSize, x:x+self.opt.crop_stride]!=-2] = 1 # or==True 0,2
-                            patches_combined[:, y+self.opt.crop_stride:y+self.opt.fineSize, x:x+self.opt.crop_stride][patches_combined[:, y+self.opt.crop_stride:y+self.opt.fineSize, x:x+self.opt.crop_stride]==-2] = -1  # or=False -2
+                            patches_combined[:, y+sd:y+ps, x:x+sd] = \
+                                            patches_combined[:, y+sd:y+ps, x:x+sd] + patches_reshape[idy][idx][:, sd:ps, :sd] 
+                            patches_combined[:, y+sd:y+ps, x:x+sd][patches_combined[:, y+sd:y+ps, x:x+sd]!=-2] = 1 # or==True 0,2
+                            patches_combined[:, y+sd:y+ps, x:x+sd][patches_combined[:, y+sd:y+ps, x:x+sd]==-2] = -1  # or=False -2
                             # 下右半直接放
-                            patches_combined[:, y+self.opt.crop_stride:y+self.opt.fineSize, x+self.opt.crop_stride:x+self.opt.fineSize] = \
-                                            patches_reshape[idy][idx][:, self.opt.crop_stride:self.opt.fineSize, self.opt.crop_stride:self.opt.fineSize]   
+                            patches_combined[:, y+sd:y+ps, x+sd:x+ps] = \
+                                            patches_reshape[idy][idx][:, sd:ps, sd:ps]   
                     idx+=1
                 idy+=1
             
             self.export_combined_diff_img(patches_combined, fn, os.path.join(save_dir, f'{threshold:.4f}_diff_pos/'))
         elif overlap_strategy == 'mean':
-            pass
+            save_dir = os.path.join(save_dir, 'mean')
+
+            patches_reshape = patches.view(15,15,3,64,64)
+            print(patches_reshape.shape)
+            # create combined img template
+            patches_combined = torch.zeros((3, 512, 512), device=self.device)
+            print(patches_combined.shape)
+            # fill combined img
+            ps = self.opt.fineSize # crop patch size
+            sd = self.opt.crop_stride # crop stride
+            idy = 0
+            for y in range(0, 512, sd): # stride default 32
+                # print(f"y {y}")
+                if (y + ps) > 512:
+                    break
+                idx = 0
+                for x in range(0, 512, sd):
+                    # print(f"x {x}")
+                    if (x + ps) > 512:
+                        break
+                    patches_combined[:, y:y+ps, x:x+ps] += patches_reshape[idy][idx]
+                    idx+=1
+                idy+=1
+            
+            # do average
+            
+            # self.export_combined_diff_img(patches_combined, fn, os.path.join(save_dir, f'{threshold:.4f}_diff_pos/'))
 
     def export_combined_diff_img(self, img, name, save_path):
         mkdir(save_path)       
