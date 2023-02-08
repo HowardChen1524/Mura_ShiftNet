@@ -28,6 +28,9 @@ class TestOptions(BaseOptions):
         parser.add_argument('--pos_normalize', action='store_true', help='do position normalize')
         parser.add_argument('--using_threshold', action='store_true', help='using threshold to do blind test')
         parser.add_argument('--using_record', action='store_true', help='using record to test')
+        # visual position
+        parser.add_argument('--binary_threshold', type=float, help='using record to test')
+        parser.add_argument('--min_area', type=int, help='using record to test')
 
         self.isTrain = False
 

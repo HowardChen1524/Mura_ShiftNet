@@ -13,7 +13,8 @@ declare -a measure_list=(
                          "Content_VGG16_sliding"
                         #  "Mask_Content_VGG16_sliding"
                         )
-              
+declare th_list=(0.01 0.0125)
+declare min_area_list=(50 60 70)
 # declare -a sup_model_list=(
 #     '/home/ldap/sallylin/Howard/Mura_ShiftNet/log/Supervised/ensemble_d23/model_0.pt'
 #     '/home/ldap/sallylin/Howard/Mura_ShiftNet/log/Supervised/ensemble_d23/model_1.pt'
@@ -51,8 +52,10 @@ model_version="ShiftNet_SSIM_d23_8k_change_cropping"
 # smura_num=3
 
 dataset_name="typec+b1"
-unsup_test_normal_path="/home/sallylab/min/d23_merge/test/test_normal_8k/" # for unsupervised model
-unsup_test_smura_path="/home/sallylab/min/typec+b1/img/" # for unsupervised model
+# unsup_test_normal_path="/home/sallylab/min/d23_merge/test/test_normal_8k/" # for unsupervised model
+# unsup_test_smura_path="/home/sallylab/min/typec+b1/img/" # for unsupervised model
+unsup_test_normal_path="/home/levi/mura_data/d23/1920x1080/test/test_normal_8k/"
+unsup_test_smura_path="/home/levi/mura_data/typecplus/img/"
 normal_num=0
 smura_num=31
 
@@ -91,17 +94,17 @@ smura_num=31
 # done
 
 # only unsupervised model
-for measure in ${measure_list[@]}
-do
-    python3 test_sliding.py \
-    --batchSize=1 --use_spectral_norm_D=1 --which_model_netD="basic" --which_model_netG="unet_shift_triple" --model="shiftnet" --shift_sz=1 --mask_thred=1 \
-    --loadSize=64 --fineSize=64 --crop_stride=32 --overlap=0 --dataset_mode="aligned_sliding" --mask_type="center" --input_nc=3 --output_nc=3 --color_mode="RGB" \
-    --inpainting_mode="ShiftNet" --measure_mode=$measure --checkpoints_dir='/home/sallylab/Howard/models/' --results_dir='./exp_result/Unsupervised' --model_version=$model_version --which_epoch="200" \
-    --data_version=$dataset_name \
-    --normal_how_many=$normal_num --testing_normal_dataroot=$unsup_test_normal_path \
-    --smura_how_many=$smura_num --testing_smura_dataroot=$unsup_test_smura_path \
-    --gpu_ids=0 
-done
+# for measure in ${measure_list[@]}
+# do
+#     python3 test_sliding.py \
+#     --batchSize=1 --use_spectral_norm_D=1 --which_model_netD="basic" --which_model_netG="unet_shift_triple" --model="shiftnet" --shift_sz=1 --mask_thred=1 \
+#     --loadSize=64 --fineSize=64 --crop_stride=32 --overlap=0 --dataset_mode="aligned_sliding" --mask_type="center" --input_nc=3 --output_nc=3 --color_mode="RGB" \
+#     --inpainting_mode="ShiftNet" --measure_mode=$measure --checkpoints_dir='/home/sallylab/Howard/models/' --results_dir='./exp_result/Unsupervised' --model_version=$model_version --which_epoch="200" \
+#     --data_version=$dataset_name \
+#     --normal_how_many=$normal_num --testing_normal_dataroot=$unsup_test_normal_path \
+#     --smura_how_many=$smura_num --testing_smura_dataroot=$unsup_test_smura_path \
+#     --gpu_ids=0 
+# done
 
 # supervised with unsupervised
 # for measure in ${measure_list[@]}
@@ -125,3 +128,20 @@ done
 #     --score_csv_dir=$score_csv_dir \
 #     --checkpoints_dir='./log' --results_dir='./exp_result/Ensemble' --using_threshold
 # done
+
+# for visualize
+for th in ${th_list[@]}
+do
+    for min_area in ${min_area_list[@]}
+    do
+        python3 test_sliding.py \
+        --batchSize=1 --use_spectral_norm_D=1 --which_model_netD="basic" --which_model_netG="unet_shift_triple" --model="shiftnet" --shift_sz=1 --mask_thred=1 \
+        --loadSize=64 --fineSize=64 --crop_stride=32 --overlap=0 --dataset_mode="aligned_sliding" --mask_type="center" --input_nc=3 --output_nc=3 --color_mode="RGB" \
+        --inpainting_mode="ShiftNet" --measure_mode="Content_VGG16_sliding" --checkpoints_dir='/home/sallylab/Howard/models' --results_dir='./exp_result/Unsupervised' --model_version=$model_version --which_epoch="200" \
+        --data_version=$dataset_name \
+        --normal_how_many=$normal_num --testing_normal_dataroot=$unsup_test_normal_path \
+        --smura_how_many=$smura_num --testing_smura_dataroot=$unsup_test_smura_path \
+        --gpu_ids=0 \
+        --binary_threshold=$th --min_area=$min_area
+    done
+done

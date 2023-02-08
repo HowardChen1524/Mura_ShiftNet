@@ -1,14 +1,11 @@
 import os
 import argparse
-import shutil
 from collections import defaultdict 
-import xmltodict, json
 from glob import glob
 import numpy as np
 import pandas as pd
 import cv2
 from PIL import Image, ImageDraw
-import matplotlib.pyplot as plt
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-dv', '--dataset_version', type=str, default=None, required=True)
@@ -64,6 +61,9 @@ df = pd.DataFrame.from_dict(info_fn_list)
 # 基於標註 df 將實際 mura 位置標註在圖上
 save_dir = os.path.join(save_dir, f'{dataset_version}/actual_pos')
 os.makedirs(save_dir, exist_ok=True)
+os.makedirs(os.path.join(save_dir, f'bounding_box'), exist_ok=True)
+os.makedirs(os.path.join(save_dir, f'ground_truth'), exist_ok=True)
+
 img_dir = os.path.join(data_dir, f'{dataset_version}/img')
 img_list = glob(f"{os.path.join(img_dir, '*png')}")
 for img_path in img_list:
@@ -79,8 +79,15 @@ for img_path in img_list:
         fn_series = fn_series_list.iloc[i]
         actual_pos_list.append((int(fn_series['x0']/3.75), int(fn_series['y0']/2.109375), int(fn_series['x1']/ 3.75), int(fn_series['y1']/2.109375)))
 
+    binary_img = np.zeros((512,512)) # for binary mask
+
     for actual_pos in actual_pos_list:
         draw = ImageDraw.Draw(img)  
         draw.rectangle(actual_pos, outline ="yellow")
+        # print(actual_pos)
+        binary_img[actual_pos[1]:actual_pos[3], actual_pos[0]:actual_pos[2]] = 255
+
     # print(os.path.join(save_dir, fn))
-    img.save(os.path.join(save_dir, fn))
+    img.save(os.path.join(save_dir, f'bounding_box/{fn}'))
+    binary_img = Image.fromarray(binary_img).convert('L')
+    binary_img.save((os.path.join(save_dir, f'ground_truth/{fn}')))

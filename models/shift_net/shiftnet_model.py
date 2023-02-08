@@ -1,16 +1,13 @@
+import os
 from collections import defaultdict
+import numpy as np
 import torch
 from torch.nn import functional as F
+from torchvision.transforms.functional import rgb_to_grayscale
 from util import util
 from util.utils_howard import tensor2img, mkdir, enhance_img, plot_img_diff_hist
 from models import networks
 from models.shift_net.base_model import BaseModel
-import time
-import torchvision.transforms as transforms
-import os
-import numpy as np
-from PIL import Image
-import cv2
 from piqa import SSIM
 
 class ShiftNetModel(BaseModel):
@@ -233,17 +230,23 @@ class ShiftNetModel(BaseModel):
         
         if ~(self.opt.isTrain) and (mode != None) and (fn != None):
             diff_B = torch.abs(self.real_B - self.fake_B)
-            position_res_dir = os.path.join(f'/home/sallylab/Howard/detect_position/{self.opt.data_version}/{self.opt.crop_stride}')            
-
-            self.export_inpaint_imgs(diff_B, mode, fn, os.path.join(position_res_dir, f'ori_diff_patches/{fn}'), 2) # 0 true, 1 fake
-            self.combine_patches(fn, diff_B, position_res_dir, 'union')
-            self.combine_patches(fn, diff_B, position_res_dir, 'mean')
-            # self.export_inpaint_imgs(self.real_B, mode, fn, self.position_res_dir, 0) # 0 true, 1 fake
-            # self.export_inpaint_imgs(self.fake_B, mode, fn, self.position_res_dir, 1) # 0 true, 1 fake
+            position_res_dir = os.path.join(f'../detect_position/{self.opt.data_version}/{self.opt.crop_stride}')            
+            gray_diff_B = rgb_to_grayscale(diff_B)
+            # print(diff_B[0,0,0,0]*0.299 + diff_B[0,1,0,0]*0.587 + diff_B[0,2,0,0]*0.114)
+            # print(gray_diff_B[0,0,0,0])
+            # print(diff_B.shape)
+            # print(gray_diff_B.shape)
+            
+            # self.export_inpaint_imgs(gray_diff_B, mode, fn, os.path.join(position_res_dir, f'ori_diff_patches/{fn}'), 2) # 0 true, 1 fake
+            self.combine_patches(fn, gray_diff_B, position_res_dir, 'union')
+            
+            # self.combine_patches(fn, diff_B, position_res_dir, 'mean')
+            # self.export_inpaint_imgs(self.real_B, mode, fn, os.path.join(position_res_dir, f'ori_diff_patches/{fn}'), 0) # 0 true, 1 fake
+            # self.export_inpaint_imgs(self.fake_B, mode, fn, os.path.join(position_res_dir, f'ori_diff_patches/{fn}'), 1) # 0 true, 1 fake
 
     def combine_patches(self, fn, patches, save_dir, overlap_strategy):
         if overlap_strategy == 'union':
-            threshold = 0.0275
+            threshold = float(self.opt.binary_threshold)
             save_dir = os.path.join(save_dir, 'union')
             mask_patches = patches[:, :, self.rand_t:self.rand_t+self.opt.fineSize//2, \
                                             self.rand_l:self.rand_l+self.opt.fineSize//2]
@@ -257,13 +260,13 @@ class ShiftNetModel(BaseModel):
             patches[patches<threshold] = -1
 
             # print(patches[224] == patches.reshape(15,15,3,64,64)[14][14])
-            print(patches.shape)
+            # print(patches.shape)
 
-            patches_reshape = patches.view(15,15,3,64,64)
-            print(patches_reshape.shape)
+            patches_reshape = patches.view(15,15,1,64,64)
+            # print(patches_reshape.shape)
             # create combined img template
-            patches_combined = torch.zeros((3, 512, 512), device=self.device)
-            print(patches_combined.shape)
+            patches_combined = torch.zeros((1, 512, 512), device=self.device)
+            # print(patches_combined.shape)
             # fill combined img
             ps = self.opt.fineSize # crop patch size
             sd = self.opt.crop_stride # crop stride
@@ -325,7 +328,10 @@ class ShiftNetModel(BaseModel):
                     idx+=1
                 idy+=1
             
-            self.export_combined_diff_img(patches_combined, fn, os.path.join(save_dir, f'{threshold:.4f}_diff_pos/'))
+            min_area = self.opt.min_area
+            if min_area > 1:
+                patches_combined = self.remove_small_areas(patches_combined, min_area)
+            self.export_combined_diff_img(patches_combined, fn, os.path.join(save_dir, f'{threshold:.4f}_diff_pos_area_{min_area}/imgs'))
         elif overlap_strategy == 'mean':
             save_dir = os.path.join(save_dir, 'mean')
 
@@ -355,12 +361,50 @@ class ShiftNetModel(BaseModel):
             
             # self.export_combined_diff_img(patches_combined, fn, os.path.join(save_dir, f'{threshold:.4f}_diff_pos/'))
 
+    def dfs(self, image, H, W, visited, pos_list):
+        # check if the current pixel is within the bounds of the image
+        if H < 0 or H >= image.shape[1] or W < 0 or W >= image.shape[2]:
+            return 0
+        # check if the current pixel is visited or not white
+        if visited[H][W] or image[0,H, W] != 1:
+            return 0
+        # mark the current pixel as visited
+        pos_list.append((H,W))
+        visited[H][W] = True
+        area = 1
+        # 8-connected neighbors
+        dirs = [(0, 1), (0, -1), (1, 0), (-1, 0), (1, 1), (1, -1), (-1, 1), (-1, -1)] # 2 8 6 4 3 9 1 7 (keyboard)
+        # recursively call dfs on each of the 8-connected neighbors
+        for direction in dirs:
+            area += self.dfs(image, H + direction[0], W + direction[1], visited, pos_list)
+        
+        return area
+
+    def remove_small_areas(self, image, min_area): # connected_component_labeling
+        # initialize the visited matrix
+        # print(image.shape)
+        visited = [[False for _ in range(image.shape[2])] for _ in range(image.shape[1])]
+        # print(np.array(visited).shape)
+
+        # loop through each pixel in the image
+        for H in range(image.shape[1]):
+            for W in range(image.shape[2]):
+                # if the current pixel is white and not visited, start a new connected component
+                if (not visited[H][W]) and (image[0, H, W] == 1):
+                    pos_list = []
+                    white_area = self.dfs(image, H, W, visited, pos_list)
+                    # print(white_area)
+                    if  white_area < min_area:
+                        for (pos_H, pos_W) in pos_list:
+                            image[0, pos_H, pos_W] = -1
+
+        return image
+
     def export_combined_diff_img(self, img, name, save_path):
         mkdir(save_path)       
         pil_img = tensor2img(img) 
         pil_img = pil_img.convert('L')           
         pil_img.save(os.path.join(save_path, name))
-
 
     def export_inpaint_imgs(self, output, mode, name, save_path, img_type):
         if img_type == 0:
@@ -387,72 +431,6 @@ class ShiftNetModel(BaseModel):
                 self.forward(mode, fn)
             fake_B = self.fake_B.detach() # Inpaint
             real_B = self.real_B # Original
-
-        elif self.opt.inpainting_mode == 'OpenCV' and self.opt.color_mode != 'RGB':
-            real_B = self.real_B # Original
-            # print(real_B)
-            # print(real_B.shape)
-            # =====Create fake_B=====
-            
-            # 去掉第一個 batch dim (1,1,h,w)
-            mask_global = np.copy(self.mask_global.detach().cpu().numpy()[0]) 
-            fake_B = np.copy(self.real_B.detach().cpu().numpy()[0])
-
-            # 建立 mask
-            mask = np.zeros(mask_global.shape)
-            mask[np.where(mask_global==True)] = 255 # white
-            mask[np.where(mask_global!=True)] = 0 # black      
-            # print(mask[np.where(mask==255)].shape)
-
-            mask = np.transpose(mask, (1, 2, 0)) # (1,h,w) -> (h,w,1)
-            mask = np.squeeze(mask, axis=2) # (h,w,1) -> (h,w)
-            # mask = mask.astype('uint8')
-            # mask_img = Image.fromarray(mask)
-            # mask_img.save('./opencv_mask.png')
-            
-            # 建立 fake_B
-            fake_B = (fake_B + 1) / 2.0 * 255.0
-            fake_B[np.where(mask_global==True)] = 0 # black
-            # print(fake_B[np.where(fake_B==0)].shape)
-
-            fake_B = np.transpose(fake_B, (1, 2, 0))
-            fake_B = np.squeeze(fake_B, axis=2)
-            fake_B = fake_B.astype('float32')
-            fake_B = cv2.inpaint(fake_B, mask, 3, cv2.INPAINT_NS)          
-            # fake_B_img = Image.fromarray(fake_B.astype('uint8'))
-            # fake_B_img.save('./opencv_img.png')
-            fake_B = (fake_B / 255.0 * 2) - 1
-            
-            # change back tensor
-            fake_B = torch.from_numpy(fake_B)
-            # transform = transforms.Compose([transforms.ToTensor(),
-            #                                 transforms.Normalize((0.5, 0.5, 0.5),(0.5, 0.5, 0.5))])
-            # fake_B = transform(fake_B_img).to(self.device)
-            fake_B = fake_B.view(1,1,64,64).to(self.device)
-            # print(fake_B)
-            # print(fake_B.shape)
-        elif self.opt.inpainting_mode == 'Mean' and self.opt.color_mode != 'RGB':
-            real_B = self.real_B # Original
-            # print(real_B)
-            # =====Create fake_B=====
-            # 去掉第一個 batch dim (1,1,256,256)
-            mask_global = np.copy(self.mask_global.detach().cpu().numpy()[0])
-            fake_B = np.copy(self.real_B.detach().cpu().numpy()[0])
-
-            # 建立 fake_B
-            mean = fake_B[np.where(mask_global!=True)].mean()
-            # fake_B[np.where(mask_global==True)] = -1 # white
-            fake_B[np.where(mask_global==True)] = mean
-            
-            fake_B = np.transpose(fake_B, (1, 2, 0))
-            fake_B = np.squeeze(fake_B, axis=2)
-            fake_B_img = Image.fromarray(fake_B.astype('uint8'))
-            fake_B_img.save('./mean_img.png')
-
-            fake_B = torch.from_numpy(fake_B)
-            fake_B = fake_B.view(1,1,64,64).to(self.device)
-            
-            # print(fake_B)
         else:
             raise ValueError("Please choose one inpainting mode!")
 
