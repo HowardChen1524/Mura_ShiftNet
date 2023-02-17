@@ -7,32 +7,13 @@ import pandas as pd
 
 def CreateDataset(opt):
     dataset = None
-    # 根據 param 選擇 dataset_mode
-    if opt.dataset_mode == 'aligned':
-        from data.aligned_dataset import AlignedDataset
-        dataset = AlignedDataset()
-
-    elif opt.dataset_mode == 'aligned_resized':
+    if opt.dataset_mode == 'aligned_resized':
         from data.aligned_dataset_resized import AlignedDatasetResized
         dataset = AlignedDatasetResized()
 
-    # 06/28 add sliding
     elif opt.dataset_mode == 'aligned_sliding':
         from data.aligned_dataset_sliding import AlignedDatasetSliding
         dataset = AlignedDatasetSliding()
-
-     # 07/30 add for type_c
-    elif opt.dataset_mode == 'aligned_type_c':
-        from data.aligned_dataset_type_c import AlignedDatasetTypeC
-        dataset = AlignedDatasetTypeC()
-
-    elif opt.dataset_mode == 'aligned_type_c':
-        from data.aligned_dataset_type_c_plus import AlignedDatasetTypeCPlus
-        dataset = AlignedDatasetTypeCPlus()
-
-    elif opt.dataset_mode == 'single':
-        from data.single_dataset import SingleDataset
-        dataset = SingleDataset()
 
     else:
         raise ValueError("Dataset [%s] not recognized." % opt.dataset_mode)

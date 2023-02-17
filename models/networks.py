@@ -81,16 +81,16 @@ def define_G(input_nc, output_nc, ngf, which_model_netG, opt, mask_global, norm=
     innerCos_list = []
     shift_list = []
 
-    print('input_nc {}'.format(input_nc)) # input channel dim
-    print('output_nc {}'.format(output_nc)) # output channel dim
-    print('which_model_netG {}'.format(which_model_netG)) # 目前是 unet_shift_triple
+    # print('input_nc {}'.format(input_nc)) # input channel dim
+    # print('output_nc {}'.format(output_nc)) # output channel dim
+    # print('which_model_netG {}'.format(which_model_netG)) # 目前是 unet_shift_triple
 
     # Here we need to initlize an artificial mask_global to construct the init model.
     # When training, we need to set mask for special layers(mostly for Shift layers) first.
     # If mask is fixed during training, we only need to set mask for these layers once,
     # else we need to set the masks each iteration, generating new random masks and mask the input
     # as well as setting masks for these special layers.
-    print('[CREATED] MODEL')
+    # print('[CREATED] MODEL')
     if which_model_netG == 'unet_256':
         netG = UnetGenerator(input_nc, output_nc, 8, ngf, norm_layer=norm_layer, use_spectral_norm=use_spectral_norm)
     elif which_model_netG == 'easy_unet_256':
@@ -115,18 +115,18 @@ def define_G(input_nc, output_nc, ngf, which_model_netG, opt, mask_global, norm=
                                                          ngf, norm_layer=norm_layer, use_spectral_norm=use_spectral_norm)
     else:
         raise NotImplementedError('Generator model name [%s] is not recognized' % which_model_netG)
-    print('[CREATED] MODEL')
-    print('Constraint in netG:')
-    print(innerCos_list) # [InnerCos(skip: Truelayer 3 to last ,strength: 1)]
+    # print('[CREATED] MODEL')
+    # print('Constraint in netG:')
+    # print(innerCos_list) # [InnerCos(skip: Truelayer 3 to last ,strength: 1)]
 
-    print('Shift in netG:')
-    print(shift_list) # [InnerShiftTriple( ,triple_weight 1)]
+    # print('Shift in netG:')
+    # print(shift_list) # [InnerShiftTriple( ,triple_weight 1)]
 
     # print(f"Howard coding test {type(netG)}") 
     # <class 'models.modules.shift_unet.UnetGeneratorShiftTriple'>
 
-    print('NetG:')
-    print(netG) # Network 架構
+    # print('NetG:')
+    # print(netG) # Network 架構
 
     return init_net(netG, init_type, init_gain, gpu_ids), innerCos_list, shift_list
 
@@ -150,7 +150,7 @@ def define_D(input_nc, ndf, which_model_netD,
         print('Discriminator model name [%s] is not recognized' %
               which_model_netD)
 
-    print('NetD:')
-    print(netD)
+    # print('NetD:')
+    # print(netD)
     return init_net(netD, init_type, init_gain, gpu_ids)
 

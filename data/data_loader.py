@@ -11,26 +11,18 @@ def CreateDataLoader(opt):
         data_loader.initialize(opt)
         return data_loader
     else:
-        if opt.dataset_mode == 'aligned_type_c' or opt.dataset_mode == 'aligned_type_c_plus': 
-            # for type-c wei
-            data_loader = CustomDatasetDataLoader()
-            print(data_loader.name())
-            data_loader.initialize(opt)
-            return data_loader
-        else:
-            # for testing
-            loaders = defaultdict()
-            if opt.testing_normal_dataroot != '':
-                n_data_loader = CustomDatasetDataLoader()
-                print(n_data_loader.name())
-                opt.dataroot = opt.testing_normal_dataroot
-                n_data_loader.initialize(opt)
-                loaders['normal'] = n_data_loader
-            if opt.testing_smura_dataroot != '':
-                s_data_loader = CustomDatasetDataLoader()
-                print(s_data_loader.name())
-                opt.dataroot = opt.testing_smura_dataroot
-                s_data_loader.initialize(opt)
-                loaders['smura'] = s_data_loader
-            
+        # for testing
+        loaders = defaultdict()
+        if opt.testing_normal_dataroot != '':
+            n_data_loader = CustomDatasetDataLoader()
+            print(n_data_loader.name())
+            opt.dataroot = opt.testing_normal_dataroot
+            n_data_loader.initialize(opt)
+            loaders['normal'] = n_data_loader
+        if opt.testing_smura_dataroot != '':
+            s_data_loader = CustomDatasetDataLoader()
+            print(s_data_loader.name())
+            opt.dataroot = opt.testing_smura_dataroot
+            s_data_loader.initialize(opt)
+            loaders['smura'] = s_data_loader
         return loaders

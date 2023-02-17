@@ -53,7 +53,7 @@ class Discounted_L1(nn.Module):
     def __init__(self, opt):
         super(Discounted_L1, self).__init__()
         # Register discounting template as a buffer
-        self.register_buffer('discounting_mask', torch.tensor(spatial_discounting_mask(opt.fineSize//2 - opt.overlap * 2, opt.fineSize//2 - opt.overlap * 2, 0.9, opt.discounting)))
+        self.register_buffer('discounting_mask', torch.tensor(spatial_discounting_mask(opt.loadSize//2, opt.loadSize//2, 0.9, opt.discounting)))
 
         self.L1 = nn.L1Loss()
 

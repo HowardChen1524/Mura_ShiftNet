@@ -104,37 +104,15 @@ class AlignedDatasetSliding(BaseDataset):
 
         A_imgs = []
 
-        # deprecate cropping, train:random, test:sliding
-        # if self.opt.isTrain:
-        #     for i in range(self.opt.crop_image_num):
-        #         A_imgs.append(self.transform(A))
-        #     #     print(A_imgs[i].shape)
-        #     #     print(A_imgs[i])
-        #     # print(A_imgs[0] == A_imgs[1])
-        # else:
-        #     A_img = self.transform(A)
-        #     c, w, h = A_img.size()
-        #     for y in range(0, h, self.opt.crop_stride): # stride default 32
-        #         # print(f"y {y}")
-        #         crop_y = y
-        #         if (y + self.opt.fineSize) > h:
-        #             break
-        #         for x in range(0, w, self.opt.crop_stride):
-        #             # print(f"x {x}")
-        #             crop_x = x
-        #             if (x + self.opt.fineSize) > w:
-        #                 break
-        #             crop_img = transforms.functional.crop(A_img, crop_y, crop_x, self.opt.fineSize, self.opt.fineSize)
-        #             A_imgs.append(crop_img)
         A_img = self.transform(A)
         c, w, h = A_img.size()
         for y in range(0, h, self.opt.crop_stride): # stride default 32
-            # print(f"y {y}")
+            print(f"y {y}")
             crop_y = y
             if (y + self.opt.fineSize) > h:
                 break
             for x in range(0, w, self.opt.crop_stride):
-                # print(f"x {x}")
+                print(f"x {x}")
                 crop_x = x
                 if (x + self.opt.fineSize) > w:
                     break

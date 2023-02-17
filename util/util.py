@@ -124,7 +124,7 @@ def diagnose_network(net, name='network'):
 def wrapper_gmask(opt):
     # batchsize should be 1 for mask_global
     mask_global = torch.ByteTensor(1, 1, \
-                                        opt.fineSize, opt.fineSize)
+                                        opt.loadSize, opt.loadSize)
 
     res = 0.06  # the lower it is, the more continuous the output will be. 0.01 is too small and 0.1 is too large
     density = 0.25
@@ -140,7 +140,7 @@ def wrapper_gmask(opt):
     gMask_opts = {}
     gMask_opts['pattern'] = pattern
     gMask_opts['MAX_SIZE'] = MAX_SIZE
-    gMask_opts['fineSize'] = opt.fineSize
+    gMask_opts['loadSize'] = opt.loadSize
     gMask_opts['maxPartition'] = maxPartition
     gMask_opts['mask_global'] = mask_global
     return create_gMask(gMask_opts)  # create an initial random mask.
@@ -149,16 +149,16 @@ def create_gMask(gMask_opts, limit_cnt=1):
     pattern = gMask_opts['pattern']
     mask_global = gMask_opts['mask_global']
     MAX_SIZE = gMask_opts['MAX_SIZE']
-    fineSize = gMask_opts['fineSize']
+    loadSize = gMask_opts['loadSize']
     maxPartition=gMask_opts['maxPartition']
     if pattern is None:
         raise ValueError
     wastedIter = 0
     while wastedIter <= limit_cnt:
-        x = random.randint(1, MAX_SIZE-fineSize)
-        y = random.randint(1, MAX_SIZE-fineSize)
-        mask = pattern[y:y+fineSize, x:x+fineSize]
-        area = mask.sum()*100./(fineSize*fineSize)
+        x = random.randint(1, MAX_SIZE-loadSize)
+        y = random.randint(1, MAX_SIZE-loadSize)
+        mask = pattern[y:y+loadSize, x:x+loadSize]
+        area = mask.sum()*100./(loadSize*loadSize)
         if area>20 and area<maxPartition:
             break
         wastedIter += 1
@@ -170,7 +170,7 @@ def create_gMask(gMask_opts, limit_cnt=1):
 
 # Create a square mask with random position.
 def create_rand_mask(opt):
-    h, w = opt.fineSize, opt.fineSize
+    h, w = opt.loadSize, opt.loadSize
     mask = np.zeros((h, w))
     # 256-4-128 = 120
     maxt = h - opt.overlap - h // 2
@@ -179,7 +179,7 @@ def create_rand_mask(opt):
     rand_t = np.random.randint(opt.overlap, maxt)
     rand_l = np.random.randint(opt.overlap, maxl)
     # 4~120+128-8
-    mask[rand_t:rand_t+opt.fineSize//2-2*opt.overlap, rand_l:rand_l+opt.fineSize//2-2*opt.overlap] = 1
+    mask[rand_t:rand_t+opt.loadSize//2-2*opt.overlap, rand_l:rand_l+opt.loadSize//2-2*opt.overlap] = 1
 
     return torch.ByteTensor(mask), rand_t, rand_l
 

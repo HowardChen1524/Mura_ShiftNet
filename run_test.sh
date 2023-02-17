@@ -13,8 +13,8 @@ declare -a measure_list=(
                          "Content_VGG16_sliding"
                         #  "Mask_Content_VGG16_sliding"
                         )
-declare th_list=(0.01 0.0125)
-declare min_area_list=(50 60 70)
+declare th_list=(0.015)
+declare min_area_list=(22)
 # declare -a sup_model_list=(
 #     '/home/ldap/sallylin/Howard/Mura_ShiftNet/log/Supervised/ensemble_d23/model_0.pt'
 #     '/home/ldap/sallylin/Howard/Mura_ShiftNet/log/Supervised/ensemble_d23/model_1.pt'
@@ -35,7 +35,7 @@ model_version="ShiftNet_SSIM_d23_8k_change_cropping"
 
 # dataset_version="mura_d23_4k"
 # sup_data_path="/hcds_vol/private/howard/mura_data/d23_merge/" # for supervised model
-# sup_csv_path="/hcds_vol/private/howard/mura_data/d23_merge/data_merged.csv" # for supervised model
+# sup_data_csv_path="/hcds_vol/private/howard/mura_data/d23_merge/data_merged.csv" # for supervised model
 # unsup_test_normal_path="/hcds_vol/private/howard/mura_data/d23_merge/test/test_normal_4k/" # for unsupervised model
 # unsup_test_smura_path="/hcds_vol/private/howard/mura_data/d23_merge/test/test_smura_4k/" # for unsupervised model
 # normal_num=5
@@ -45,7 +45,7 @@ model_version="ShiftNet_SSIM_d23_8k_change_cropping"
 
 # dataset_name="typec_4k"
 # # sup_data_path="/hcds_vol/private/howard/mura_data/d23_merge/" # for supervised model
-# # sup_csv_path="/hcds_vol/private/howard/mura_data/d23_merge/data_merged.csv" # for supervised model
+# # sup_data_csv_path="/hcds_vol/private/howard/mura_data/d23_merge/data_merged.csv" # for supervised model
 # unsup_test_normal_path="/home/sallylab/min/d23_merge/test/test_normal_4k/" # for unsupervised model
 # unsup_test_smura_path="/home/sallylab/Howard/Mura_ShiftNet/imgs/typec4k/" # for unsupervised model
 # normal_num=1
@@ -62,7 +62,7 @@ smura_num=31
 # d23 test
 # dataset_version="d23_8k"
 # # sup_data_path="/hcds_vol/private/howard/mura_data/d23_merge/" # for supervised model
-# # csv_path="/hcds_vol/private/howard/mura_data/d23_merge/data_merged.csv" # for supervised model
+# # data_csv_path="/hcds_vol/private/howard/mura_data/d23_merge/data_merged.csv" # for supervised model
 # unsup_test_normal_path="/home/sallylab/min/d23_merge/test/test_normal_8k/" # for unsupervised model
 # unsup_test_smura_path="/home/sallylab/min/d23_merge/test/test_smura_8k/" # for unsupervised model
 # normal_num=541
@@ -74,8 +74,8 @@ smura_num=31
 # d24 d25 blind test
 # dataset_version="d24_d25_8k"
 # sup_data_path="/hcds_vol/private/howard/mura_data/d25_merge/"
-# # csv_path="/hcds_vol/private/howard/mura_data/d25_merge/d25_data_merged.csv"
-# csv_path="/hcds_vol/private/howard/mura_data/d25_merge_8k/d25_data_merged_new.csv"
+# # data_csv_path="/hcds_vol/private/howard/mura_data/d25_merge/d25_data_merged.csv"
+# data_csv_path="/hcds_vol/private/howard/mura_data/d25_merge_8k/d25_data_merged_new.csv"
 # unsup_test_normal_path="/hcds_vol/private/howard/mura_data/d25_merge_8k/d2425_all_normal_8k/"
 # unsup_test_smura_path="/hcds_vol/private/howard/mura_data/d25_merge_8k/d2425_all_smura_8k/"
 # normal_num=87
@@ -89,7 +89,7 @@ smura_num=31
 # do
 #     python3 sup_gen_res.py \
 #     --sup_model_version=$sup_model_version --data_version=$dataset_version \
-#     --sup_model_path=$sup_model --data_dir=$sup_data_path --csv_path=$csv_path \
+#     --sup_model_path=$sup_model --sup_dataroot=$sup_data_path --data_csv_path=$data_csv_path \
 #     --gpu_id=0
 # done
 
@@ -98,7 +98,7 @@ smura_num=31
 # do
 #     python3 test_sliding.py \
 #     --batchSize=1 --use_spectral_norm_D=1 --which_model_netD="basic" --which_model_netG="unet_shift_triple" --model="shiftnet" --shift_sz=1 --mask_thred=1 \
-#     --loadSize=64 --fineSize=64 --crop_stride=32 --overlap=0 --dataset_mode="aligned_sliding" --mask_type="center" --input_nc=3 --output_nc=3 --color_mode="RGB" \
+#     --loadSize=64 --crop_stride=32 --overlap=0 --dataset_mode="aligned_sliding" --mask_type="center" --input_nc=3 --output_nc=3 --="RGB" \
 #     --inpainting_mode="ShiftNet" --measure_mode=$measure --checkpoints_dir='/home/sallylab/Howard/models/' --results_dir='./exp_result/Unsupervised' --model_version=$model_version --which_epoch="200" \
 #     --data_version=$dataset_name \
 #     --normal_how_many=$normal_num --testing_normal_dataroot=$unsup_test_normal_path \
@@ -111,12 +111,12 @@ smura_num=31
 # do
 #     python3 sup_unsup_gen_res.py \
 #     --batchSize=1 --use_spectral_norm_D=1 --which_model_netD="basic" --which_model_netG="unet_shift_triple" --model="shiftnet" --shift_sz=1 --mask_thred=1 \
-#     --loadSize=64 --fineSize=64 --crop_stride=32 --overlap=0 --dataset_mode="aligned_sliding" --mask_type="center" --input_nc=3 --output_nc=3 --color_mode="RGB" \
+#     --loadSize=64 --crop_stride=32 --overlap=0 --dataset_mode="aligned_sliding" --mask_type="center" --input_nc=3 --output_nc=3 \
 #     --inpainting_mode="ShiftNet" --measure_mode=$measure --checkpoints_dir='./log' --model_version=$model_version --which_epoch="400" \
 #     --data_version $dataset_version \
 #     --normal_how_many=$normal_num --testing_normal_dataroot=$unsup_test_normal_path \
 #     --smura_how_many=$smura_num --testing_smura_dataroot=$unsup_test_smura_path \
-#     --sup_model_path=$sup_model --data_dir=$sup_data_path --csv_path=$csv_path --gpu_ids=0
+#     --sup_model_path=$sup_model --sup_dataroot=$sup_data_path --data_csv_path=$data_csv_path --gpu_ids=0
 # done
 
 # find line
@@ -134,11 +134,11 @@ for th in ${th_list[@]}
 do
     for min_area in ${min_area_list[@]}
     do
-        python3 test_sliding.py \
+        python3 gen_patch.py \
         --batchSize=1 --use_spectral_norm_D=1 --which_model_netD="basic" --which_model_netG="unet_shift_triple" --model="shiftnet" --shift_sz=1 --mask_thred=1 \
-        --loadSize=64 --fineSize=64 --crop_stride=32 --overlap=0 --dataset_mode="aligned_sliding" --mask_type="center" --input_nc=3 --output_nc=3 --color_mode="RGB" \
-        --inpainting_mode="ShiftNet" --measure_mode="Content_VGG16_sliding" --checkpoints_dir='/home/sallylab/Howard/models' --results_dir='./exp_result/Unsupervised' --model_version=$model_version --which_epoch="200" \
-        --data_version=$dataset_name \
+        --data_version=$dataset_name --dataset_mode="aligned_sliding" --loadSize=64 --crop_stride=32  --mask_type="center" --input_nc=3 --output_nc=3 \
+        --model_version=$model_version --which_epoch="200" --inpainting_mode="ShiftNet" --measure_mode="Content_VGG16_sliding" \
+        --checkpoints_dir='/home/sallylab/Howard/models/' --results_dir='./exp_result/Unsupervised' \
         --normal_how_many=$normal_num --testing_normal_dataroot=$unsup_test_normal_path \
         --smura_how_many=$smura_num --testing_smura_dataroot=$unsup_test_smura_path \
         --gpu_ids=0 \

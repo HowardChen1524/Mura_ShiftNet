@@ -4,14 +4,14 @@ from .base_options import BaseOptions
 class TestOptions(BaseOptions):
     def initialize(self, parser):
         parser = BaseOptions.initialize(self, parser)
-        # save
+        # save path
         parser.add_argument('--results_dir', type=str, default='./exp_result', help='saves results here.')
         # data
         parser.add_argument('--data_version', type=str)       
+        parser.add_argument('--data_csv_path', type=str)
+        parser.add_argument('--sup_dataroot', type=str)
         parser.add_argument('--testing_normal_dataroot', type=str, default='', help='test normal data path')
         parser.add_argument('--testing_smura_dataroot', type=str, default='', help='test smura data path') 
-        parser.add_argument('--csv_path', type=str)
-        parser.add_argument('--data_dir', type=str)
         parser.add_argument('--how_many', type=int, default=0, help='how many test images to run')
         parser.add_argument('--normal_how_many', type=int, default=0, help='how many test images to run')
         parser.add_argument('--smura_how_many', type=int, default=0, help='how many test images to run')
@@ -29,14 +29,9 @@ class TestOptions(BaseOptions):
         parser.add_argument('--using_threshold', action='store_true', help='using threshold to do blind test')
         parser.add_argument('--using_record', action='store_true', help='using record to test')
         # visual position
-        parser.add_argument('--binary_threshold', type=float, help='using record to test')
-        parser.add_argument('--min_area', type=int, help='using record to test')
+        parser.add_argument('--binary_threshold', type=float, help='patch combine th')
+        parser.add_argument('--min_area', type=int, help='patch combine filter min area')
 
         self.isTrain = False
 
         return parser
-
-# parser.add_argument('--ntest', type=int, default=float("inf"), help='# of test examples.')
-# parser.add_argument('--aspect_ratio', type=float, default=1.0, help='aspect ratio of result images')
-# parser.add_argument('--phase', type=str, default='test', help='train, val, test, etc')
-# parser.add_argument('--testing_mask_folder', type=str, default='masks/testing_masks', help='perpared masks for testing')
