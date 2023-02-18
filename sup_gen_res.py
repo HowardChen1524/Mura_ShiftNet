@@ -13,11 +13,7 @@ from data.data_loader import CreateDataLoader
 from models import create_model
 
 from util.utils_howard import mkdir, \
-                              get_data_info, make_test_dataloader, evaluate, get_line_threshold, \
-                              plot_score_distribution, plot_sup_unsup_scatter, plot_line_on_scatter, \
-                              sup_unsup_prediction_spec_th, sup_unsup_prediction_spec_multi_th, \
-                              sup_unsup_prediction_auto_th, sup_unsup_prediction_auto_multi_th, sup_unsup_svm, \
-                              sup_prediction_spec_th, get_value_threshold, set_seed
+                              get_data_info, make_test_dataloader, evaluate, set_seed
 
 import torchvision.models as models
 import pretrainedmodels
@@ -28,9 +24,7 @@ def initail_setting():
   opt.nThreads = 1   # test code only supports nThreads = 1
   opt.batchSize = 1  # test code only supports batchSize = 1
   opt.serial_batches = True  # no shuffle
-  opt.no_flip = True  # no flip
   opt.display_id = -1 # no visdom display
-  opt.loadSize = opt.fineSize  # Do not scale!
   opt.results_dir = f"/home/ldap/sallylin/Howard/Mura_ShiftNet/exp_result/Supervised/{opt.sup_model_version}/{opt.data_version}/{opt.sup_model_path.split('/')[-1][:-3]}"
   mkdir(opt.results_dir)
   set_seed(2022)

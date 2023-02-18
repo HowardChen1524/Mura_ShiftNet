@@ -101,19 +101,6 @@ class tjwei_augumentation(object):
         img = tf.concat([img, img2[0, :, :, 0]], 2)
         image_array = tf.keras.preprocessing.image.array_to_img(img)
         
-        # gray three
-        # img = tf.keras.preprocessing.image.img_to_array(img)
-        # img = tf.image.convert_image_dtype(img, tf.float32)
-        # img = tf.image.rgb_to_grayscale(img)
-        # img2 = tf.concat([img, img], 2)
-        # img = tf.concat([img, img2], 2)
-        # image_array = tf.keras.preprocessing.image.array_to_img(img)
-
-        # sobel
-        # img = tf.keras.preprocessing.image.img_to_array(img)
-        # img = cv2.Sobel(img, cv2.CV_64F, 1, 1)
-        # img = tf.image.convert_image_dtype(img, tf.float32)
-        # image_array = tf.keras.preprocessing.image.array_to_img(img)
         return image_array
     def __repr__(self):
         return self.__class__.__name__+'()'
@@ -145,6 +132,14 @@ def make_training_dataloader(ds):
     dataloader = DataLoader(train_ds, 
                             batch_size=16,
                             shuffle=True, 
+                            num_workers=0,
+                           )
+    return dataloader
+
+def make_single_dataloader(ds):
+    dataloader = DataLoader(ds, 
+                            batch_size=1,
+                            shuffle=False, 
                             num_workers=0,
                            )
     return dataloader
