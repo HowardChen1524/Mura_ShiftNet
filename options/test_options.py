@@ -31,6 +31,7 @@ class TestOptions(BaseOptions):
         # visual position
         parser.add_argument('--binary_threshold', type=float, help='patch combine th')
         parser.add_argument('--min_area', type=int, help='patch combine filter min area')
+        parser.add_argument('--sup_gradcam_th', type=float, help='')
 
         self.isTrain = False
 

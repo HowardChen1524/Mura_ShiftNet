@@ -83,7 +83,7 @@ class AlignedDatasetSliding(BaseDataset):
         #         transform_list = [transforms.ToTensor(),
         #                         transforms.Normalize((0.5), (0.5))]
 
-        if self.opt.color_mode=='RGB':
+        if self.opt.input_nc==3:
             transform_list = [transforms.ToTensor(),
                             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]
         else:
@@ -100,25 +100,34 @@ class AlignedDatasetSliding(BaseDataset):
         if self.opt.resolution == 'resized':
             img = cv2.resize(img, ORISIZE, interpolation=cv2.INTER_AREA)
         A = Image.fromarray(cv2.cvtColor(img,cv2.COLOR_BGR2RGB))  
-        A = A.convert(self.opt.color_mode)
-
+        if self.opt.input_nc == 3:
+            A = A.convert('RGB')
+        else:
+            A = A.convert('L')
+            
         A_imgs = []
 
         A_img = self.transform(A)
         c, w, h = A_img.size()
+        y_flag = False
         for y in range(0, h, self.opt.crop_stride): # stride default 32
-            print(f"y {y}")
+            if y_flag: break
             crop_y = y
-            if (y + self.opt.fineSize) > h:
-                break
+            if (y + self.opt.loadSize) >= h:
+                y = h-self.opt.loadSize
+                y_flag = True
+            # print(f"y {y}")
+            x_flag = False
             for x in range(0, w, self.opt.crop_stride):
-                print(f"x {x}")
+                if x_flag: break
                 crop_x = x
-                if (x + self.opt.fineSize) > w:
-                    break
-                crop_img = transforms.functional.crop(A_img, crop_y, crop_x, self.opt.fineSize, self.opt.fineSize)
+                if (x + self.opt.loadSize) >= w:
+                    crop_x = w-self.opt.loadSize
+                    x_flag = True
+                # print(f"x {x}")
+                crop_img = transforms.functional.crop(A_img, crop_y, crop_x, self.opt.loadSize, self.opt.loadSize)
                 A_imgs.append(crop_img)
-
+        
         if self.opt.isTrain: 
             crop_index_list = []
             for i in range(0,225):
@@ -129,6 +138,7 @@ class AlignedDatasetSliding(BaseDataset):
             A_imgs = [A_imgs[crop_index] for crop_index in crop_index_list]
             
         A = torch.stack(A_imgs)
+        print(A.shape)
         
         mask = A.clone().zero_()
         

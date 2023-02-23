@@ -1,7 +1,7 @@
 #!/bin/bash
 dataset_version='typec+b1'
 data_dir='/home/sallylab/min/'
-save_dir='/home/sallylab/Howard/detect_position/'
+save_dir='/home/sallylab/Howard/Mura_ShiftNet/detect_position/'
 
 python dc_gt.py \
 -dv=$dataset_version \

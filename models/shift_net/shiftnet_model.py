@@ -204,7 +204,7 @@ class ShiftNetModel(BaseModel):
 
         if ~(self.opt.isTrain) and (mode != None) and (fn != None):
             diff_B = torch.abs(self.real_B - self.fake_B)
-            position_res_dir = os.path.join(f'../detect_position/{self.opt.data_version}/{self.opt.crop_stride}')            
+            position_res_dir = os.path.join(f'./detect_position/{self.opt.data_version}/{self.opt.crop_stride}')            
             gray_diff_B = rgb_to_grayscale(diff_B)
             # print(diff_B[0,0,0,0]*0.299 + diff_B[0,1,0,0]*0.587 + diff_B[0,2,0,0]*0.114)
             # print(gray_diff_B[0,0,0,0])
@@ -212,11 +212,12 @@ class ShiftNetModel(BaseModel):
             # print(gray_diff_B.shape)
             
             # self.export_inpaint_imgs(gray_diff_B, mode, fn, os.path.join(position_res_dir, f'ori_diff_patches/{fn}'), 2) # 0 true, 1 fake
-            combine_t, denoise_t, export_t = self.combine_patches(fn, gray_diff_B, position_res_dir, 'union')
+            patches, combine_t, denoise_t, export_t = self.combine_patches(fn, gray_diff_B, position_res_dir, 'union')
             
-            # self.combine_patches(fn, diff_B, position_res_dir, 'mean')
             # self.export_inpaint_imgs(self.real_B, mode, fn, os.path.join(position_res_dir, f'ori_diff_patches/{fn}'), 0) # 0 true, 1 fake
             # self.export_inpaint_imgs(self.fake_B, mode, fn, os.path.join(position_res_dir, f'ori_diff_patches/{fn}'), 1) # 0 true, 1 fake
+            self.export_inpaint_imgs(patches, mode, fn, os.path.join(position_res_dir, f'ori_diff_patches/{fn}'), 3) # 0 true, 1 fake
+
         return (model_pred_t, combine_t, denoise_t, export_t)
     '''
     for visualize rec difference or export patch
@@ -309,6 +310,7 @@ class ShiftNetModel(BaseModel):
             combine_t = time.time() - start_time
             print(f"combine time cost: {combine_t}")
             min_area = self.opt.min_area
+            denoise_t=0
             if min_area > 1:
                 start_time = time.time()
                 patches_combined = self.remove_small_areas(patches_combined, min_area)
@@ -347,7 +349,7 @@ class ShiftNetModel(BaseModel):
             
             # self.export_combined_diff_img(patches_combined, fn, os.path.join(save_dir, f'{threshold:.4f}_diff_pos/'))
 
-        return combine_t, denoise_t, export_t
+        return patches, combine_t, denoise_t, export_t
     
     def dfs(self, image, H, W, visited, pos_list):
         # check if the current pixel is within the bounds of the image
@@ -401,14 +403,16 @@ class ShiftNetModel(BaseModel):
             save_path =  os.path.join(save_path, 'fake')
         elif img_type == 2:
             save_path =  os.path.join(save_path, 'diff')
-
+        elif img_type == 3:
+            save_path =  os.path.join(save_path, 'binary')
         mkdir(save_path)
+
         for idx, img in enumerate(output):
             pil_img = tensor2img(img) 
-            # pil_img = pil_img.convert('L')           
+            pil_img = pil_img.convert('L')           
             pil_img.save(os.path.join(save_path,f"{idx}.png"))
-            pil_img_en = enhance_img(pil_img)
-            pil_img_en.save(os.path.join(save_path,f"en_{idx}.png"))
+            # pil_img_en = enhance_img(pil_img)
+            # pil_img_en.save(os.path.join(save_path,f"en_{idx}.png"))
 
     '''
     for compute rec anomaly score

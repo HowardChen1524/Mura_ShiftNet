@@ -118,7 +118,7 @@ class BaseOptions():
             suffix = ('_' + opt.suffix.format(**vars(opt))) if opt.suffix != '' else ''
             opt.model_version = opt.model_version + suffix
 
-        self.print_options(opt)
+        # self.print_options(opt)
 
         # set gpu ids
         os.environ["CUDA_VISIBLE_DEVICES"]=opt.gpu_ids

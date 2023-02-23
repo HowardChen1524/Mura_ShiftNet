@@ -95,23 +95,11 @@ def define_G(input_nc, output_nc, ngf, which_model_netG, opt, mask_global, norm=
         netG = UnetGenerator(input_nc, output_nc, 8, ngf, norm_layer=norm_layer, use_spectral_norm=use_spectral_norm)
     elif which_model_netG == 'easy_unet_256':
         netG = EasyUnetGenerator(input_nc, output_nc, ngf, norm_layer=norm_layer, use_spectral_norm=use_spectral_norm)
-    elif which_model_netG == 'face_unet_shift_triple':
-        netG = FaceUnetGenerator(input_nc, output_nc, innerCos_list, shift_list, mask_global, opt, \
-                                                         ngf, norm_layer=norm_layer, use_spectral_norm=use_spectral_norm)
     elif which_model_netG == 'unet_shift_triple': # current use
         # input_nc = 2, output_nc = 1, innerCos_list=[], shift_list=[], ngf=64
         # num_downs will be param, 8-> 6 because input size 256 -> 64
         # num_downs = 7 -> 128
         netG = UnetGeneratorShiftTriple(input_nc, output_nc, 6, opt, innerCos_list, shift_list, mask_global, \
-                                                         ngf, norm_layer=norm_layer, use_spectral_norm=use_spectral_norm)
-    elif which_model_netG == 'res_unet_shift_triple':
-        netG = ResUnetGeneratorShiftTriple(input_nc, output_nc, 8, opt, innerCos_list, shift_list, mask_global, \
-                                                         ngf, norm_layer=norm_layer, use_spectral_norm=use_spectral_norm)
-    elif which_model_netG == 'patch_soft_unet_shift_triple':
-        netG = PatchSoftUnetGeneratorShiftTriple(input_nc, output_nc, 8, opt, innerCos_list, shift_list, mask_global, \
-                                                         ngf, norm_layer=norm_layer, use_spectral_norm=use_spectral_norm)
-    elif which_model_netG == 'res_patch_soft_unet_shift_triple':
-        netG = ResPatchSoftUnetGeneratorShiftTriple(input_nc, output_nc, 8, opt, innerCos_list, shift_list, mask_global, \
                                                          ngf, norm_layer=norm_layer, use_spectral_norm=use_spectral_norm)
     else:
         raise NotImplementedError('Generator model name [%s] is not recognized' % which_model_netG)

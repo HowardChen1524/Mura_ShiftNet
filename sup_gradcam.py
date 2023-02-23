@@ -28,7 +28,7 @@ import torch.nn as nn
 import glob
 import torchvision.transforms as transforms
 from pytorch_grad_cam import GradCAM
-from PIL import Image, ImageFile
+from PIL import Image
 from torch.utils.data import DataLoader, Dataset
 from torchvision.transforms.functional import InterpolationMode
 import argparse
@@ -48,65 +48,17 @@ def initail_setting():
   opt.batchSize = 1  # test code only supports batchSize = 1
   opt.serial_batches = True  # no shuffle
   opt.display_id = -1 # no visdom display
-  opt.results_dir = f"./exp_result/Supervised/{opt.sup_model_version}/{opt.data_version}/{opt.sup_model_path.split('/')[-1][:-3]}"
+  opt.results_dir = f"./detect_position/{opt.data_version}/sup_gradcam/{opt.sup_model_version}/{opt.sup_gradcam_th}"
   mkdir(opt.results_dir)
   set_seed(2022)
   
   return opt, opt.gpu_ids[0]
-  
-def export_conf(conf_sup, path, name):
-  sup_name = conf_sup['files_res']['all']
-  sup_conf = np.concatenate([conf_sup['preds_res']['n'], conf_sup['preds_res']['s']])
-  sup_label = [0]*len(conf_sup['preds_res']['n'])+[1]*len(conf_sup['preds_res']['s'])
-  df_sup = pd.DataFrame(list(zip(sup_name,sup_conf,sup_label)), columns=['name', 'conf', 'label'])
-  df_sup.to_csv(os.path.join(path, f'{name}.csv'))
-
-  print("save conf score finished!")
-
-def evaluate(model, testloaders, save_path):
-    model.eval().cuda()
-    res = defaultdict(dict)
-    for l in ['preds_res','labels_res','files_res']:
-      for t in ['n', 's']:
-        res[l][t] = []
-
-    with torch.no_grad():
-      for idx, loader in enumerate(testloaders):
-        for inputs, labels, names in tqdm(loader):
-            
-          inputs = inputs.cuda()
-          labels = labels.cuda()
-          
-          preds = model(inputs)
-          
-          preds = torch.reshape(preds, (-1,)).cpu()
-          labels = labels.cpu()
-          
-          names = list(names)
-
-          if idx == 0:
-            res['files_res']['n'].extend(names)
-            res['preds_res']['n'].extend(preds)
-            res['labels_res']['n'].extend(labels)
-          elif idx == 1:
-            res['files_res']['s'].extend(names)
-            res['preds_res']['s'].extend(preds)
-            res['labels_res']['s'].extend(labels)
-          
-    res['files_res']['all'] = res['files_res']['n'] + res['files_res']['s'] # list type
-    res['preds_res']['all'] = np.array(res['preds_res']['n'] + res['preds_res']['s'])
-    res['labels_res']['all'] = np.array(res['labels_res']['n'] + res['labels_res']['s'])
-    
-    calc_roc(res['labels_res']['all'], res['preds_res']['all'], save_path, "sup")
-    print("roc curve saved!")
-
-    return res
 
 def join_path(p1, p2):
     return os.path.join(p1,p2)
 
 def supervised_model_gradcam(opt, gpu):
-    test_img_files = glob.glob(join_path(opt.sup_img_dir,'*.png'))
+    test_img_files = glob.glob(join_path(opt.testing_smura_dataroot,'*.png'))
     # test_img_files = test_img_files[:5] 
     test_targets = [1]*len(test_img_files)
     test_files = [f.split("/")[-1] for f in test_img_files]
@@ -116,7 +68,7 @@ def supervised_model_gradcam(opt, gpu):
                         name = test_files,
                         transform = data_transforms["test"])
           
-    dataloaders = make_single_dataloader(ds)
+    dataloader = make_single_dataloader(ds)
     # read model
     # seresnext101
     model_sup = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_se_resnext101_32x4d')
@@ -124,17 +76,18 @@ def supervised_model_gradcam(opt, gpu):
             nn.Linear(2048, 1),
             nn.Sigmoid()
         )
-    print(opt.sup_model_path)
-    model_sup.load_state_dict(torch.load(opt.sup_model_path, map_location=torch.device(f"cuda:{gpu}")))  
+    sup_model_path = os.path.join(opt.checkpoints_dir, f"{opt.sup_model_version}/model.pt")
+    print(sup_model_path)
+    model_sup.load_state_dict(torch.load(sup_model_path, map_location=torch.device(f"cuda:{gpu}")))  
 
     # init cam
     cam = GradCAM(model=model_sup, target_layers=[model_sup.layers[-1]], use_cuda=True)
 
     rgb_images = [Image.open(p) for p in test_img_files]
     grayscale_cam = []
-    print(len(dataloaders["test"]))
+    print(len(dataloader))
 
-    for x in tqdm(dataloaders["test"]):
+    for x, y, n in tqdm(dataloader):
         grayscale_cam.append(cam(input_tensor=x, aug_smooth=False, eigen_smooth=False))
 
     print(len(grayscale_cam))
@@ -144,9 +97,9 @@ def supervised_model_gradcam(opt, gpu):
         # cam_image = show_cam_on_image(rgb_img, cam[0])
         # cam_image = Image.fromarray(cv2.cvtColor(cam_image, cv2.COLOR_BGR2RGB))
         name = test_files[index]
-        cam_discrete = cam[0] > 0.5
-        # mask = np.ones((256, 256), dtype='uint8')*255
-        # mask[cam_discrete[:, :] == False] = 0
+        cam_discrete = cam[0] > opt.sup_gradcam_th
+        mask = np.ones((256, 256), dtype='uint8')*255
+        mask[cam_discrete == False] = 0
         # origin_img = rgb_img.copy()
         # ret, thresh = cv2.threshold(mask, 100, 255, 0)
         # contours, _ = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
@@ -155,10 +108,8 @@ def supervised_model_gradcam(opt, gpu):
         
         # rgb_img = rgb_img[index]
         # print(cam_discrete)
-        cam_discrete = Image.fromarray(cam_discrete).resize((512,512), Image.NEAREST)
-        save_path = "/home/sallylab/Howard/detect_position/typec+b1/sup_gradcam"
-        mkdir(save_path)
-        cam_discrete.save(join_path(save_path, f"{name}.png"))
+        mask = Image.fromarray(mask).resize((512,512), Image.Resampling.NEAREST).convert('L')
+        mask.save(join_path(opt.results_dir, name))
         # cam_image.show()
         # plt.figure(figsize=(10, 3))
         # plt.suptitle(name)
@@ -178,5 +129,3 @@ if __name__ == '__main__':
 
     # ===== supervised =====
     res_sup = supervised_model_gradcam(opt, gpu)
-
-    export_conf(res_sup, opt.results_dir, 'sup_conf') # 記錄下來，防止每次都要重跑

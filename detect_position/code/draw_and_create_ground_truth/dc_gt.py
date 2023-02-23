@@ -6,16 +6,12 @@ import numpy as np
 import pandas as pd
 import cv2
 from PIL import Image, ImageDraw
+import xmltodict
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-dv', '--dataset_version', type=str, default=None, required=True)
 parser.add_argument('-dd', '--data_dir', type=str, default=None, required=True)
 parser.add_argument('-sd', '--save_dir', type=str, default=None, required=True)
-
-args = parser.parse_args()
-dataset_version = args.dataset_version
-data_dir = args.data_dir
-save_dir = args.save_dir
 
 def add_row(info_fn, fn, obj):
     info_fn['fn'] = fn
@@ -36,9 +32,17 @@ def add_row(info_fn, fn, obj):
     info_fn['h'] = y1-y0
     return info_fn
 
+def join_path(p1,p2):
+    return os.path.join(p1,p2)
+    
+args = parser.parse_args()
+dataset_version = args.dataset_version
+data_dir = args.data_dir
+save_dir = args.save_dir
+
 # 將所有標註 xml 統整成標註 df
-xml_dir = os.path.join(data_dir, f'{dataset_version}/xml')
-xml_list = glob(f"{os.path.join(xml_dir, '*xml')}")
+xml_dir = join_path(data_dir, f'{dataset_version}/xml')
+xml_list = glob(f"{join_path(xml_dir, '*xml')}")
 info_fn_list = []
 for xml_path in xml_list:
     with open(xml_path) as fd:
@@ -56,16 +60,16 @@ for xml_path in xml_list:
             info_fn_list.append(add_row(info_fn, json_fd['annotation']['filename'], json_fd['annotation']['object']))
 
 df = pd.DataFrame.from_dict(info_fn_list)
-# df.to_csv(os.path.join(save_path, f'{dataset_version}.csv'), index=False, header=True)
+df.to_csv(join_path(save_dir, f'{dataset_version}/{dataset_version}.csv'), index=False, header=True)
 
 # 基於標註 df 將實際 mura 位置標註在圖上
-save_dir = os.path.join(save_dir, f'{dataset_version}/actual_pos')
+save_dir = join_path(save_dir, f'{dataset_version}/actual_pos')
 os.makedirs(save_dir, exist_ok=True)
-os.makedirs(os.path.join(save_dir, f'bounding_box'), exist_ok=True)
-os.makedirs(os.path.join(save_dir, f'ground_truth'), exist_ok=True)
+os.makedirs(join_path(save_dir, f'bounding_box'), exist_ok=True)
+os.makedirs(join_path(save_dir, f'ground_truth'), exist_ok=True)
 
-img_dir = os.path.join(data_dir, f'{dataset_version}/img')
-img_list = glob(f"{os.path.join(img_dir, '*png')}")
+img_dir = join_path(data_dir, f'{dataset_version}/img')
+img_list = glob(f"{join_path(img_dir, '*png')}")
 for img_path in img_list:
     fn = img_path.split('/')[-1]
     img = Image.open(img_path)
@@ -87,7 +91,7 @@ for img_path in img_list:
         # print(actual_pos)
         binary_img[actual_pos[1]:actual_pos[3], actual_pos[0]:actual_pos[2]] = 255
 
-    # print(os.path.join(save_dir, fn))
-    img.save(os.path.join(save_dir, f'bounding_box/{fn}'))
+    # print(join_path(save_dir, fn))
+    img.save(join_path(save_dir, f'bounding_box/{fn}'))
     binary_img = Image.fromarray(binary_img).convert('L')
-    binary_img.save((os.path.join(save_dir, f'ground_truth/{fn}')))
+    binary_img.save((join_path(save_dir, f'ground_truth/{fn}')))
