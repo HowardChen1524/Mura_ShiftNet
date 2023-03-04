@@ -7,7 +7,9 @@ import pandas as pd
 import cv2
 from PIL import Image, ImageDraw
 import xmltodict
-
+import sys
+sys.path.append("../../../")
+from util.utils_howard import enhance_img
 parser = argparse.ArgumentParser()
 parser.add_argument('-dv', '--dataset_version', type=str, default=None, required=True)
 parser.add_argument('-dd', '--data_dir', type=str, default=None, required=True)
@@ -39,16 +41,16 @@ args = parser.parse_args()
 dataset_version = args.dataset_version
 data_dir = args.data_dir
 save_dir = args.save_dir
-
+os.makedirs(join_path(save_dir, dataset_version), exist_ok=True)
 # 將所有標註 xml 統整成標註 df
 xml_dir = join_path(data_dir, f'{dataset_version}/xml')
 xml_list = glob(f"{join_path(xml_dir, '*xml')}")
 info_fn_list = []
 for xml_path in xml_list:
-    with open(xml_path) as fd:
+    with open(xml_path) as fd:   
+        print(xml_path)     
         json_fd = xmltodict.parse(fd.read())
         if isinstance(json_fd['annotation']['object'], list):
-        # if type(json_fd['annotation']['object']) == list:
             for obj in json_fd['annotation']['object']:
                 info_fn = defaultdict()
                 # print(info_f)
@@ -76,6 +78,7 @@ for img_path in img_list:
     img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
     img = cv2.resize(img, (512,512), interpolation=cv2.INTER_AREA)
     img = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+    img = enhance_img(img)
     fn_series_list = df[df['fn']==fn]
     
     actual_pos_list = []

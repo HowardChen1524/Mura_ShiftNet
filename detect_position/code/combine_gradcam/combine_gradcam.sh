@@ -3,8 +3,8 @@
 dataset_version='typec+b1'
 data_dir='/home/sallylab/Howard/Mura_ShiftNet/detect_position'
 crop_stride=16
-declare th_list=(0.015)
-declare min_area_list=(22 56)
+declare th_list=(0.0125 0.015)
+declare min_area_list=(0 10 20 22 30 40 50 56 60)
 declare gradcam_th_list=(0.1 0.2 0.3 0.4 0.5)
 
 for grad_th in ${gradcam_th_list[@]}

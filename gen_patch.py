@@ -51,9 +51,11 @@ def unsupervised_model_prediction(opt):
     all_t_list = []
     print(f"Mode(0:normal,1:smura): {mode}, {opt.how_many}")
     for i, data in enumerate(dataset):
+       
         all_start_time = time.time()
         if i >= opt.how_many:
             break
+        
         fn = data['A_paths'][0][fn_len:]
         print(f"Image num {i}: {fn}")
         fn_log.append(fn)

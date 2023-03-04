@@ -52,7 +52,11 @@ import matplotlib.pyplot as plt
 # plot_score_distribution(nscore, sscore)
 # df[smura_filter & outlier_filter].to_csv('./typec_smura_outlier.csv')
 
-df1 = pd.read_csv('/home/ldap/sallylin/Howard/Mura_ShiftNet/temp/sup_conf_remove.csv')
-df2 = pd.read_csv('/home/ldap/sallylin/Howard/Mura_ShiftNet/temp/sup_conf_no_remove.csv')
-df = df1.merge(df2, left_on='name', right_on='name')
-print((df.conf_x - df.conf_y).sort_values().to_numpy())
+# df1 = pd.read_csv('/home/ldap/sallylin/Howard/Mura_ShiftNet/temp/sup_conf_remove.csv')
+# df2 = pd.read_csv('/home/ldap/sallylin/Howard/Mura_ShiftNet/temp/sup_conf_no_remove.csv')
+# df = df1.merge(df2, left_on='name', right_on='name')
+# print((df.conf_x - df.conf_y).sort_values().to_numpy())
+
+img = np.array(Image.open('/home/sallylab/Howard/Mura_ShiftNet/detect_position/typec+b1/16/ori_diff_patches/4C2D34N6XAZZ_20220626001612_0_L050P_resize.png/real/en_0.png'))
+s_img = Image.fromarray(img[1:63,1:63,:])
+s_img.save('test.png')

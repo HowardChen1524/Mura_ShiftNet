@@ -6,6 +6,8 @@ import numpy as np
 import pandas as pd
 import cv2
 from PIL import Image, ImageDraw
+import sys 
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-dv', '--dataset_version', type=str, default=None, required=True)
@@ -32,6 +34,7 @@ img_list = glob(f"{join_path(data_dir, '*png')}")
 for img_path in img_list:
     fn = img_path.split('/')[-1]
     img = Image.open(img_path)
+    
     img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
     img = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
     fn_series_list = df[df['fn']==fn]

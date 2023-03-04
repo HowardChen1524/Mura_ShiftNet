@@ -11,6 +11,7 @@ import cv2
 import pandas as pd
 import numpy as np
 
+from util.utils_howard import tensor2img, enhance_img
 ORISIZE = (512, 512)
 
 class AlignedDatasetSliding(BaseDataset):
@@ -19,69 +20,13 @@ class AlignedDatasetSliding(BaseDataset):
         self.dir_A = opt.dataroot
         self.A_paths = make_dataset(self.dir_A) # return image path list (image_folder.py)
         print(f"Take all img: {len(self.A_paths)}")
-        self.edge_index_list = [0, 105, 210, 14, 119, 224]
-        # Deprecate random choose
-        # # train
-        # if (opt.isTrain) and (not opt.continue_train):
-        #     self.A_paths = make_dataset(self.dir_A) # return image path list (image_folder.py)
-        #     random.shuffle(self.A_paths) # shuffle path list
+        # crop stride 32, for training
+        self.edge_index_list = [0, 105, 210, 14, 119, 224] 
 
-        #     self.A_paths = self.A_paths[:opt.random_choose_num]
-
-        #     # save filename
-        #     recover_list = []
-        #     for i, path in enumerate(self.A_paths):
-        #         # print(i)
-        #         recover_list.append(path[len(self.dir_A):].replace('.png','.bmp'))
-        #     recover_df = pd.DataFrame(recover_list, columns=['PIC_ID'])
-        #     recover_df.to_csv('./training_imgs.csv', index=False, columns=['PIC_ID'])
-        #     print(f"Record {len(self.A_paths)} filename successful!")
-        # # continue train
-        # elif (opt.isTrain) and (opt.continue_train):
-        #     self.A_paths = make_dataset(self.dir_A) # return image path list (image_folder.py)
-        #     random.shuffle(self.A_paths) # shffle path list
-        #     self.A_paths = self.A_paths[:opt.random_choose_num]
-
-        #     # save filename
-        #     expr_dir = os.path.join(opt.checkpoints_dir, opt.model_version)
-        #     recover_list = []
-        #     for i, path in enumerate(self.A_paths):
-        #         # print(i)
-        #         recover_list.append(path[len(self.dir_A):].replace('.png','.bmp'))
-        #     recover_df = pd.DataFrame(recover_list, columns=['PIC_ID'])
-        #     recover_df.to_csv(os.path.join(expr_dir, 'training_imgs.csv'), index=False, columns=['PIC_ID'])
-        #     print(f"Record {len(self.A_paths)} filename successful!")
-
-        #     recover_list = []
-        #     recover_df = pd.read_csv('./training_imgs.csv')
-        #     data_df = pd.read_csv('/home/levi/mura_data/d17/data_merged.csv')
-        #     recover_fn = pd.merge(recover_df, data_df, on='PIC_ID', how='inner')['PIC_ID'].tolist()
-        #     for fn in recover_fn:
-        #         recover_list.append(f"{self.dir_A}{fn.replace('bmp','png')}")
-        #     self.A_paths = recover_list
-        #     print(f"Recover img num: {len(self.A_paths)}")
-        # # test
-        # else:
-        #     self.A_paths = make_dataset(self.dir_A) # return image path list (image_folder.py)
-        #     print(f"Take all img: {len(self.A_paths)}")
-        
-        # preprocessing
-        # if opt.isTrain:
-        #     if self.opt.color_mode=='RGB':
-        #         transform_list = [transforms.ToTensor(),
-        #                         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)), # pixel range -1~1
-        #                         transforms.RandomCrop(self.opt.fineSize)]
-        #     else:
-        #         transform_list = [transforms.ToTensor(),
-        #                         transforms.Normalize((0.5), (0.5)),
-        #                         transforms.RandomCrop(self.opt.fineSize)]
-        # else:
-        #     if self.opt.color_mode=='RGB':
-        #         transform_list = [transforms.ToTensor(),
-        #                         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]
-        #     else:
-        #         transform_list = [transforms.ToTensor(),
-        #                         transforms.Normalize((0.5), (0.5))]
+        # crop stride 16, for find mura location
+        self.corner_index_list = [0, 28, 812, 840]
+        self.ud_index_list = [i for i in range(1, 28)] + [i for i in range(813, 840)]
+        self.lr_index_list = [(29*i) for i in range(1, 27)] + [(28*i) for i in range(1, 27)]
 
         if self.opt.input_nc==3:
             transform_list = [transforms.ToTensor(),
@@ -108,7 +53,25 @@ class AlignedDatasetSliding(BaseDataset):
         A_imgs = []
 
         A_img = self.transform(A)
-        c, w, h = A_img.size()
+
+        if self.opt.flip_edge:
+            # 左右水平翻 上下垂直翻
+            # A_img[:,1:511,1:64] = torch.flip(A_img[:,1:511,1:64], dims=[2])
+            # A_img[:,1:511,449:511] = torch.flip(A_img[:,1:511,449:511], dims=[2])
+            # A_img[:,1:64,1:511] = torch.flip(A_img[:,1:64,1:511], dims=[1])
+            # A_img[:,449:511,1:511] = torch.flip(A_img[:,449:511,1:511], dims=[1])
+            
+            # 左右水平翻 上下垂直翻
+            A_img[:,1:511,4:64] = torch.flip(A_img[:,1:511,4:64], dims=[2])
+            A_img[:,1:511,449:508] = torch.flip(A_img[:,1:511,449:508], dims=[2])
+            # A_img[:,4:64,1:511] = torch.flip(A_img[:,4:64,1:511], dims=[1])
+            # A_img[:,449:508,1:511] = torch.flip(A_img[:,449:508,1:511], dims=[1])
+
+            # flip_img = tensor2img(A_img)
+            # flip_img = enhance_img(flip_img)
+            # flip_img.save(f"{A_path.split('/')[-1]}")
+
+        c, h, w = A_img.size()
         y_flag = False
         for y in range(0, h, self.opt.crop_stride): # stride default 32
             if y_flag: break

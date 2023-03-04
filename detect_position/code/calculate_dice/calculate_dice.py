@@ -42,7 +42,7 @@ if __name__ == '__main__':
     min_area = args.min_area
 
     gt_dir = join_path(args.data_dir, f'{dataset_version}/actual_pos/ground_truth')
-    diff_dir = join_path(args.data_dir, f'{dataset_version}/{crop_stride}/union/{th:.4f}_diff_pos_area_{min_area}')
+    diff_dir = join_path(args.data_dir, f'{dataset_version}/8-connected/{crop_stride}/union/{th:.4f}_diff_pos_area_{min_area}')
     # diff_dir = '/home/sallylab/Howard/Mura_ShiftNet/detect_position/typec+b1/sup_gradcam/SEResNeXt101_d23/0.5'
     row_data = defaultdict(float)
     dice_list = []

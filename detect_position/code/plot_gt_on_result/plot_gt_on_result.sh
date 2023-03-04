@@ -1,8 +1,6 @@
 #!/bin/bash
 dataset_version='typec+b1'
-data_dir='/home/sallylab/Howard/Mura_ShiftNet/detect_position/typec+b1/sup_0.1_unsup_0.0125_60_combined'
-# data_dir='/home/sallylab/Howard/Mura_ShiftNet/detect_position/typec+b1/sup_gradcam/SEResNeXt101_d23/0.1'
-# data_dir='/home/sallylab/Howard/Mura_ShiftNet/detect_position/typec+b1/16/union/0.0125_diff_pos_area_60'
+data_dir='/home/sallylab/Howard/Mura_ShiftNet/detect_position/typec+b1/4-connected/sup_0.1_unsup_0.0125_60_combined'
 
 csv_path='/home/sallylab/Howard/Mura_ShiftNet/detect_position/typec+b1/typec+b1.csv'
 save_dir='/home/sallylab/Howard/Mura_ShiftNet/detect_position'

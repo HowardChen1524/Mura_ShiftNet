@@ -222,7 +222,7 @@ class ShiftNetModel(BaseModel):
     '''
     for visualize rec difference or export patch
     '''
-    def combine_patches(self, fn, patches, save_dir, overlap_strategy):
+    def combine_patches(self, fn, patches, save_dir, overlap_strategy, flip=False):
         start_time = time.time()
         if overlap_strategy == 'union':
             threshold = float(self.opt.binary_threshold)
@@ -320,78 +320,66 @@ class ShiftNetModel(BaseModel):
             self.export_combined_diff_img(patches_combined, fn, os.path.join(save_dir, f'{threshold:.4f}_diff_pos_area_{min_area}/imgs'))
             export_t = time.time() - start_time
             print(f"export time cost: {export_t}")
-        elif overlap_strategy == 'mean':
-            save_dir = os.path.join(save_dir, 'mean')
-
-            patches_reshape = patches.view(15,15,3,64,64)
-            print(patches_reshape.shape)
-            # create combined img template
-            patches_combined = torch.zeros((3, 512, 512), device=self.device)
-            print(patches_combined.shape)
-            # fill combined img
-            ps = self.opt.loadSize # crop patch size
-            sd = self.opt.crop_stride # crop stride
-            idy = 0
-            for y in range(0, 512, sd): # stride default 32
-                # print(f"y {y}")
-                if (y + ps) > 512:
-                    break
-                idx = 0
-                for x in range(0, 512, sd):
-                    # print(f"x {x}")
-                    if (x + ps) > 512:
-                        break
-                    patches_combined[:, y:y+ps, x:x+ps] += patches_reshape[idy][idx]
-                    idx+=1
-                idy+=1
-            
-            # do average
-            
-            # self.export_combined_diff_img(patches_combined, fn, os.path.join(save_dir, f'{threshold:.4f}_diff_pos/'))
 
         return patches, combine_t, denoise_t, export_t
     
-    def dfs(self, image, H, W, visited, pos_list):
+    def dfs(self, image, H, W, visited, pos_list, count=1):
         # check if the current pixel is within the bounds of the image
         if H < 0 or H >= image.shape[1] or W < 0 or W >= image.shape[2]:
             return 0
         # check if the current pixel is visited or not white
         if visited[H][W] or image[0, H, W] != 1:
             return 0
+        if count > 500: # 面積超過 200 直接回傳，避免因 max recursive 跳出
+            return 0
         # mark the current pixel as visited
         pos_list.append((H,W))
         visited[H][W] = True
         area = 1
+    
         # 8-connected neighbors
-        dirs = [(0, 1), (0, -1), (1, 0), (-1, 0), (1, 1), (1, -1), (-1, 1), (-1, -1)] # 2 8 6 4 3 9 1 7 (keyboard)
+        # dirs = [(0, 1), (0, -1), (1, 0), (-1, 0), (1, 1), (1, -1), (-1, 1), (-1, -1)] # 2 8 6 4 3 9 1 7 (keyboard)
+        # 4-connected neighbors
+        dirs = [(0, 1), (0, -1), (1, 0), (-1, 0)] # 2 8 6 4 (keyboard)
+
         # recursively call dfs on each of the 8-connected neighbors
         for direction in dirs:
-            area += self.dfs(image, H + direction[0], W + direction[1], visited, pos_list)
+            area += self.dfs(image, H + direction[0], W + direction[1], visited, pos_list, count+1)
         
         return area
 
     def remove_small_areas(self, image, min_area): # connected_component_labeling
+        ori_img = image
         # initialize the visited matrix
-        # print(image.shape)
         visited = [[False for _ in range(image.shape[2])] for _ in range(image.shape[1])]
         # print(np.array(visited).shape)
-
-        # loop through each pixel in the image
-        for H in range(image.shape[1]):
-            for W in range(image.shape[2]):
-                # if the current pixel is white and not visited, start a new connected component
-                if (not visited[H][W]) and (image[0, H, W] == 1):
-                    pos_list = []
-                    white_area = self.dfs(image, H, W, visited, pos_list)
-                    # print(white_area)
-                    if  white_area < min_area:
-                        for (pos_H, pos_W) in pos_list:
-                            image[0, pos_H, pos_W] = -1
-
+        
+        try:
+            # loop through each pixel in the image
+            for H in range(image.shape[1]):
+                for W in range(image.shape[2]):
+                    # if the current pixel is white and not visited, start a new connected component
+                    if (not visited[H][W]) and (image[0, H, W] == 1):
+                        pos_list = []
+                        white_area = self.dfs(image, H, W, visited, pos_list)
+                        # print(white_area)
+                        if  white_area < min_area or white_area > 200:
+                        # if  white_area < min_area:
+                            for (pos_H, pos_W) in pos_list:
+                                image[0, pos_H, pos_W] = -1
+        except RecursionError:
+            print('recursive max')
+            return ori_img
+                    
         return image
 
     def export_combined_diff_img(self, img, name, save_path):
         mkdir(save_path)       
+        # if self.opt.flip_edge:
+        #     img[:,1:511,4:64] = torch.flip(img[:,1:511,4:64], dims=[2])
+        #     img[:,1:511,449:508] = torch.flip(img[:,1:511,449:508], dims=[2])
+        #     img[:,4:64,1:511] = torch.flip(img[:,4:64,1:511], dims=[1])
+        #     img[:,449:508,1:511] = torch.flip(img[:,449:508,1:511], dims=[1])
         pil_img = tensor2img(img) 
         pil_img = pil_img.convert('L')           
         pil_img.save(os.path.join(save_path, name))
@@ -409,7 +397,8 @@ class ShiftNetModel(BaseModel):
 
         for idx, img in enumerate(output):
             pil_img = tensor2img(img) 
-            pil_img = pil_img.convert('L')           
+            if img_type == 3:
+                pil_img = pil_img.convert('L')           
             pil_img.save(os.path.join(save_path,f"{idx}.png"))
             # pil_img_en = enhance_img(pil_img)
             # pil_img_en.save(os.path.join(save_path,f"en_{idx}.png"))
