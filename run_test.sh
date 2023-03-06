@@ -15,6 +15,7 @@ declare -a measure_list=(
                         )
 declare th_list=(0.015)
 declare min_area_list=(40)
+declare max_area_list=(80)
 # declare -a sup_model_list=(
 #     '/home/ldap/sallylin/Howard/Mura_ShiftNet/log/Supervised/ensemble_d23/model_0.pt'
 #     '/home/ldap/sallylin/Howard/Mura_ShiftNet/log/Supervised/ensemble_d23/model_1.pt'
@@ -41,36 +42,6 @@ model_version="ShiftNet_SSIM_d23_8k_change_cropping"
 # smura_num=5
 # normal_num=16295
 # smura_num=181
-
-# dataset_version="typec_4k"
-# # sup_data_path="/hcds_vol/private/howard/mura_data/d23_merge/" # for supervised model
-# # sup_data_csv_path="/hcds_vol/private/howard/mura_data/d23_merge/data_merged.csv" # for supervised model
-# unsup_test_normal_path="/home/sallylab/min/d23_merge/test/test_normal_4k/" # for unsupervised model
-# unsup_test_smura_path="/home/sallylab/Howard/Mura_ShiftNet/imgs/typec4k/" # for unsupervised model
-# normal_num=1
-# smura_num=3
-
-# dataset_version="typec+b1"
-# unsup_test_normal_path="/home/sallylab/min/d23_merge/test/test_normal_8k/" # for unsupervised model
-# unsup_test_smura_path="/home/sallylab/min/typec+b1/img/" # for unsupervised model
-# # unsup_test_normal_path="/home/levi/mura_data/d23/1920x1080/test/test_normal_8k/"
-# # unsup_test_smura_path="/home/levi/mura_data/typecplus/img/"
-# normal_num=0
-# smura_num=31
-
-dataset_version="typec+b1_edge"
-unsup_test_normal_path="/home/sallylab/min/d23_merge/test/test_normal_8k/" # for unsupervised model
-unsup_test_smura_path="/home/sallylab/min/typec+b1_edge/" # for unsupervised model
-# unsup_test_normal_path="/home/levi/mura_data/d23/1920x1080/test/test_normal_8k/"
-# unsup_test_smura_path="/home/levi/mura_data/typecplus/img/"
-normal_num=0
-smura_num=4
-
-# dataset_version="typed"
-# unsup_test_normal_path="/home/sallylab/min/d23_merge/test/test_normal_8k/" # for unsupervised model
-# unsup_test_smura_path="/home/sallylab/min/typed/img/" # for unsupervised model
-# normal_num=0
-# smura_num=52
 
 # d23 test
 # dataset_version="d23_8k"
@@ -141,28 +112,3 @@ smura_num=4
 #     --score_csv_dir=$score_csv_dir \
 #     --checkpoints_dir='./log' --results_dir='./exp_result/Ensemble' --using_threshold
 # done
-
-# generate unsupervised model diff visualize
-for th in ${th_list[@]}
-do
-    for min_area in ${min_area_list[@]}
-    do
-        python3 gen_patch.py \
-        --batchSize=1 --use_spectral_norm_D=1 --which_model_netD="basic" --which_model_netG="unet_shift_triple" --model="shiftnet" --shift_sz=1 --mask_thred=1 \
-        --data_version=$dataset_version --dataset_mode="aligned_sliding" --loadSize=64 --crop_stride=16  --mask_type="center" --input_nc=3 --output_nc=3 \
-        --model_version=$model_version --which_epoch="200" --inpainting_mode="ShiftNet" --measure_mode="Content_VGG16_sliding" \
-        --checkpoints_dir='/home/sallylab/Howard/models/' --results_dir='./exp_result/Unsupervised' \
-        --normal_how_many=$normal_num --testing_normal_dataroot=$unsup_test_normal_path \
-        --smura_how_many=$smura_num --testing_smura_dataroot=$unsup_test_smura_path \
-        --gpu_ids=1 \
-        --binary_threshold=$th --min_area=$min_area --flip_edge
-    done
-done
-
-# generate gradcam
-# python3 sup_gradcam.py \
-# --batchSize=1 \
-# --sup_model_version=$sup_model_version --checkpoints_dir='/home/sallylab/Howard/models/' \
-# --data_version=$dataset_version --loadSize=64 --testing_smura_dataroot=$unsup_test_smura_path \
-# --sup_gradcam_th=0.5 --gpu_ids=0
-

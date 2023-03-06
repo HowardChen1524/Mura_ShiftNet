@@ -27,10 +27,10 @@ save_dir = args.save_dir
 
 df = pd.read_csv(csv_path)
 # 基於標註 df 將實際 mura 位置標註在圖上
-save_dir = join_path(save_dir, f"{dataset_version}/img_contain_gt/{data_dir.split('/')[-1]}_add_gt")
+save_dir = join_path(data_dir, f"imgs_gt")
 os.makedirs(save_dir, exist_ok=True)
 
-img_list = glob(f"{join_path(data_dir, '*png')}")
+img_list = glob(f"{join_path(data_dir, 'imgs/*png')}")
 for img_path in img_list:
     fn = img_path.split('/')[-1]
     img = Image.open(img_path)

@@ -30,8 +30,8 @@ if __name__ == '__main__':
     pixels_gt = []
     for fn in os.listdir(gt_dir):
         # Load the images
-        # img = (np.array(Image.open(join_path(data_dir, f'imgs/{fn}')))/255)
-        img = (np.array(Image.open(join_path(data_dir, fn)))/255)
+        img = (np.array(Image.open(join_path(data_dir, f'imgs/{fn}')))/255)
+        # img = (np.array(Image.open(join_path(data_dir, fn)))/255)
         gt = (np.array(Image.open(join_path(gt_dir,fn)))/255)
         pixels_gt.append(gt)
         pixels_imgs.append(img)

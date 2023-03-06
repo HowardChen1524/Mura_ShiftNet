@@ -11,6 +11,7 @@ from models import networks
 from models.shift_net.base_model import BaseModel
 from piqa import SSIM
 import math
+import cv2
 
 class ShiftNetModel(BaseModel):
     def name(self):
@@ -195,28 +196,29 @@ class ShiftNetModel(BaseModel):
     def forward(self, mode=None, fn=None):
         self.set_gt_latent() # real_B，不知道幹嘛用
         start_time = time.time()
-        self.fake_B = self.netG(self.real_A) # real_A 當 input 進去做 inpaint
-        model_pred_t = time.time() - start_time
-        print(f"model predict time cost: {model_pred_t}")
-       
-        # self.export_inpaint_imgs(self.real_B, mode, fn, os.path.join(self.opt.results_dir, '0'), 0) # 0 true, 1 fake
-        # self.export_inpaint_imgs(self.fake_B, mode, fn, os.path.join(self.opt.results_dir, '1'), 1) # 0 true, 1 fake
+        with torch.no_grad():
+            self.fake_B = self.netG(self.real_A) # real_A 當 input 進去做 inpaint
+            model_pred_t = time.time() - start_time
+            print(f"model predict time cost: {model_pred_t}")
+        
+            # self.export_inpaint_imgs(self.real_B, mode, fn, os.path.join(self.opt.results_dir, '0'), 0) # 0 true, 1 fake
+            # self.export_inpaint_imgs(self.fake_B, mode, fn, os.path.join(self.opt.results_dir, '1'), 1) # 0 true, 1 fake
 
-        if ~(self.opt.isTrain) and (mode != None) and (fn != None):
-            diff_B = torch.abs(self.real_B - self.fake_B)
-            position_res_dir = os.path.join(f'./detect_position/{self.opt.data_version}/{self.opt.crop_stride}')            
-            gray_diff_B = rgb_to_grayscale(diff_B)
-            # print(diff_B[0,0,0,0]*0.299 + diff_B[0,1,0,0]*0.587 + diff_B[0,2,0,0]*0.114)
-            # print(gray_diff_B[0,0,0,0])
-            # print(diff_B.shape)
-            # print(gray_diff_B.shape)
-            
-            # self.export_inpaint_imgs(gray_diff_B, mode, fn, os.path.join(position_res_dir, f'ori_diff_patches/{fn}'), 2) # 0 true, 1 fake
-            patches, combine_t, denoise_t, export_t = self.combine_patches(fn, gray_diff_B, position_res_dir, 'union')
-            
-            # self.export_inpaint_imgs(self.real_B, mode, fn, os.path.join(position_res_dir, f'ori_diff_patches/{fn}'), 0) # 0 true, 1 fake
-            # self.export_inpaint_imgs(self.fake_B, mode, fn, os.path.join(position_res_dir, f'ori_diff_patches/{fn}'), 1) # 0 true, 1 fake
-            self.export_inpaint_imgs(patches, mode, fn, os.path.join(position_res_dir, f'ori_diff_patches/{fn}'), 3) # 0 true, 1 fake
+            if ~(self.opt.isTrain) and (mode != None) and (fn != None):
+                diff_B = torch.abs(self.real_B - self.fake_B)
+                position_res_dir = os.path.join(f'./detect_position/{self.opt.data_version}/{self.opt.crop_stride}')            
+                gray_diff_B = rgb_to_grayscale(diff_B)
+                # print(diff_B[0,0,0,0]*0.299 + diff_B[0,1,0,0]*0.587 + diff_B[0,2,0,0]*0.114)
+                # print(gray_diff_B[0,0,0,0])
+                # print(diff_B.shape)
+                # print(gray_diff_B.shape)
+                
+                # self.export_inpaint_imgs(gray_diff_B, mode, fn, os.path.join(position_res_dir, f'ori_diff_patches/{fn}'), 2) # 0 true, 1 fake
+                patches, combine_t, denoise_t, export_t = self.combine_patches(fn, gray_diff_B, position_res_dir, 'union')
+                
+                # self.export_inpaint_imgs(self.real_B, mode, fn, os.path.join(position_res_dir, f'ori_diff_patches/{fn}'), 0) # 0 true, 1 fake
+                # self.export_inpaint_imgs(self.fake_B, mode, fn, os.path.join(position_res_dir, f'ori_diff_patches/{fn}'), 1) # 0 true, 1 fake
+                self.export_inpaint_imgs(patches, mode, fn, os.path.join(position_res_dir, f'ori_diff_patches/{fn}'), 3) # 0 true, 1 fake
 
         return (model_pred_t, combine_t, denoise_t, export_t)
     '''
@@ -309,20 +311,22 @@ class ShiftNetModel(BaseModel):
                 idy+=1
             combine_t = time.time() - start_time
             print(f"combine time cost: {combine_t}")
-            min_area = self.opt.min_area
             denoise_t=0
-            if min_area > 1:
+            if self.opt.min_area > 1:
                 start_time = time.time()
-                patches_combined = self.remove_small_areas(patches_combined, min_area)
+                # patches_combined = self.remove_small_areas(patches_combined, min_area)
+                patches_combined = self.remove_small_areas_opencv(patches_combined)
                 denoise_t = time.time() - start_time
                 print(f"denoise time cost: {denoise_t}")
             start_time = time.time()
-            self.export_combined_diff_img(patches_combined, fn, os.path.join(save_dir, f'{threshold:.4f}_diff_pos_area_{min_area}/imgs'))
+            # self.export_combined_diff_img(patches_combined, fn, os.path.join(save_dir, f'{threshold:.4f}_diff_pos_area_{min_area}/imgs'))
+            self.export_combined_diff_img_opencv(patches_combined, fn, os.path.join(save_dir, f'{threshold:.4f}_diff_pos_area_{self.opt.min_area}_{self.opt.max_area}/imgs'))
             export_t = time.time() - start_time
             print(f"export time cost: {export_t}")
 
         return patches, combine_t, denoise_t, export_t
     
+    # handcraft
     def dfs(self, image, H, W, visited, pos_list, count=1):
         # check if the current pixel is within the bounds of the image
         if H < 0 or H >= image.shape[1] or W < 0 or W >= image.shape[2]:
@@ -347,32 +351,25 @@ class ShiftNetModel(BaseModel):
             area += self.dfs(image, H + direction[0], W + direction[1], visited, pos_list, count+1)
         
         return area
-
     def remove_small_areas(self, image, min_area): # connected_component_labeling
-        ori_img = image
         # initialize the visited matrix
         visited = [[False for _ in range(image.shape[2])] for _ in range(image.shape[1])]
         # print(np.array(visited).shape)
         
-        try:
-            # loop through each pixel in the image
-            for H in range(image.shape[1]):
-                for W in range(image.shape[2]):
-                    # if the current pixel is white and not visited, start a new connected component
-                    if (not visited[H][W]) and (image[0, H, W] == 1):
-                        pos_list = []
-                        white_area = self.dfs(image, H, W, visited, pos_list)
-                        # print(white_area)
-                        if  white_area < min_area or white_area > 200:
-                        # if  white_area < min_area:
-                            for (pos_H, pos_W) in pos_list:
-                                image[0, pos_H, pos_W] = -1
-        except RecursionError:
-            print('recursive max')
-            return ori_img
+        # loop through each pixel in the image
+        for H in range(image.shape[1]):
+            for W in range(image.shape[2]):
+                # if the current pixel is white and not visited, start a new connected component
+                if (not visited[H][W]) and (image[0, H, W] == 1):
+                    pos_list = []
+                    white_area = self.dfs(image, H, W, visited, pos_list)
+                    # print(white_area)
+                    if  white_area < min_area or white_area > 200:
+                    # if  white_area < min_area:
+                        for (pos_H, pos_W) in pos_list:
+                            image[0, pos_H, pos_W] = -1
                     
         return image
-
     def export_combined_diff_img(self, img, name, save_path):
         mkdir(save_path)       
         # if self.opt.flip_edge:
@@ -381,8 +378,63 @@ class ShiftNetModel(BaseModel):
         #     img[:,4:64,1:511] = torch.flip(img[:,4:64,1:511], dims=[1])
         #     img[:,449:508,1:511] = torch.flip(img[:,449:508,1:511], dims=[1])
         pil_img = tensor2img(img) 
-        pil_img = pil_img.convert('L')           
+        pil_img = pil_img.convert('L')          
         pil_img.save(os.path.join(save_path, name))
+    # opencv
+    def remove_small_areas_opencv(self, image):
+        image = image.detach().cpu().numpy().transpose((1, 2, 0))
+        image[image==-1] = 0
+        image[image==1] = 255
+        image = image.astype(np.uint8)
+
+        #使用 connectedComponents 函數
+        num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(image, connectivity=4)
+
+        # 輸出連通區域的數量
+        # print("連通區域的數量：", num_labels)
+
+        # 輸出每個區域的統計資訊
+        # for i in range(1, num_labels):
+        #     left = stats[i, cv2.CC_STAT_LEFT]
+        #     top = stats[i, cv2.CC_STAT_TOP]
+        #     width = stats[i, cv2.CC_STAT_WIDTH]
+        #     height = stats[i, cv2.CC_STAT_HEIGHT]
+        #     area = stats[i, cv2.CC_STAT_AREA]
+        #     print("區域", i, "的左上角座標：", (left, top), "寬度：", width, "高度：", height, "面積：", area)
+
+        # 將每個區域的標籤轉換為彩色影像並顯示
+        # label_hue = np.uint8(179 * labels / np.max(labels))
+        # blank_ch = 255 * np.ones_like(label_hue)
+        # labeled_img = cv2.merge([label_hue, blank_ch, blank_ch])
+        # labeled_img = cv2.cvtColor(labeled_img, cv2.COLOR_HSV2BGR)
+        # labeled_img[label_hue == 0] = 0
+        # cv2.imwrite('labeled_image.png', labeled_img)
+
+        # 指定面積閾值
+        max_area_threshold = self.opt.max_area
+        min_area_threshold = self.opt.min_area
+
+        # 遍歷所有區域
+        for i in range(1, num_labels):
+            # 如果區域面積小於閾值，就將對應的像素值設置為黑色
+            if stats[i, cv2.CC_STAT_AREA] < min_area_threshold:
+                labels[labels == i] = 0
+
+        # 將標籤為 0 的像素設置為白色，其它像素設置為黑色
+        result = labels.astype('uint8')
+        # print(np.unique(labels))
+        result[result == 0] = 0
+        result[result != 0] = 255
+        return result
+    def export_combined_diff_img_opencv(self, img, name, save_path):
+        mkdir(save_path)       
+        if self.opt.flip_edge:
+            # img[1:511,1:64] = np.flip(img[1:511,1:64], axis=[1])
+            # img[1:511,449:511] = np.flip(img[1:511,449:511], axis=[1])
+            img[1:511,4:64] = np.flip(img[1:511,4:64], axis=[1])
+            img[1:511,449:508] = np.flip(img[1:511,449:508], axis=[1])
+            
+        cv2.imwrite(os.path.join(save_path, name), img)
 
     def export_inpaint_imgs(self, output, mode, name, save_path, img_type):
         if img_type == 0:
