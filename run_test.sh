@@ -15,7 +15,6 @@ declare -a measure_list=(
                         )
 declare th_list=(0.015)
 declare min_area_list=(40)
-declare max_area_list=(80)
 # declare -a sup_model_list=(
 #     '/home/ldap/sallylin/Howard/Mura_ShiftNet/log/Supervised/ensemble_d23/model_0.pt'
 #     '/home/ldap/sallylin/Howard/Mura_ShiftNet/log/Supervised/ensemble_d23/model_1.pt'

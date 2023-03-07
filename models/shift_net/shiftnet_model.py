@@ -320,7 +320,7 @@ class ShiftNetModel(BaseModel):
                 print(f"denoise time cost: {denoise_t}")
             start_time = time.time()
             # self.export_combined_diff_img(patches_combined, fn, os.path.join(save_dir, f'{threshold:.4f}_diff_pos_area_{min_area}/imgs'))
-            self.export_combined_diff_img_opencv(patches_combined, fn, os.path.join(save_dir, f'{threshold:.4f}_diff_pos_area_{self.opt.min_area}_{self.opt.max_area}/imgs'))
+            self.export_combined_diff_img_opencv(patches_combined, fn, os.path.join(save_dir, f'{threshold:.4f}_diff_pos_area_{self.opt.min_area}/imgs'))
             export_t = time.time() - start_time
             print(f"export time cost: {export_t}")
 
@@ -372,11 +372,6 @@ class ShiftNetModel(BaseModel):
         return image
     def export_combined_diff_img(self, img, name, save_path):
         mkdir(save_path)       
-        # if self.opt.flip_edge:
-        #     img[:,1:511,4:64] = torch.flip(img[:,1:511,4:64], dims=[2])
-        #     img[:,1:511,449:508] = torch.flip(img[:,1:511,449:508], dims=[2])
-        #     img[:,4:64,1:511] = torch.flip(img[:,4:64,1:511], dims=[1])
-        #     img[:,449:508,1:511] = torch.flip(img[:,449:508,1:511], dims=[1])
         pil_img = tensor2img(img) 
         pil_img = pil_img.convert('L')          
         pil_img.save(os.path.join(save_path, name))
@@ -411,7 +406,6 @@ class ShiftNetModel(BaseModel):
         # cv2.imwrite('labeled_image.png', labeled_img)
 
         # 指定面積閾值
-        max_area_threshold = self.opt.max_area
         min_area_threshold = self.opt.min_area
 
         # 遍歷所有區域
@@ -427,13 +421,7 @@ class ShiftNetModel(BaseModel):
         result[result != 0] = 255
         return result
     def export_combined_diff_img_opencv(self, img, name, save_path):
-        mkdir(save_path)       
-        if self.opt.flip_edge:
-            # img[1:511,1:64] = np.flip(img[1:511,1:64], axis=[1])
-            # img[1:511,449:511] = np.flip(img[1:511,449:511], axis=[1])
-            img[1:511,4:64] = np.flip(img[1:511,4:64], axis=[1])
-            img[1:511,449:508] = np.flip(img[1:511,449:508], axis=[1])
-            
+        mkdir(save_path)             
         cv2.imwrite(os.path.join(save_path, name), img)
 
     def export_inpaint_imgs(self, output, mode, name, save_path, img_type):

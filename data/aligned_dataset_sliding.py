@@ -54,23 +54,6 @@ class AlignedDatasetSliding(BaseDataset):
 
         A_img = self.transform(A)
 
-        if self.opt.flip_edge:
-            # 左右水平翻 上下垂直翻
-            # A_img[:,1:511,1:64] = torch.flip(A_img[:,1:511,1:64], dims=[2])
-            # A_img[:,1:511,449:511] = torch.flip(A_img[:,1:511,449:511], dims=[2])
-            # A_img[:,1:64,1:511] = torch.flip(A_img[:,1:64,1:511], dims=[1])
-            # A_img[:,449:511,1:511] = torch.flip(A_img[:,449:511,1:511], dims=[1])
-            
-            # 左右水平翻 上下垂直翻
-            A_img[:,1:511,4:64] = torch.flip(A_img[:,1:511,4:64], dims=[2])
-            A_img[:,1:511,449:508] = torch.flip(A_img[:,1:511,449:508], dims=[2])
-            # A_img[:,4:64,1:511] = torch.flip(A_img[:,4:64,1:511], dims=[1])
-            # A_img[:,449:508,1:511] = torch.flip(A_img[:,449:508,1:511], dims=[1])
-
-            # flip_img = tensor2img(A_img)
-            # flip_img = enhance_img(flip_img)
-            # flip_img.save(f"{A_path.split('/')[-1]}")
-
         c, h, w = A_img.size()
         y_flag = False
         for y in range(0, h, self.opt.crop_stride): # stride default 32

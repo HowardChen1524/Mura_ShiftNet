@@ -74,11 +74,14 @@ img_dir = join_path(data_dir, f'{dataset_version}/img')
 img_list = glob(f"{join_path(img_dir, '*png')}")
 for img_path in img_list:
     fn = img_path.split('/')[-1]
+
+    if join_path(xml_dir, f"{fn[:-4]}.xml") not in xml_list:
+        continue
     img = Image.open(img_path)
     img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
     img = cv2.resize(img, (512,512), interpolation=cv2.INTER_AREA)
     img = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
-    img = enhance_img(img)
+    # img = enhance_img(img)
     fn_series_list = df[df['fn']==fn]
     
     actual_pos_list = []

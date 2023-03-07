@@ -14,7 +14,7 @@ declare -a measure_list=(
                         #  "Mask_Content_VGG16_sliding"
                         )
 declare th_list=(0.015)
-declare min_area_list=(40)
+declare min_area_list=(2 40)
 
 sup_model_path='/home/sallylab/Howard/models/SEResNeXt101_d23/model.pt'
 # sup_model_version="ensemble_d23"
@@ -48,13 +48,13 @@ normal_num=0
 smura_num=52
 
 # gnerate ground truth
-data_dir='/home/sallylab/min/'
-save_dir='/home/sallylab/Howard/Mura_ShiftNet/detect_position/'
+# data_dir='/home/sallylab/min/'
+# save_dir='/home/sallylab/Howard/Mura_ShiftNet/detect_position/'
 
-python /home/sallylab/Howard/Mura_ShiftNet/detect_position/code/draw_and_create_ground_truth/dc_gt.py \
--dv=$dataset_version \
--dd=$data_dir \
--sd=$save_dir
+# python /home/sallylab/Howard/Mura_ShiftNet/detect_position/code/draw_and_create_ground_truth/dc_gt.py \
+# -dv=$dataset_version \
+# -dd=$data_dir \
+# -sd=$save_dir
 
 # generate unsupervised model diff visualize
 for th in ${th_list[@]}
@@ -69,7 +69,7 @@ do
         --normal_how_many=$normal_num --testing_normal_dataroot=$unsup_test_normal_path \
         --smura_how_many=$smura_num --testing_smura_dataroot=$unsup_test_smura_path \
         --gpu_ids=1 \
-        --binary_threshold=$th --min_area=$min_area --max_area=$max_area --flip_edge
+        --binary_threshold=$th --min_area=$min_area
     done
 done
 
@@ -87,44 +87,37 @@ for th in ${th_list[@]}
 do
     for min_area in ${min_area_list[@]}
     do
-        for max_area in ${max_area_list[@]}
-        do
-            python /home/sallylab/Howard/Mura_ShiftNet/detect_position/code/calculate_dice/calculate_dice.py \
-            -dv=$dataset_version \
-            -dd=$res_dir \
-            -cs=$crop_stride \
-            -th=$th \
-            -mi=$min_area \
-            -mx=$max_area
-        done
+        python /home/sallylab/Howard/Mura_ShiftNet/detect_position/code/calculate_dice/calculate_dice.py \
+        -dv=$dataset_version \
+        -dd=$res_dir \
+        -cs=$crop_stride \
+        -th=$th \
+        -mi=$min_area
     done
 done
 
-declare th_list=(0.0150)
-# calculate recall precision
-gt_dir='/home/sallylab/Howard/Mura_ShiftNet/detect_position/typec+b1/actual_pos/ground_truth'
-for th in ${th_list[@]}
-do
-    for min_area in ${min_area_list[@]}
-    do
-        for max_area in ${max_area_list[@]}
-        do
-            res_dir="/home/sallylab/Howard/Mura_ShiftNet/detect_position/typec+b1/16/union/${th}_diff_pos_area_${min_area}_${max_area}"
-            
-            python /home/sallylab/Howard/Mura_ShiftNet/detect_position/code/calculate_pixel_based_recall_precision/calculate_recall_precision.py \
-            -dv=$dataset_version \
-            -dd=$res_dir \
-            -gd=$gt_dir
-        done
-    done
-done
+# declare th_list=(0.0150)
+# # calculate recall precision
+# gt_dir="/home/sallylab/Howard/Mura_ShiftNet/detect_position/${dataset_version}/actual_pos/ground_truth"
+# for th in ${th_list[@]}
+# do
+#     for min_area in ${min_area_list[@]}
+#     do
+#         res_dir="/home/sallylab/Howard/Mura_ShiftNet/detect_position/${dataset_version}/16/union/${th}_diff_pos_area_${min_area}"
+        
+#         python /home/sallylab/Howard/Mura_ShiftNet/detect_position/code/calculate_pixel_based_recall_precision/calculate_recall_precision.py \
+#         -dv=$dataset_version \
+#         -dd=$res_dir \
+#         -gd=$gt_dir
+#     done
+# done
 
-data_dir='/home/sallylab/Howard/Mura_ShiftNet/detect_position/typec+b1/16/union/0.0150_diff_pos_area_40_80'
-csv_path='/home/sallylab/Howard/Mura_ShiftNet/detect_position/typec+b1/typec+b1.csv'
-save_dir='/home/sallylab/Howard/Mura_ShiftNet/detect_position'
+# data_dir='/home/sallylab/Howard/Mura_ShiftNet/detect_position/${dataset_version}/16/union/0.0150_diff_pos_area_40'
+# csv_path='/home/sallylab/Howard/Mura_ShiftNet/detect_position/${dataset_version}/typed.csv'
+# save_dir='/home/sallylab/Howard/Mura_ShiftNet/detect_position'
 
-python /home/sallylab/Howard/Mura_ShiftNet/detect_position/code/plot_gt_on_result/plot_gt_on_result.py \
--dv=$dataset_version \
--cp=$csv_path \
--dd=$data_dir \
--sd=$save_dir
+# python /home/sallylab/Howard/Mura_ShiftNet/detect_position/code/plot_gt_on_result/plot_gt_on_result.py \
+# -dv=$dataset_version \
+# -cp=$csv_path \
+# -dd=$data_dir \
+# -sd=$save_dir
