@@ -1,8 +1,8 @@
 #!/bin/bash
 dataset_version='typec+b1'
-data_dir='/home/sallylab/Howard/Mura_ShiftNet/detect_position/typec+b1/4-connected/sup_0.1_unsup_0.0125_60_combined'
+data_dir='/home/sallylab/Howard/Mura_ShiftNet/detect_position/typed/16/union/0.0150_diff_pos_area_2'
 
-csv_path='/home/sallylab/Howard/Mura_ShiftNet/detect_position/typec+b1/typec+b1.csv'
+csv_path='/home/sallylab/Howard/Mura_ShiftNet/detect_position/typed/typed.csv'
 save_dir='/home/sallylab/Howard/Mura_ShiftNet/detect_position'
 
 python plot_gt_on_result.py \

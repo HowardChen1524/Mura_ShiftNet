@@ -14,7 +14,7 @@ declare -a measure_list=(
                         #  "Mask_Content_VGG16_sliding"
                         )
 declare th_list=(0.015)
-declare min_area_list=(2 40)
+declare min_area_list=(1 40)
 
 sup_model_path='/home/sallylab/Howard/models/SEResNeXt101_d23/model.pt'
 # sup_model_version="ensemble_d23"

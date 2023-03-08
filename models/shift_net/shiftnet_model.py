@@ -312,12 +312,11 @@ class ShiftNetModel(BaseModel):
             combine_t = time.time() - start_time
             print(f"combine time cost: {combine_t}")
             denoise_t=0
-            if self.opt.min_area > 1:
-                start_time = time.time()
-                # patches_combined = self.remove_small_areas(patches_combined, min_area)
-                patches_combined = self.remove_small_areas_opencv(patches_combined)
-                denoise_t = time.time() - start_time
-                print(f"denoise time cost: {denoise_t}")
+            start_time = time.time()
+            # patches_combined = self.remove_small_areas(patches_combined, min_area)
+            patches_combined = self.remove_small_areas_opencv(patches_combined)
+            denoise_t = time.time() - start_time
+            print(f"denoise time cost: {denoise_t}")
             start_time = time.time()
             # self.export_combined_diff_img(patches_combined, fn, os.path.join(save_dir, f'{threshold:.4f}_diff_pos_area_{min_area}/imgs'))
             self.export_combined_diff_img_opencv(patches_combined, fn, os.path.join(save_dir, f'{threshold:.4f}_diff_pos_area_{self.opt.min_area}/imgs'))
