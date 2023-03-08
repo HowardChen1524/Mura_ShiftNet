@@ -50,10 +50,22 @@ class AlignedDatasetSliding(BaseDataset):
         else:
             A = A.convert('L')
             
-        A_imgs = []
+        
 
         A_img = self.transform(A)
 
+        # padding
+        A_img = A_img[:,3:-3,3:-3]
+        left = torch.flip(A_img[:,:,:19], dims=[2])
+        right = torch.flip(A_img[:,:,-20:], dims=[2])
+        A_img = torch.concat((left, A_img, right), dim=2)
+
+        A_img = tensor2img(A_img)
+        A_img = enhance_img(A_img)
+        A_img.save('./A.png')
+        raise
+        # sliding crop
+        A_imgs = []
         c, h, w = A_img.size()
         y_flag = False
         for y in range(0, h, self.opt.crop_stride): # stride default 32

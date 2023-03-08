@@ -19,7 +19,6 @@ from models.shift_net.InnerCos import InnerCos
 # from models.res_patch_soft_shift.innerResPatchSoftShiftTriple import InnerResPatchSoftShiftTriple 
 
 from .unet import UnetSkipConnectionBlock
-from .modules import *
 
 
 ################################### ***************************  #####################################

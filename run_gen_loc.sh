@@ -14,7 +14,7 @@ declare -a measure_list=(
                         #  "Mask_Content_VGG16_sliding"
                         )
 declare th_list=(0.015)
-declare min_area_list=(1 40)
+declare min_area_list=(40)
 
 sup_model_path='/home/sallylab/Howard/models/SEResNeXt101_d23/model.pt'
 # sup_model_version="ensemble_d23"
@@ -33,19 +33,19 @@ crop_stride=16
 # normal_num=0
 # smura_num=31
 
-# dataset_version="typec+b1_edge"
-# unsup_test_normal_path="/home/sallylab/min/d23_merge/test/test_normal_8k/" # for unsupervised model
-# unsup_test_smura_path="/home/sallylab/min/typec+b1_edge/" # for unsupervised model
-# # unsup_test_normal_path="/home/levi/mura_data/d23/1920x1080/test/test_normal_8k/"
-# # unsup_test_smura_path="/home/levi/mura_data/typecplus/img/"
-# normal_num=0
-# smura_num=4
-
-dataset_version="typed"
+dataset_version="typec+b1_edge"
 unsup_test_normal_path="/home/sallylab/min/d23_merge/test/test_normal_8k/" # for unsupervised model
-unsup_test_smura_path="/home/sallylab/min/typed/img/" # for unsupervised model
+unsup_test_smura_path="/home/sallylab/min/typec+b1_edge/" # for unsupervised model
+# unsup_test_normal_path="/home/levi/mura_data/d23/1920x1080/test/test_normal_8k/"
+# unsup_test_smura_path="/home/levi/mura_data/typecplus/img/"
 normal_num=0
-smura_num=52
+smura_num=4
+
+# dataset_version="typed"
+# unsup_test_normal_path="/home/sallylab/min/d23_merge/test/test_normal_8k/" # for unsupervised model
+# unsup_test_smura_path="/home/sallylab/min/typed/img/" # for unsupervised model
+# normal_num=0
+# smura_num=52
 
 # gnerate ground truth
 # data_dir='/home/sallylab/min/'
@@ -81,20 +81,20 @@ done
 # --sup_gradcam_th=0.5 --gpu_ids=0
 
 # calculate dice
-res_dir='/home/sallylab/Howard/Mura_ShiftNet/detect_position'
+# res_dir='/home/sallylab/Howard/Mura_ShiftNet/detect_position'
 
-for th in ${th_list[@]}
-do
-    for min_area in ${min_area_list[@]}
-    do
-        python /home/sallylab/Howard/Mura_ShiftNet/detect_position/code/calculate_dice/calculate_dice.py \
-        -dv=$dataset_version \
-        -dd=$res_dir \
-        -cs=$crop_stride \
-        -th=$th \
-        -mi=$min_area
-    done
-done
+# for th in ${th_list[@]}
+# do
+#     for min_area in ${min_area_list[@]}
+#     do
+#         python /home/sallylab/Howard/Mura_ShiftNet/detect_position/code/calculate_dice/calculate_dice.py \
+#         -dv=$dataset_version \
+#         -dd=$res_dir \
+#         -cs=$crop_stride \
+#         -th=$th \
+#         -mi=$min_area
+#     done
+# done
 
 # declare th_list=(0.0150)
 # # calculate recall precision
