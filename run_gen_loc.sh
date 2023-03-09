@@ -27,6 +27,8 @@ model_version="ShiftNet_SSIM_d23_8k_change_cropping"
 
 crop_stride=16
 
+base_dir="/home/sallylab/Howard/Mura_ShiftNet/detect_position"
+
 dataset_version="typec+b1"
 unsup_test_normal_path="/home/sallylab/min/d23_merge/test/test_normal_8k/" # for unsupervised model
 unsup_test_smura_path="/home/sallylab/min/typec+b1/img/" # for unsupervised model
@@ -56,11 +58,11 @@ smura_num=31
 # -dd=$data_dir \
 # -sd=$save_dir
 
-# generate unsupervised model diff visualize
 for th in ${th_list[@]}
 do
     for min_area in ${min_area_list[@]}
     do
+        # generate unsupervised model diff visualize
         python3 gen_patch.py \
         --batchSize=1 --use_spectral_norm_D=1 --which_model_netD="basic" --which_model_netG="unet_shift_triple" --model="shiftnet" --shift_sz=1 --mask_thred=1 \
         --data_version=$dataset_version --dataset_mode="aligned_sliding" --loadSize=64 --crop_stride=$crop_stride  --mask_type="center" --input_nc=3 --output_nc=3 \
@@ -69,7 +71,27 @@ do
         --normal_how_many=$normal_num --testing_normal_dataroot=$unsup_test_normal_path \
         --smura_how_many=$smura_num --testing_smura_dataroot=$unsup_test_smura_path \
         --gpu_ids=1 \
-        --binary_threshold=$th --min_area=$min_area
+        --binary_threshold=$th --min_area=$min_area --isPadding
+
+        # plot gt
+        data_dir="${base_dir}/${dataset_version}/${crop_stride}/union/${th}_diff_pos_area_${min_area}/imgs"
+        csv_path="${base_dir}/${dataset_version}/${dataset_version}.csv"
+        save_dir="${base_dir}/${dataset_version}/${crop_stride}/union/${th}_diff_pos_area_${min_area}/imgs_gt"
+
+        python3 ./detect_position/code/plot_gt_on_result/plot_gt_on_result.py \
+        -dv=$dataset_version \
+        -cp=$csv_path \
+        -dd=$data_dir \
+        -sd=$save_dir
+
+        gt_dir="${base_dir}/${dataset_version}/actual_pos/ground_truth"
+        save_dir="${base_dir}/${dataset_version}/${crop_stride}/union/${th}_diff_pos_area_${min_area}"
+        # cal dice and recall & precision
+        python3 ./detect_position/code/calculate_metrics/calculate_metrics.py \
+        -dv=$dataset_version \
+        -dd=$data_dir \
+        -gd=$gt_dir \
+        -sd=$save_dir
     done
 done
 
@@ -79,52 +101,3 @@ done
 # --sup_model_version=$sup_model_version --checkpoints_dir='/home/sallylab/Howard/models/' \
 # --data_version=$dataset_version --loadSize=64 --testing_smura_dataroot=$unsup_test_smura_path \
 # --sup_gradcam_th=0.5 --gpu_ids=0
-
-# calculate dice
-# res_dir='/home/sallylab/Howard/Mura_ShiftNet/detect_position'
-
-# for th in ${th_list[@]}
-# do
-#     for min_area in ${min_area_list[@]}
-#     do
-#         python /home/sallylab/Howard/Mura_ShiftNet/detect_position/code/calculate_dice/calculate_dice.py \
-#         -dv=$dataset_version \
-#         -dd=$res_dir \
-#         -cs=$crop_stride \
-#         -th=$th \
-#         -mi=$min_area
-#     done
-# done
-
-# declare th_list=(0.0150)
-# # calculate recall precision
-# gt_dir="/home/sallylab/Howard/Mura_ShiftNet/detect_position/${dataset_version}/actual_pos/ground_truth"
-# for th in ${th_list[@]}
-# do
-#     for min_area in ${min_area_list[@]}
-#     do
-#         res_dir="/home/sallylab/Howard/Mura_ShiftNet/detect_position/${dataset_version}/16/union/${th}_diff_pos_area_${min_area}"
-        
-#         python /home/sallylab/Howard/Mura_ShiftNet/detect_position/code/calculate_pixel_based_recall_precision/calculate_recall_precision.py \
-#         -dv=$dataset_version \
-#         -dd=$res_dir \
-#         -gd=$gt_dir
-#     done
-# done
-
-for th in ${th_list[@]}
-do
-    for min_area in ${min_area_list[@]}
-    do
-        data_dir="/home/sallylab/Howard/Mura_ShiftNet/detect_position/${dataset_version}/16/union/${th}_diff_pos_area_${min_area}"
-        csv_path="/home/sallylab/Howard/Mura_ShiftNet/detect_position/${dataset_version}/${dataset_version}.csv"
-        save_dir="/home/sallylab/Howard/Mura_ShiftNet/detect_position"
-
-        python /home/sallylab/Howard/Mura_ShiftNet/detect_position/code/plot_gt_on_result/plot_gt_on_result.py \
-        -dv=$dataset_version \
-        -cp=$csv_path \
-        -dd=$data_dir \
-        -sd=$save_dir
-    done
-done
-
