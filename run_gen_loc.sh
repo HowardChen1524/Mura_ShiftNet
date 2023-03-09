@@ -13,8 +13,8 @@ declare -a measure_list=(
                          "Content_VGG16_sliding"
                         #  "Mask_Content_VGG16_sliding"
                         )
-declare th_list=(0.015)
-declare min_area_list=(1 40)
+declare th_list=(0.0125)
+declare min_area_list=(1)
 
 sup_model_path='/home/sallylab/Howard/models/SEResNeXt101_d23/model.pt'
 # sup_model_version="ensemble_d23"
@@ -27,11 +27,11 @@ model_version="ShiftNet_SSIM_d23_8k_change_cropping"
 
 crop_stride=16
 
-# dataset_version="typec+b1"
-# unsup_test_normal_path="/home/sallylab/min/d23_merge/test/test_normal_8k/" # for unsupervised model
-# unsup_test_smura_path="/home/sallylab/min/typec+b1/img/" # for unsupervised model
-# normal_num=0
-# smura_num=31
+dataset_version="typec+b1"
+unsup_test_normal_path="/home/sallylab/min/d23_merge/test/test_normal_8k/" # for unsupervised model
+unsup_test_smura_path="/home/sallylab/min/typec+b1/img/" # for unsupervised model
+normal_num=0
+smura_num=31
 
 # dataset_version="typec+b1_edge"
 # unsup_test_normal_path="/home/sallylab/min/d23_merge/test/test_normal_8k/" # for unsupervised model
@@ -41,11 +41,11 @@ crop_stride=16
 # normal_num=0
 # smura_num=4
 
-dataset_version="typed"
-unsup_test_normal_path="/home/sallylab/min/d23_merge/test/test_normal_8k/" # for unsupervised model
-unsup_test_smura_path="/home/sallylab/min/typed/img/" # for unsupervised model
-normal_num=0
-smura_num=52
+# dataset_version="typed"
+# unsup_test_normal_path="/home/sallylab/min/d23_merge/test/test_normal_8k/" # for unsupervised model
+# unsup_test_smura_path="/home/sallylab/min/typed/img/" # for unsupervised model
+# normal_num=0
+# smura_num=52
 
 # gnerate ground truth
 # data_dir='/home/sallylab/min/'
@@ -81,20 +81,20 @@ done
 # --sup_gradcam_th=0.5 --gpu_ids=0
 
 # calculate dice
-res_dir='/home/sallylab/Howard/Mura_ShiftNet/detect_position'
+# res_dir='/home/sallylab/Howard/Mura_ShiftNet/detect_position'
 
-for th in ${th_list[@]}
-do
-    for min_area in ${min_area_list[@]}
-    do
-        python /home/sallylab/Howard/Mura_ShiftNet/detect_position/code/calculate_dice/calculate_dice.py \
-        -dv=$dataset_version \
-        -dd=$res_dir \
-        -cs=$crop_stride \
-        -th=$th \
-        -mi=$min_area
-    done
-done
+# for th in ${th_list[@]}
+# do
+#     for min_area in ${min_area_list[@]}
+#     do
+#         python /home/sallylab/Howard/Mura_ShiftNet/detect_position/code/calculate_dice/calculate_dice.py \
+#         -dv=$dataset_version \
+#         -dd=$res_dir \
+#         -cs=$crop_stride \
+#         -th=$th \
+#         -mi=$min_area
+#     done
+# done
 
 # declare th_list=(0.0150)
 # # calculate recall precision
@@ -112,12 +112,19 @@ done
 #     done
 # done
 
-# data_dir='/home/sallylab/Howard/Mura_ShiftNet/detect_position/${dataset_version}/16/union/0.0150_diff_pos_area_40'
-# csv_path='/home/sallylab/Howard/Mura_ShiftNet/detect_position/${dataset_version}/typed.csv'
-# save_dir='/home/sallylab/Howard/Mura_ShiftNet/detect_position'
+for th in ${th_list[@]}
+do
+    for min_area in ${min_area_list[@]}
+    do
+        data_dir="/home/sallylab/Howard/Mura_ShiftNet/detect_position/${dataset_version}/16/union/${th}_diff_pos_area_${min_area}"
+        csv_path="/home/sallylab/Howard/Mura_ShiftNet/detect_position/${dataset_version}/${dataset_version}.csv"
+        save_dir="/home/sallylab/Howard/Mura_ShiftNet/detect_position"
 
-# python /home/sallylab/Howard/Mura_ShiftNet/detect_position/code/plot_gt_on_result/plot_gt_on_result.py \
-# -dv=$dataset_version \
-# -cp=$csv_path \
-# -dd=$data_dir \
-# -sd=$save_dir
+        python /home/sallylab/Howard/Mura_ShiftNet/detect_position/code/plot_gt_on_result/plot_gt_on_result.py \
+        -dv=$dataset_version \
+        -cp=$csv_path \
+        -dd=$data_dir \
+        -sd=$save_dir
+    done
+done
+

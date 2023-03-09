@@ -229,38 +229,32 @@ class ShiftNetModel(BaseModel):
         if overlap_strategy == 'union':
             threshold = float(self.opt.binary_threshold)
             save_dir = os.path.join(save_dir, 'union')
-            mask_patches = patches[:, :, self.rand_t:self.rand_t+self.opt.loadSize//2, \
-                                            self.rand_l:self.rand_l+self.opt.loadSize//2]
-
-            # plot patches threshold hist
-            # plot_img_diff_hist(patches.flatten().detach().cpu().numpy(), os.path.join(save_dir, f'all_patches_diff_hist/{fn}'), 0)
-            # plot_img_diff_hist(mask_patches.flatten().detach().cpu().numpy(), os.path.join(save_dir, f'all_patches_diff_hist/{fn}'), 1)
 
             # thresholding
             patches[patches>=threshold] = 1
             patches[patches<threshold] = -1
 
-            # print(patches[224] == patches.reshape(15,15,3,64,64)[14][14])
-            # print(patches.shape)
+            print(patches.shape)
+            
             l = int(math.sqrt(patches.shape[0]))
             patches_reshape = patches.view(l,l,1,64,64)
-            # print(patches_reshape.shape)
-
+            print(patches_reshape.shape)
+            
             # create combined img template
-            patches_combined = torch.zeros((1, 512, 512), device=self.device)
+            patches_combined = torch.zeros((1, 528, 528), device=self.device)
             # print(patches_combined.shape)
             # fill combined img
             ps = self.opt.loadSize # crop patch size
             sd = self.opt.crop_stride # crop stride
             idy = 0
-            for y in range(0, 512, sd): # stride default 32
+            for y in range(0, 528, sd):
                 # print(f"y {y}")
-                if (y + ps) > 512:
+                if (y + ps) > 528:
                     break
                 idx = 0
-                for x in range(0, 512, sd):
+                for x in range(0, 528, sd):
                     # print(f"x {x}")
-                    if (x + ps) > 512:
+                    if (x + ps) > 528:
                         break
                     # 判斷是否 最上 y=0 & 最左=0 & 最右x=14
                     if idy == 0: # 只需考慮左右重疊
@@ -317,6 +311,12 @@ class ShiftNetModel(BaseModel):
             patches_combined = self.remove_small_areas_opencv(patches_combined)
             denoise_t = time.time() - start_time
             print(f"denoise time cost: {denoise_t}")
+
+            # flip back
+            patches_combined = patches_combined[14:-14, 14:-14]
+            pad_width = ((6, 6), (6, 6))  # 上下左右各填充6个元素
+            patches_combined = np.pad(patches_combined, pad_width, mode='constant', constant_values=0)
+            
             start_time = time.time()
             # self.export_combined_diff_img(patches_combined, fn, os.path.join(save_dir, f'{threshold:.4f}_diff_pos_area_{min_area}/imgs'))
             self.export_combined_diff_img_opencv(patches_combined, fn, os.path.join(save_dir, f'{threshold:.4f}_diff_pos_area_{self.opt.min_area}/imgs'))

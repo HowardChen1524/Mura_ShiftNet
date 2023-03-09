@@ -50,11 +50,38 @@ class AlignedDatasetSliding(BaseDataset):
         else:
             A = A.convert('L')
             
-        A_imgs = []
+        
 
         A_img = self.transform(A)
+        # padding
+        A_img  = A_img[:,6:-6,6:-6]
+        # print(A_img.shape)
+        up = torch.flip(A_img[:,:14,:], dims=[1])
+        down = torch.flip(A_img[:,-14:,:], dims=[1])
+        A_img = torch.concat((up, A_img, down), dim=1)
 
+        # pil_img = tensor2img(A_img)
+        # pil_img = enhance_img(pil_img)
+        # pil_img.save(f"{A_path.split('/')[-1]}_ud.png")
+        # print(A_img.shape)
+
+        left = torch.flip(A_img[:,:,:14], dims=[2])
+        right = torch.flip(A_img[:,:,-14:], dims=[2])
+        A_img = torch.concat((left, A_img, right), dim=2)
+        
+        # pil_img = tensor2img(A_img)
+        # pil_img = enhance_img(pil_img)
+        # pil_img.save(f"{A_path.split('/')[-1]}_lr.png")
+        print(A_img.shape)
+
+        # pil_img = tensor2img(A_img)
+        # pil_img = enhance_img(pil_img)
+        # pil_img.save(f"{A_path.split('/')[-1]}.png")
+        
+        # sliding crop
+        A_imgs = []
         c, h, w = A_img.size()
+        # print(h,w)
         y_flag = False
         for y in range(0, h, self.opt.crop_stride): # stride default 32
             if y_flag: break
@@ -84,7 +111,7 @@ class AlignedDatasetSliding(BaseDataset):
             A_imgs = [A_imgs[crop_index] for crop_index in crop_index_list]
             
         A = torch.stack(A_imgs)
-        print(A.shape)
+        # print(A.shape)
         
         mask = A.clone().zero_()
         

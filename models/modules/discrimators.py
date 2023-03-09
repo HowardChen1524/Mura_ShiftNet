@@ -1,8 +1,8 @@
 import functools
 import torch.nn as nn
 from .denset_net import *
-
 from .modules import *
+
 ################################### This is for D ###################################
 # Defines the PatchGAN discriminator with the specified arguments.
 class NLayerDiscriminator(nn.Module):

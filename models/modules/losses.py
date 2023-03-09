@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import numpy as np
+from .modules import *
 
 # Defines the GAN loss which uses either LSGAN or the regular GAN.
 # When LSGAN is used, it is basically same as MSELoss,
