@@ -10,41 +10,40 @@ import sys
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-dv', '--dataset_version', type=str, default=None, required=True)
 parser.add_argument('-dd', '--data_dir', type=str, default=None, required=True)
 parser.add_argument('-cp', '--csv_path', type=str, default=None, required=True)
 parser.add_argument('-sd', '--save_dir', type=str, default=None, required=True)
 
 def join_path(p1,p2):
     return os.path.join(p1,p2)
-    
-args = parser.parse_args()
-dataset_version = args.dataset_version
-data_dir = args.data_dir
-csv_path = args.csv_path
-save_dir = args.save_dir
-os.makedirs(save_dir, exist_ok=True)
+
+if __name__ == '__main__': 
+    args = parser.parse_args()
+    data_dir = args.data_dir
+    csv_path = args.csv_path
+    save_dir = args.save_dir
+    os.makedirs(save_dir, exist_ok=True)
 
 
-df = pd.read_csv(csv_path)
-# 基於標註 df 將實際 mura 位置標註在圖上
-img_list = glob(f"{join_path(data_dir, '*png')}")
-for img_path in img_list:
-    fn = img_path.split('/')[-1]
-    img = Image.open(img_path)
-    
-    img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
-    img = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
-    fn_series_list = df[df['fn']==fn]
-    
-    actual_pos_list = []
-    for i in range(0, fn_series_list.shape[0]):
-        fn_series = fn_series_list.iloc[i]
-        actual_pos_list.append((int(fn_series['x0']/3.75), int(fn_series['y0']/2.109375), int(fn_series['x1']/ 3.75), int(fn_series['y1']/2.109375)))
+    df = pd.read_csv(csv_path)
+    # 基於標註 df 將實際 mura 位置標註在圖上
+    img_list = glob(f"{join_path(data_dir, '*png')}")
+    for img_path in img_list:
+        fn = img_path.split('/')[-1]
+        img = Image.open(img_path)
+        
+        img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+        img = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+        fn_series_list = df[df['fn']==fn]
+        
+        actual_pos_list = []
+        for i in range(0, fn_series_list.shape[0]):
+            fn_series = fn_series_list.iloc[i]
+            actual_pos_list.append((int(fn_series['x0']/3.75), int(fn_series['y0']/2.109375), int(fn_series['x1']/ 3.75), int(fn_series['y1']/2.109375)))
 
-    for actual_pos in actual_pos_list:
-        draw = ImageDraw.Draw(img)  
-        draw.rectangle(actual_pos, outline ="red")
-        # print(actual_pos)
+        for actual_pos in actual_pos_list:
+            draw = ImageDraw.Draw(img)  
+            draw.rectangle(actual_pos, outline ="red")
+            # print(actual_pos)
 
-    img.save(join_path(save_dir, fn))
+        img.save(join_path(save_dir, fn))

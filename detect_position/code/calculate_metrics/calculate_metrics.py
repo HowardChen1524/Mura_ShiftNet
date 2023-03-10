@@ -7,7 +7,6 @@ from PIL import Image
 from sklearn.metrics import confusion_matrix
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-dv', '--dataset_version', type=str, default=None, required=True)
 parser.add_argument('-dd', '--data_dir', type=str, default=None, required=True)
 parser.add_argument('-gd', '--gt_dir', type=str, default=None, required=True)
 parser.add_argument('-sd', '--save_dir', type=str, default=None, required=True)
@@ -35,11 +34,11 @@ def join_path(p1,p2):
 
 if __name__ == '__main__':
     args = parser.parse_args()
-    dataset_version = args.dataset_version
     data_dir = args.data_dir
     gt_dir = args.gt_dir
     save_dir = args.save_dir
-
+    os.makedirs(save_dir, exist_ok=True)
+    
     row_data = defaultdict(float)
     pixels_imgs = []
     pixels_gt = []

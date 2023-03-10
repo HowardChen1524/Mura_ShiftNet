@@ -8,8 +8,6 @@ import cv2
 from PIL import Image, ImageDraw
 import xmltodict
 import sys
-sys.path.append("../../../")
-from util.utils_howard import enhance_img
 parser = argparse.ArgumentParser()
 parser.add_argument('-dv', '--dataset_version', type=str, default=None, required=True)
 parser.add_argument('-dd', '--data_dir', type=str, default=None, required=True)
@@ -81,7 +79,6 @@ for img_path in img_list:
     img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
     img = cv2.resize(img, (512,512), interpolation=cv2.INTER_AREA)
     img = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
-    # img = enhance_img(img)
     fn_series_list = df[df['fn']==fn]
     
     actual_pos_list = []
