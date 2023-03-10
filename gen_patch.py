@@ -1,28 +1,21 @@
 import time
-import os
-from collections import defaultdict
+import numpy as np
 
 from options.test_options import TestOptions
 from data.data_loader import CreateDataLoader
 from models import create_model
 
-from util.utils_howard import mkdir, \
-                              plot_score_distribution, plot_score_scatter, \
-                              unsup_calc_metric, unsup_find_param_max_mean, set_seed
+from util.utils_howard import mkdir, set_seed
                               
-import numpy as np
-import pandas as pd
+
 
 def initail_setting():
     opt = TestOptions().parse()
     opt.nThreads = 1   # test code only supports nThreads = 1
     opt.batchSize = 1  # test code only supports batchSize = 1
     opt.serial_batches = True  # no shuffle
-    opt.display_id = -1 # no visdom display
 
-    opt.results_dir = f"{opt.results_dir}/{opt.model_version}/{opt.data_version}/{opt.measure_mode}"
-    if opt.pos_normalize:
-        opt.results_dir = f"{opt.results_dir}_pn"
+    opt.results_dir = f"{opt.results_dir}/{opt.data_version}/{opt.crop_stride}"
 
     mkdir(opt.results_dir)
 
@@ -30,7 +23,7 @@ def initail_setting():
 
     return opt, opt.gpu_ids[0]
 
-def unsupervised_model_prediction(opt):
+def main(opt):
   model = create_model(opt)
   data_loader = CreateDataLoader(opt)
 
@@ -73,7 +66,7 @@ def unsupervised_model_prediction(opt):
         # 建立 input real_A & real_B
         # it not only sets the input data with mask, but also sets the latent mask.
         model.set_input(data)
-        t = model.forward(mode, fn)
+        t = model.visualize_diff(mode, fn)
         all_t_list.append(time.time() - all_start_time)
         model_pred_t_list.append(t[0])
         combine_t_list.append(t[1])
@@ -90,4 +83,4 @@ if __name__ == "__main__":
 
     opt, gpu = initail_setting()  
     
-    unsupervised_model_prediction(opt)
+    main(opt)

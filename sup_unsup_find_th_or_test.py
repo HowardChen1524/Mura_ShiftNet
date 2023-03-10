@@ -26,7 +26,6 @@ def initail_setting():
     opt.batchSize = 1  # test code only supports batchSize = 1
     opt.serial_batches = True  # no shuffle
     opt.no_flip = True  # no flip
-    opt.display_id = -1 # no visdom display
     opt.loadSize = opt.fineSize  # Do not scale!
 
     # opt.results_dir = f"{opt.results_dir}/{opt.model_version}_with_SEResNeXt101_d23/{opt.data_version}/{opt.measure_mode}"

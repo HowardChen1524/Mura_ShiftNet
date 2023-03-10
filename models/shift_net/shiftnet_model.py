@@ -21,6 +21,7 @@ class ShiftNetModel(BaseModel):
         BaseModel.initialize(self, opt)
         self.opt = opt
         self.isTrain = opt.isTrain
+        
         # specify the training losses you want to print out. The program will call base_model.get_current_losses
         if self.opt.input_nc == 3:
             self.loss_names = ['G_GAN', 'G_L1', 'D', 'style', 'content', 'tv', 'ssim']
@@ -28,18 +29,11 @@ class ShiftNetModel(BaseModel):
         else:
             self.loss_names = ['G_GAN', 'G_L1', 'D']
 
-        # specify the images you want to save/display. The program will call base_model.get_current_visuals
-        # if self.opt.show_flow:
-        #     self.visual_names = ['real_A', 'fake_B', 'real_B', 'flow_srcs']
-        # else:
-        #     self.visual_names = ['real_A', 'fake_B', 'real_B']
-
         # specify the models you want to save to the disk. The program will call base_model.save_networks and base_model.load_networks
         if self.isTrain:
             self.model_names = ['G', 'D']
         else:  # during test time, only load Gs, if need d_score, add Ds
-            self.model_names = ['G', 'D']
-
+            self.model_names = ['G']
 
         # batchsize should be 1 for mask_global，初始化 mask
         self.mask_global = torch.zeros((self.opt.batchSize, 1, opt.loadSize, opt.loadSize), dtype=torch.bool)
@@ -130,7 +124,6 @@ class ShiftNetModel(BaseModel):
     def set_input(self, input):
         self.image_paths = input['A_paths']
         
-        # print(input['A'].shape)
         real_A = input['A'].to(self.device)
         real_B = input['B'].to(self.device)
         
@@ -193,38 +186,40 @@ class ShiftNetModel(BaseModel):
 
             self.netG(real_B) # input ground truth
 
-    def forward(self, mode=None, fn=None):
-        self.set_gt_latent() # real_B，不知道幹嘛用
-        start_time = time.time()
-        with torch.no_grad():
-            self.fake_B = self.netG(self.real_A) # real_A 當 input 進去做 inpaint
-            model_pred_t = time.time() - start_time
-            print(f"model predict time cost: {model_pred_t}")
-        
-            # self.export_inpaint_imgs(self.real_B, mode, fn, os.path.join(self.opt.results_dir, '0'), 0) # 0 true, 1 fake
-            # self.export_inpaint_imgs(self.fake_B, mode, fn, os.path.join(self.opt.results_dir, '1'), 1) # 0 true, 1 fake
-
-            if ~(self.opt.isTrain) and (mode != None) and (fn != None):
-                diff_B = torch.abs(self.real_B - self.fake_B)
-                position_res_dir = os.path.join(f'./detect_position/{self.opt.data_version}/{self.opt.crop_stride}')            
-                gray_diff_B = rgb_to_grayscale(diff_B)
-                # print(diff_B[0,0,0,0]*0.299 + diff_B[0,1,0,0]*0.587 + diff_B[0,2,0,0]*0.114)
-                # print(gray_diff_B[0,0,0,0])
-                # print(diff_B.shape)
-                # print(gray_diff_B.shape)
-                
-                # self.export_inpaint_imgs(gray_diff_B, mode, fn, os.path.join(position_res_dir, f'ori_diff_patches/{fn}'), 2) # 0 true, 1 fake
-                patches, combine_t, denoise_t, export_t = self.combine_patches(fn, gray_diff_B, position_res_dir, 'union')
-                
-                # self.export_inpaint_imgs(self.real_B, mode, fn, os.path.join(position_res_dir, f'ori_diff_patches/{fn}'), 0) # 0 true, 1 fake
-                # self.export_inpaint_imgs(self.fake_B, mode, fn, os.path.join(position_res_dir, f'ori_diff_patches/{fn}'), 1) # 0 true, 1 fake
-                self.export_inpaint_imgs(patches, mode, fn, os.path.join(position_res_dir, f'ori_diff_patches/{fn}'), 3) # 0 true, 1 fake
-
-        return (model_pred_t, combine_t, denoise_t, export_t)
+    def forward(self):
+        self.set_gt_latent()
+        self.fake_B = self.netG(self.real_A) # real_A 當 input 進去做 inpaint
+    
     '''
     for visualize rec difference or export patch
     '''
-    def combine_patches(self, fn, patches, save_dir, overlap_strategy, flip=False):
+    def visualize_diff(self, mode=None, fn=None):
+        with torch.no_grad():
+            start_time = time.time()
+            self.forward()
+            model_pred_t = time.time() - start_time
+            print(f"model inpainting time cost: {model_pred_t}")
+
+        fake_B = self.fake_B.detach() # Inpaint
+        real_B = self.real_B # Original
+        
+        diff_B = torch.abs(real_B - fake_B)    
+        gray_diff_B = rgb_to_grayscale(diff_B)
+        
+        patches, combine_t, denoise_t, export_t = self.combine_patches(fn, gray_diff_B, self.opt.results_dir, 'union')
+        
+        # self.export_inpaint_imgs(real_B, os.path.join(self.opt.results_dir, f'ori_diff_patches/{fn}'), 0) # 0 true, 1 fake
+        # self.export_inpaint_imgs(fake_B, os.path.join(self.opt.results_dir, f'ori_diff_patches/{fn}'), 1) # 0 true, 1 fake
+        self.export_inpaint_imgs(patches, os.path.join(self.opt.results_dir, f'ori_diff_patches/{fn}'), 2) # 0 true, 1 fake
+
+        return (model_pred_t, combine_t, denoise_t, export_t)
+    
+    def combine_patches(self, fn, patches, save_dir, overlap_strategy):
+        ORISIZE = 512
+        EDGE_PIXEL = 6
+        PADDING_PIXEL = 14
+        IMGH = IMGW = (ORISIZE-2*EDGE_PIXEL+2*PADDING_PIXEL)
+        
         start_time = time.time()
         if overlap_strategy == 'union':
             threshold = float(self.opt.binary_threshold)
@@ -233,28 +228,25 @@ class ShiftNetModel(BaseModel):
             # thresholding
             patches[patches>=threshold] = 1
             patches[patches<threshold] = -1
-
-            print(patches.shape)
             
             l = int(math.sqrt(patches.shape[0]))
-            patches_reshape = patches.view(l,l,1,64,64)
-            print(patches_reshape.shape)
+            patches_reshape = patches.view(l,l,1,self.opt.loadSize,self.opt.loadSize)
             
             # create combined img template
-            patches_combined = torch.zeros((1, 528, 528), device=self.device)
-            # print(patches_combined.shape)
+            patches_combined = torch.zeros((1, IMGH, IMGW), device=self.device)
+
             # fill combined img
             ps = self.opt.loadSize # crop patch size
             sd = self.opt.crop_stride # crop stride
             idy = 0
-            for y in range(0, 528, sd):
+            for y in range(0, IMGH, sd):
                 # print(f"y {y}")
-                if (y + ps) > 528:
+                if (y + ps) > IMGH:
                     break
                 idx = 0
-                for x in range(0, 528, sd):
+                for x in range(0, IMGW, sd):
                     # print(f"x {x}")
-                    if (x + ps) > 528:
+                    if (x + ps) > IMGW:
                         break
                     # 判斷是否 最上 y=0 & 最左=0 & 最右x=14
                     if idy == 0: # 只需考慮左右重疊
@@ -313,8 +305,8 @@ class ShiftNetModel(BaseModel):
             print(f"denoise time cost: {denoise_t}")
 
             # flip back
-            patches_combined = patches_combined[14:-14, 14:-14]
-            pad_width = ((6, 6), (6, 6))  # 上下左右各填充6个元素
+            patches_combined = patches_combined[PADDING_PIXEL:-PADDING_PIXEL, PADDING_PIXEL:-PADDING_PIXEL]
+            pad_width = ((EDGE_PIXEL, EDGE_PIXEL), (EDGE_PIXEL, EDGE_PIXEL))  # 上下左右各填充6个元素
             patches_combined = np.pad(patches_combined, pad_width, mode='constant', constant_values=0)
             
             start_time = time.time()
@@ -325,63 +317,13 @@ class ShiftNetModel(BaseModel):
 
         return patches, combine_t, denoise_t, export_t
     
-    # handcraft
-    def dfs(self, image, H, W, visited, pos_list, count=1):
-        # check if the current pixel is within the bounds of the image
-        if H < 0 or H >= image.shape[1] or W < 0 or W >= image.shape[2]:
-            return 0
-        # check if the current pixel is visited or not white
-        if visited[H][W] or image[0, H, W] != 1:
-            return 0
-        if count > 500: # 面積超過 200 直接回傳，避免因 max recursive 跳出
-            return 0
-        # mark the current pixel as visited
-        pos_list.append((H,W))
-        visited[H][W] = True
-        area = 1
-    
-        # 8-connected neighbors
-        # dirs = [(0, 1), (0, -1), (1, 0), (-1, 0), (1, 1), (1, -1), (-1, 1), (-1, -1)] # 2 8 6 4 3 9 1 7 (keyboard)
-        # 4-connected neighbors
-        dirs = [(0, 1), (0, -1), (1, 0), (-1, 0)] # 2 8 6 4 (keyboard)
-
-        # recursively call dfs on each of the 8-connected neighbors
-        for direction in dirs:
-            area += self.dfs(image, H + direction[0], W + direction[1], visited, pos_list, count+1)
-        
-        return area
-    def remove_small_areas(self, image, min_area): # connected_component_labeling
-        # initialize the visited matrix
-        visited = [[False for _ in range(image.shape[2])] for _ in range(image.shape[1])]
-        # print(np.array(visited).shape)
-        
-        # loop through each pixel in the image
-        for H in range(image.shape[1]):
-            for W in range(image.shape[2]):
-                # if the current pixel is white and not visited, start a new connected component
-                if (not visited[H][W]) and (image[0, H, W] == 1):
-                    pos_list = []
-                    white_area = self.dfs(image, H, W, visited, pos_list)
-                    # print(white_area)
-                    if  white_area < min_area or white_area > 200:
-                    # if  white_area < min_area:
-                        for (pos_H, pos_W) in pos_list:
-                            image[0, pos_H, pos_W] = -1
-                    
-        return image
-    def export_combined_diff_img(self, img, name, save_path):
-        mkdir(save_path)       
-        pil_img = tensor2img(img) 
-        pil_img = pil_img.convert('L')          
-        pil_img.save(os.path.join(save_path, name))
-    # opencv
     def remove_small_areas_opencv(self, image):
         image = image.detach().cpu().numpy().transpose((1, 2, 0))
         image[image==-1] = 0
         image[image==1] = 255
         image = image.astype(np.uint8)
 
-        #使用 connectedComponents 函數
+        # 使用 connectedComponents 函數
         num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(image, connectivity=4)
 
         # 輸出連通區域的數量
@@ -419,42 +361,38 @@ class ShiftNetModel(BaseModel):
         result[result == 0] = 0
         result[result != 0] = 255
         return result
+    
     def export_combined_diff_img_opencv(self, img, name, save_path):
         mkdir(save_path)             
         cv2.imwrite(os.path.join(save_path, name), img)
 
-    def export_inpaint_imgs(self, output, mode, name, save_path, img_type):
+    def export_inpaint_imgs(self, output, save_path, img_type):
         if img_type == 0:
             save_path =  os.path.join(save_path, 'real')
         elif img_type == 1:
             save_path =  os.path.join(save_path, 'fake')
         elif img_type == 2:
-            save_path =  os.path.join(save_path, 'diff')
-        elif img_type == 3:
             save_path =  os.path.join(save_path, 'binary')
         mkdir(save_path)
 
         for idx, img in enumerate(output):
             pil_img = tensor2img(img) 
-            if img_type == 3:
+            if img_type == 2:
                 pil_img = pil_img.convert('L')           
-            pil_img.save(os.path.join(save_path,f"{idx}.png"))
-            # pil_img_en = enhance_img(pil_img)
-            # pil_img_en.save(os.path.join(save_path,f"en_{idx}.png"))
+                pil_img.save(os.path.join(save_path,f"{idx}.png"))
+            else:
+                pil_img.save(os.path.join(save_path,f"{idx}.png"))
+                pil_img_en = enhance_img(pil_img)
+                pil_img_en.save(os.path.join(save_path,f"en_{idx}.png"))
 
     '''
     for compute rec anomaly score
     '''
-    def test(self, mode=None, fn=None):
-        # ======Inpainting method======
-        if self.opt.inpainting_mode == 'ShiftNet':
-            # torch.no_grad() disables the gradient calculation，等於 torch.set_grad_enabled(False)                       
-            with torch.no_grad():
-                self.forward(mode, fn)
-            fake_B = self.fake_B.detach() # Inpaint
-            real_B = self.real_B # Original
-        else:
-            raise ValueError("Please choose one inpainting mode!")
+    def test(self):
+        with torch.no_grad():
+            self.forward()
+        fake_B = self.fake_B.detach() # Inpaint
+        real_B = self.real_B # Original
 
         # ======Anomaly score======
         if self.opt.measure_mode == 'MSE':

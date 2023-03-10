@@ -22,7 +22,6 @@ from PIL import Image, ImageEnhance
 import matplotlib.pyplot as plt
 from sklearn import metrics
 from sklearn.metrics import f1_score, roc_curve, auc, confusion_matrix
-from sklearn.preprocessing import MinMaxScaler
 from sklearn.svm import LinearSVC
 import cv2
 

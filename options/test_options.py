@@ -22,9 +22,6 @@ class TestOptions(BaseOptions):
         parser.add_argument('--sup_model_path', type=str)
         parser.add_argument('--which_epoch', type=str, default='latest', help='which epoch to load (shiftnet model)? set to latest to use latest cached model')
         # test
-        parser.add_argument('--inpainting_mode', type=str, default='ShiftNet', help='[ShiftNet|OpenCV|Mean], OpenCV and Mean only for grayscale')        
-        parser.add_argument('--measure_mode', type=str, default='MSE', help='[MSE|Mask_MSE|MSE_SSIM|Mask_MSE_SSIM|D_model_score|Mask_D_model_score], if need sliding add tail, e.g. MSE_sliding')
-        parser.add_argument('--minmax', action='store_true', help='minmax anomaly score')
         parser.add_argument('--pos_normalize', action='store_true', help='do position normalize')
         parser.add_argument('--using_threshold', action='store_true', help='using threshold to do blind test')
         parser.add_argument('--using_record', action='store_true', help='using record to test')

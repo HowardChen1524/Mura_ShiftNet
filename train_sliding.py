@@ -2,7 +2,7 @@ import time
 from options.train_options import TrainOptions
 from data.data_loader import CreateDataLoader
 from models import create_model
-from util.visualizer import Visualizer
+from util.logger import Logger
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
@@ -27,8 +27,8 @@ if __name__ == "__main__":
     # 建立 model
     model = create_model(opt)
 
-    # 建立 visualizer
-    visualizer = Visualizer(opt)
+    # 建立 logger
+    logger = Logger(opt)
 
     # 初始化 total_steps
     total_steps = 0
@@ -59,8 +59,8 @@ if __name__ == "__main__":
             if total_steps % opt.print_freq == 0:
                 t_data = iter_start_time - iter_data_time
             
-            # reset visualizer
-            visualizer.reset()
+            # reset logger
+            logger.reset()
             
             # batchSize default 1
             # total_steps += opt.batchSize
@@ -91,7 +91,7 @@ if __name__ == "__main__":
             if total_steps % opt.print_freq == 0:
                 losses = model.get_current_losses()
                 t = (time.time() - iter_start_time) / opt.batchSize 
-                visualizer.print_current_losses(epoch, epoch_iter, losses, t, t_data)
+                logger.print_current_losses(epoch, epoch_iter, losses, t, t_data)
 
             # 取得現在時間放入 iter_data_time?
             iter_data_time = time.time()

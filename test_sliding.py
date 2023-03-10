@@ -18,7 +18,6 @@ def initail_setting():
     opt.nThreads = 1   # test code only supports nThreads = 1
     opt.batchSize = 1  # test code only supports batchSize = 1
     opt.serial_batches = True  # no shuffle
-    opt.display_id = -1 # no visdom display
 
     opt.results_dir = f"{opt.results_dir}/{opt.model_version}/{opt.data_version}/{opt.measure_mode}"
     if opt.pos_normalize:

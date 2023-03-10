@@ -13,7 +13,8 @@ import numpy as np
 
 from util.utils_howard import tensor2img, enhance_img
 ORISIZE = (512, 512)
-
+EDGE_PIXEL = 6
+PADDING_PIXEL = 14
 class AlignedDatasetSliding(BaseDataset):
     def initialize(self, opt):
         self.opt = opt # param
@@ -55,10 +56,10 @@ class AlignedDatasetSliding(BaseDataset):
         A_img = self.transform(A)
         
         if self.opt.isPadding: 
-            A_img  = A_img[:,6:-6,6:-6]
+            A_img  = A_img[:,EDGE_PIXEL:-EDGE_PIXEL,EDGE_PIXEL:-EDGE_PIXEL]
             # print(A_img.shape)
-            up = torch.flip(A_img[:,:14,:], dims=[1])
-            down = torch.flip(A_img[:,-14:,:], dims=[1])
+            up = torch.flip(A_img[:,:PADDING_PIXEL,:], dims=[1])
+            down = torch.flip(A_img[:,-PADDING_PIXEL:,:], dims=[1])
             A_img = torch.concat((up, A_img, down), dim=1)
 
             # pil_img = tensor2img(A_img)
@@ -66,14 +67,14 @@ class AlignedDatasetSliding(BaseDataset):
             # pil_img.save(f"{A_path.split('/')[-1]}_ud.png")
             # print(A_img.shape)
 
-            left = torch.flip(A_img[:,:,:14], dims=[2])
-            right = torch.flip(A_img[:,:,-14:], dims=[2])
+            left = torch.flip(A_img[:,:,:PADDING_PIXEL], dims=[2])
+            right = torch.flip(A_img[:,:,-PADDING_PIXEL:], dims=[2])
             A_img = torch.concat((left, A_img, right), dim=2)
             
             # pil_img = tensor2img(A_img)
             # pil_img = enhance_img(pil_img)
             # pil_img.save(f"{A_path.split('/')[-1]}_lr.png")
-            print(A_img.shape)
+            # print(A_img.shape)
 
             # pil_img = tensor2img(A_img)
             # pil_img = enhance_img(pil_img)

@@ -1,20 +1,8 @@
 #!/bin/bash
 # /hcds_vol/private/howard/mura_data/typecplus/img/
 
-declare -a measure_list=(
-                        #  "MSE_sliding"
-                        #  "Mask_MSE_sliding"
-                        #  "SSIM_sliding"
-                        #  "Mask_SSIM_sliding"
-                        #  "Dis_sliding"
-                        #  "Mask_Dis_sliding"
-                        #  "Style_VGG16_sliding"
-                        #  "Mask_Style_VGG16_sliding"
-                         "Content_VGG16_sliding"
-                        #  "Mask_Content_VGG16_sliding"
-                        )
 declare th_list=(0.0125)
-declare min_area_list=(1)
+declare min_area_list=(10)
 
 sup_model_path='/home/sallylab/Howard/models/SEResNeXt101_d23/model.pt'
 # sup_model_version="ensemble_d23"
@@ -66,12 +54,12 @@ do
         python3 gen_patch.py \
         --batchSize=1 --use_spectral_norm_D=1 --which_model_netD="basic" --which_model_netG="unet_shift_triple" --model="shiftnet" --shift_sz=1 --mask_thred=1 \
         --data_version=$dataset_version --dataset_mode="aligned_sliding" --loadSize=64 --crop_stride=$crop_stride  --mask_type="center" --input_nc=3 --output_nc=3 \
-        --model_version=$model_version --which_epoch="200" --inpainting_mode="ShiftNet" --measure_mode="Content_VGG16_sliding" \
-        --checkpoints_dir='/home/sallylab/Howard/models/' --results_dir='./exp_result/Unsupervised' \
+        --model_version=$model_version --which_epoch="200" \
+        --checkpoints_dir='/home/sallylab/Howard/models/' --results_dir='./detect_position/' \
         --normal_how_many=$normal_num --testing_normal_dataroot=$unsup_test_normal_path \
         --smura_how_many=$smura_num --testing_smura_dataroot=$unsup_test_smura_path \
-        --gpu_ids=1 \
-        --binary_threshold=$th --min_area=$min_area --isPadding
+        --binary_threshold=$th --min_area=$min_area --isPadding \
+        --gpu_ids=1
 
         # plot gt
         data_dir="${base_dir}/${dataset_version}/${crop_stride}/union/${th}_diff_pos_area_${min_area}/imgs"

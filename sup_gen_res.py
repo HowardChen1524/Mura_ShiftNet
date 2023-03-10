@@ -24,7 +24,6 @@ def initail_setting():
   opt.nThreads = 1   # test code only supports nThreads = 1
   opt.batchSize = 1  # test code only supports batchSize = 1
   opt.serial_batches = True  # no shuffle
-  opt.display_id = -1 # no visdom display
   opt.results_dir = f"/home/ldap/sallylin/Howard/Mura_ShiftNet/exp_result/Supervised/{opt.sup_model_version}/{opt.data_version}/{opt.sup_model_path.split('/')[-1][:-3]}"
   mkdir(opt.results_dir)
   set_seed(2022)
