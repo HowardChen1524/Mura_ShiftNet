@@ -56,26 +56,25 @@ class AlignedDatasetSliding(BaseDataset):
         A_img = self.transform(A)
         
         if self.opt.isPadding: 
+            # pil_img = tensor2img(A_img)
+            # pil_img = enhance_img(pil_img)
+            # pil_img.save(f"{A_path.split('/')[-1]}_ori.png")
+
             A_img  = A_img[:,EDGE_PIXEL:-EDGE_PIXEL,EDGE_PIXEL:-EDGE_PIXEL]
-            # print(A_img.shape)
+            # pil_img = tensor2img(A_img)
+            # pil_img = enhance_img(pil_img)
+            # pil_img.save(f"{A_path.split('/')[-1]}_crop.png")
+
             up = torch.flip(A_img[:,:PADDING_PIXEL,:], dims=[1])
             down = torch.flip(A_img[:,-PADDING_PIXEL:,:], dims=[1])
             A_img = torch.concat((up, A_img, down), dim=1)
-
             # pil_img = tensor2img(A_img)
             # pil_img = enhance_img(pil_img)
             # pil_img.save(f"{A_path.split('/')[-1]}_ud.png")
-            # print(A_img.shape)
 
             left = torch.flip(A_img[:,:,:PADDING_PIXEL], dims=[2])
             right = torch.flip(A_img[:,:,-PADDING_PIXEL:], dims=[2])
             A_img = torch.concat((left, A_img, right), dim=2)
-            
-            # pil_img = tensor2img(A_img)
-            # pil_img = enhance_img(pil_img)
-            # pil_img.save(f"{A_path.split('/')[-1]}_lr.png")
-            # print(A_img.shape)
-
             # pil_img = tensor2img(A_img)
             # pil_img = enhance_img(pil_img)
             # pil_img.save(f"{A_path.split('/')[-1]}.png")

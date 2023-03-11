@@ -303,9 +303,13 @@ class ShiftNetModel(BaseModel):
             patches_combined = self.remove_small_areas_opencv(patches_combined)
             denoise_t = time.time() - start_time
             print(f"denoise time cost: {denoise_t}")
-
-            # flip back
+            
+            # if fn == '5F2D4HJ0GBZZ_20220624074544_0_L050P_resize.png':
+            #     self.export_combined_diff_img_opencv(patches_combined, f'{fn[:-4]}_pad.png', os.path.join(save_dir, f'{threshold:.4f}_diff_pos_area_{self.opt.min_area}/imgs'))
+            # crop flip part
             patches_combined = patches_combined[PADDING_PIXEL:-PADDING_PIXEL, PADDING_PIXEL:-PADDING_PIXEL]
+            # if fn == '5F2D4HJ0GBZZ_20220624074544_0_L050P_resize.png':
+            #     self.export_combined_diff_img_opencv(patches_combined, f'{fn[:-4]}_crop.png', os.path.join(save_dir, f'{threshold:.4f}_diff_pos_area_{self.opt.min_area}/imgs'))
             pad_width = ((EDGE_PIXEL, EDGE_PIXEL), (EDGE_PIXEL, EDGE_PIXEL))  # 上下左右各填充6个元素
             patches_combined = np.pad(patches_combined, pad_width, mode='constant', constant_values=0)
             
