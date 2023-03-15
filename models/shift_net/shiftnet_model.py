@@ -188,16 +188,16 @@ class ShiftNetModel(BaseModel):
 
     def forward(self):
         self.set_gt_latent()
+        start_time = time.time()
         self.fake_B = self.netG(self.real_A) # real_A 當 input 進去做 inpaint
+        return time.time() - start_time
     
     '''
     for visualize rec difference or export patch
     '''
     def visualize_diff(self, mode=None, fn=None):
         with torch.no_grad():
-            start_time = time.time()
-            self.forward()
-            model_pred_t = time.time() - start_time
+            model_pred_t = self.forward()
             print(f"model inpainting time cost: {model_pred_t}")
 
         fake_B = self.fake_B.detach() # Inpaint
@@ -210,15 +210,18 @@ class ShiftNetModel(BaseModel):
         
         # self.export_inpaint_imgs(real_B, os.path.join(self.opt.results_dir, f'ori_diff_patches/{fn}'), 0) # 0 true, 1 fake
         # self.export_inpaint_imgs(fake_B, os.path.join(self.opt.results_dir, f'ori_diff_patches/{fn}'), 1) # 0 true, 1 fake
-        self.export_inpaint_imgs(patches, os.path.join(self.opt.results_dir, f'ori_diff_patches/{fn}'), 2) # 0 true, 1 fake
+        # self.export_inpaint_imgs(patches, os.path.join(self.opt.results_dir, f'ori_diff_patches/{fn}'), 2) # 0 true, 1 fake
 
         return (model_pred_t, combine_t, denoise_t, export_t)
     
     def combine_patches(self, fn, patches, save_dir, overlap_strategy):
-        ORISIZE = 512
-        EDGE_PIXEL = 6
-        PADDING_PIXEL = 14
-        IMGH = IMGW = (ORISIZE-2*EDGE_PIXEL+2*PADDING_PIXEL)
+        if self.opt.isPadding:
+            ORISIZE = 512
+            EDGE_PIXEL = 6
+            PADDING_PIXEL = 14
+            IMGH = IMGW = (ORISIZE-2*EDGE_PIXEL+2*PADDING_PIXEL)
+        else:
+            IMGH = IMGW = 512
         
         start_time = time.time()
         if overlap_strategy == 'union':
@@ -304,14 +307,11 @@ class ShiftNetModel(BaseModel):
             denoise_t = time.time() - start_time
             print(f"denoise time cost: {denoise_t}")
             
-            # if fn == '5F2D4HJ0GBZZ_20220624074544_0_L050P_resize.png':
-            #     self.export_combined_diff_img_opencv(patches_combined, f'{fn[:-4]}_pad.png', os.path.join(save_dir, f'{threshold:.4f}_diff_pos_area_{self.opt.min_area}/imgs'))
-            # crop flip part
-            patches_combined = patches_combined[PADDING_PIXEL:-PADDING_PIXEL, PADDING_PIXEL:-PADDING_PIXEL]
-            # if fn == '5F2D4HJ0GBZZ_20220624074544_0_L050P_resize.png':
-            #     self.export_combined_diff_img_opencv(patches_combined, f'{fn[:-4]}_crop.png', os.path.join(save_dir, f'{threshold:.4f}_diff_pos_area_{self.opt.min_area}/imgs'))
-            pad_width = ((EDGE_PIXEL, EDGE_PIXEL), (EDGE_PIXEL, EDGE_PIXEL))  # 上下左右各填充6个元素
-            patches_combined = np.pad(patches_combined, pad_width, mode='constant', constant_values=0)
+            if self.opt.isPadding:
+                # crop flip part
+                patches_combined = patches_combined[PADDING_PIXEL:-PADDING_PIXEL, PADDING_PIXEL:-PADDING_PIXEL]
+                pad_width = ((EDGE_PIXEL, EDGE_PIXEL), (EDGE_PIXEL, EDGE_PIXEL))  # 上下左右各填充6个元素
+                patches_combined = np.pad(patches_combined, pad_width, mode='constant', constant_values=0)
             
             start_time = time.time()
             # self.export_combined_diff_img(patches_combined, fn, os.path.join(save_dir, f'{threshold:.4f}_diff_pos_area_{min_area}/imgs'))

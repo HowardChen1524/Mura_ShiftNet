@@ -41,11 +41,9 @@ def main(opt):
     combine_t_list = []
     denoise_t_list = []
     export_t_list = []
-    all_t_list = []
     print(f"Mode(0:normal,1:smura): {mode}, {opt.how_many}")
     for i, data in enumerate(dataset):
        
-        all_start_time = time.time()
         if i >= opt.how_many:
             break
         
@@ -62,12 +60,11 @@ def main(opt):
         
         bs, ncrops, c, h, w = data['M'].size()
         data['M'] = data['M'].view(-1, c, h, w)
-        # 329
+       
         # 建立 input real_A & real_B
         # it not only sets the input data with mask, but also sets the latent mask.
         model.set_input(data)
         t = model.visualize_diff(mode, fn)
-        all_t_list.append(time.time() - all_start_time)
         model_pred_t_list.append(t[0])
         combine_t_list.append(t[1])
         denoise_t_list.append(t[2])
@@ -77,7 +74,6 @@ def main(opt):
     print(f"combine time cost mean: {np.mean(combine_t_list)}")
     print(f"denoise time cost mean: {np.mean(denoise_t_list)}")
     print(f"export time cost mean: {np.mean(export_t_list)}")
-    print(f"all time cost mean: {np.mean(all_t_list)}")
 
 if __name__ == "__main__":
 
