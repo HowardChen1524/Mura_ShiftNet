@@ -56,9 +56,7 @@ if __name__ == "__main__":
             iter_start_time = time.time()
             if total_steps % opt.print_freq == 0:
                 t_data = iter_start_time - iter_data_time
-            
-            logger.reset()
-            
+                        
             # batchSize default 1
             total_steps += opt.batchSize
             epoch_iter += opt.batchSize

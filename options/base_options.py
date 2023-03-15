@@ -1,6 +1,6 @@
 import argparse
 import os
-from util import util
+from util import util, utils_howard
 import torch
 
 class BaseOptions():
@@ -73,6 +73,8 @@ class BaseOptions():
         # Howard add
         parser.add_argument('--resolution', type=str, default='origin', help='[origin, resized], default resize 512*512')
         parser.add_argument('--crop_stride', type=int, default=32, help='slding crop stride')
+        parser.add_argument('--isPadding', action='store_true', help='')
+        
         self.initialized = True # 表示已經做完初始化
         return parser
 
@@ -102,7 +104,7 @@ class BaseOptions():
 
         # save to the disk
         expr_dir = os.path.join(opt.checkpoints_dir, opt.model_version)
-        util.mkdirs(expr_dir)
+        utils_howard.mkdirs(expr_dir)
         file_name = os.path.join(expr_dir, 'opt.txt')
         with open(file_name, 'wt') as opt_file:
             opt_file.write(message)
@@ -118,7 +120,7 @@ class BaseOptions():
             suffix = ('_' + opt.suffix.format(**vars(opt))) if opt.suffix != '' else ''
             opt.model_version = opt.model_version + suffix
 
-        # self.print_options(opt)
+        self.print_options(opt)
 
         # set gpu ids
         os.environ["CUDA_VISIBLE_DEVICES"]=opt.gpu_ids
