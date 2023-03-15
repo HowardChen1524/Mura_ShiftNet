@@ -54,40 +54,29 @@ if __name__ == "__main__":
                 break
 
             iter_start_time = time.time()
-
-            # 計算此 epoch 訓練的累積時間，default 每 50 張大圖 print 一次
             if total_steps % opt.print_freq == 0:
                 t_data = iter_start_time - iter_data_time
             
-            # reset logger
             logger.reset()
             
             # batchSize default 1
-            # total_steps += opt.batchSize
-            # epoch_iter += opt.batchSize
-            total_steps += 1
-            epoch_iter += 1
+            total_steps += opt.batchSize
+            epoch_iter += opt.batchSize
 
-            # (1,mini-batch,c,h,w) -> (mini-batch,c,h,w)，會有多一個維度是因為 dataloader batchsize 設 1
+            # remove extra dim
             bs, ncrops, c, h, w = data['A'].size()
             data['A'] = data['A'].view(-1, c, h, w)
-            # print(data['A'].shape)
 
             bs, ncrops, c, h, w = data['B'].size()
             data['B'] = data['B'].view(-1, c, h, w)
-            # print(data['B'].shape)
 
             bs, ncrops, c, h, w = data['M'].size()
             data['M'] = data['M'].view(-1, c, h, w)
-            # print(data['M'].shape)
 
-            # it not only sets the input data with mask, but also sets the latent mask.
-            # 建立 input real_A & real_B
-            model.set_input(data) 
-            
+            # training
+            model.set_input(data)  
             model.optimize_parameters()
             
-            # 計算每 50 張大圖的時間
             if total_steps % opt.print_freq == 0:
                 losses = model.get_current_losses()
                 t = (time.time() - iter_start_time) / opt.batchSize 
@@ -95,7 +84,9 @@ if __name__ == "__main__":
 
             # 取得現在時間放入 iter_data_time?
             iter_data_time = time.time()
-        
+
+        model.update_learning_rate()
+
         # 依照 save_epoch_freq 去 save_networks
         if epoch % opt.save_epoch_freq == 0:
             print('saving the model at the end of epoch %d, iters %d' %
@@ -125,8 +116,6 @@ if __name__ == "__main__":
         # print 一個 epoch 所花的時間
         print('End of epoch %d / %d \t Time Taken: %d sec' %
                 (epoch, opt.niter + opt.niter_decay, time.time() - epoch_start_time))
-        
-        model.update_learning_rate()
     
     
 

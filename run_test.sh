@@ -86,7 +86,7 @@ for measure in ${measure_list[@]}
 do
     python3 test_sliding.py \
     --batchSize=1 --use_spectral_norm_D=1 --which_model_netD="basic" --which_model_netG="unet_shift_triple" --model="shiftnet" --shift_sz=1 --mask_thred=1 \
-    --data_version=$dataset_version --dataset_mode="aligned_sliding" --loadSize=64 --crop_stride=32  --mask_type="center" --input_nc=3 --output_nc=3 \
+    --data_version=$dataset_version --dataset_mode="aligned_sliding" --loadSize=64 --crop_stride=32  --mask_type="center" --input_nc=3 --output_nc=3 --resolution='resized' \
     --model_version=$model_version --which_epoch="200" --measure_mode=$measure \
     --checkpoints_dir='/home/sallylab/Howard/models/' --results_dir='./exp_result/Unsupervised' \
     --normal_how_many=$normal_num --testing_normal_dataroot=$unsup_test_normal_path \
@@ -99,7 +99,7 @@ done
 # do
 #     python3 sup_unsup_gen_res.py \
 #     --batchSize=1 --use_spectral_norm_D=1 --which_model_netD="basic" --which_model_netG="unet_shift_triple" --model="shiftnet" --shift_sz=1 --mask_thred=1 \
-#     --loadSize=64 --crop_stride=32 --overlap=0 --dataset_mode="aligned_sliding" --mask_type="center" --input_nc=3 --output_nc=3 \
+#     --loadSize=64 --crop_stride=32 --overlap=0 --dataset_mode="aligned_sliding" --mask_type="center" --input_nc=3 --output_nc=3 --resolution='resized' \
 #     --inpainting_mode="ShiftNet" --measure_mode=$measure --checkpoints_dir='./log' --model_version=$model_version --which_epoch="400" \
 #     --data_version $dataset_version \
 #     --normal_how_many=$normal_num --testing_normal_dataroot=$unsup_test_normal_path \

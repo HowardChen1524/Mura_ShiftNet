@@ -6,7 +6,7 @@ import torch
 from torch.nn import functional as F
 from torchvision.transforms.functional import rgb_to_grayscale
 from util import util
-from util.utils_howard import tensor2img, mkdir, enhance_img, plot_img_diff_hist
+from util.utils_howard import tensor2img, mkdir, enhance_img
 from models import networks
 from models.shift_net.base_model import BaseModel
 from piqa import SSIM
@@ -25,7 +25,6 @@ class ShiftNetModel(BaseModel):
         # specify the training losses you want to print out. The program will call base_model.get_current_losses
         if self.opt.input_nc == 3:
             self.loss_names = ['G_GAN', 'G_L1', 'D', 'style', 'content', 'tv', 'ssim']
-            # self.loss_names = ['G_GAN', 'G_L1', 'D', 'style', 'content', 'tv']
         else:
             self.loss_names = ['G_GAN', 'G_L1', 'D']
 
@@ -478,58 +477,6 @@ class ShiftNetModel(BaseModel):
                 crop_scores.append((self.criterionSSIM(torch.unsqueeze(real_B[i], 0), torch.unsqueeze(fake_B[i], 0))).detach().cpu().numpy())
             crop_scores = np.array(crop_scores)
             return crop_scores
- 
-        elif self.opt.measure_mode == 'MSE_SSIM_sliding':
-            MSE_crop_scores = []
-            SSIM_crop_scores = []
-            for i in range(0,225):
-                MSE_crop_scores.append(self.criterionL2(real_B[i], fake_B[i]).detach().cpu().numpy())
-                SSIM_crop_scores.append((1-self.criterionSSIM(torch.unsqueeze(real_B[i], 0), torch.unsqueeze(fake_B[i], 0))).detach().cpu().numpy())
-            crop_scores = defaultdict()
-            crop_scores['MSE'] = np.array(MSE_crop_scores)
-            crop_scores['SSIM'] = np.array(SSIM_crop_scores)
-            return crop_scores   
-
-        elif self.opt.measure_mode == 'Mask_MSE_SSIM_sliding':
-            fake_B = fake_B[:, :, self.rand_t:self.rand_t+self.opt.loadSize//2, \
-                                            self.rand_l:self.rand_l+self.opt.loadSize//2]
-
-            real_B = real_B[:, :, self.rand_t:self.rand_t+self.opt.loadSize//2, \
-                                            self.rand_l:self.rand_l+self.opt.loadSize//2]  
-            MSE_crop_scores = []
-            SSIM_crop_scores = []
-            for i in range(0,225):
-                MSE_crop_scores.append(self.criterionL2(real_B[i], fake_B[i]).detach().cpu().numpy())
-                SSIM_crop_scores.append((1-self.criterionSSIM(torch.unsqueeze(real_B[i], 0), torch.unsqueeze(fake_B[i], 0))).detach().cpu().numpy())
-            crop_scores = defaultdict()
-            crop_scores['MSE'] = np.array(MSE_crop_scores)
-            crop_scores['SSIM'] = np.array(SSIM_crop_scores)
-            return crop_scores   
-
-        elif self.opt.measure_mode == 'ADV_sliding':
-            self.netD.eval()
-            with torch.no_grad():
-                pred_fake = self.netD(fake_B)
-
-            crop_scores = []
-            for i in range(0,225):
-                crop_scores.append(self.criterionGAN(pred_fake[i], True).detach().cpu().numpy())
-            crop_scores = np.array(crop_scores)
-            return crop_scores  
-
-        elif self.opt.measure_mode == 'Mask_ADV_sliding':
-            fake_B = fake_B[:, :, self.rand_t:self.rand_t+self.opt.loadSize//2, \
-                                            self.rand_l:self.rand_l+self.opt.loadSize//2]
-
-            self.netD.eval()
-            with torch.no_grad():
-                pred_fake = self.netD(fake_B)
-
-            crop_scores = []
-            for i in range(0,225):
-                crop_scores.append(self.criterionGAN(pred_fake[i], True).detach().cpu().numpy())
-            crop_scores = np.array(crop_scores)
-            return crop_scores  
 
         elif self.opt.measure_mode == 'Dis_sliding':
             self.netD.eval()
@@ -665,31 +612,6 @@ class ShiftNetModel(BaseModel):
             crop_scores = np.array(crop_scores)
             return crop_scores
 
-        elif self.opt.measure_mode == 'R_square':
-            crop_scores = []
-            for i in range(0,225):
-                crop_scores.append((1-(self.criterionL2(real_B[i], fake_B[i])/torch.var(real_B[i], unbiased=False))).detach().cpu().numpy())
-            
-            crop_scores = np.array(crop_scores)
-            return crop_scores  
-
-        elif self.opt.measure_mode == 'Mask_R_square':
-            fake_B = fake_B[:, :, self.rand_t:self.rand_t+self.opt.loadSize//2, \
-                                            self.rand_l:self.rand_l+self.opt.loadSize//2]
-
-            real_B = real_B[:, :, self.rand_t:self.rand_t+self.opt.loadSize//2, \
-                                            self.rand_l:self.rand_l+self.opt.loadSize//2]
-
-            crop_scores = []
-            for i in range(0,225):
-                print(self.criterionL2(real_B[i], fake_B[i]))
-                print(torch.var(real_B[i], unbiased=False))
-                crop_scores.append((1-(self.criterionL2(real_B[i], fake_B[i])/torch.var(real_B[i], unbiased=False))).detach().cpu().numpy())
-                print(crop_scores)
-                raise
-            crop_scores = np.array(crop_scores)
-            return crop_scores 
-
         else:
             raise ValueError("Please choose one measure mode!")
 
@@ -819,7 +741,6 @@ class ShiftNetModel(BaseModel):
 
             self.loss_G += (self.loss_style + self.loss_content + self.loss_tv)
 
-        # 08/23 new add SSIM loss
         self.loss_ssim = 0
         self.loss_ssim = 1-self.criterionSSIM(self.fake_B, self.real_B)
         self.loss_G += self.loss_ssim

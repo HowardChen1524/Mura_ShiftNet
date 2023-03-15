@@ -4,7 +4,6 @@ from collections import defaultdict
 # -> BaseDataLoader 
 # -> CreateDataset
 def CreateDataLoader(opt):
-    
     if opt.isTrain:
         data_loader = CustomDatasetDataLoader()
         print(data_loader.name())

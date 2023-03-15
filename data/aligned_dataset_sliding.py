@@ -41,10 +41,11 @@ class AlignedDatasetSliding(BaseDataset):
     def __getitem__(self, index):
         A_path = self.A_paths[index]
         img = cv2.imread(A_path)  
-        img_size = img.shape[:2] # h, w, c
-        # if not 512,512 -> resize
+        
+        assert (self.opt.resolution == 'resized') or (self.opt.resolution == 'origin')
         if self.opt.resolution == 'resized':
             img = cv2.resize(img, ORISIZE, interpolation=cv2.INTER_AREA)
+
         A = Image.fromarray(cv2.cvtColor(img,cv2.COLOR_BGR2RGB))  
         if self.opt.input_nc == 3:
             A = A.convert('RGB')

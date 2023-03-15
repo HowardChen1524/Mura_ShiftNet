@@ -71,7 +71,7 @@ class BaseOptions():
         parser.add_argument('--verbose', action='store_true', help='if specified, print more debugging information')
         
         # Howard add
-        parser.add_argument('--resolution', type=str, default='resized', help='[origin, resized], default resize 512*512')
+        parser.add_argument('--resolution', type=str, default='origin', help='[origin, resized], default resize 512*512')
         parser.add_argument('--crop_stride', type=int, default=32, help='slding crop stride')
         self.initialized = True # 表示已經做完初始化
         return parser

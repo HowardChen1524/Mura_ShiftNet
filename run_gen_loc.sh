@@ -52,7 +52,7 @@ do
         # generate unsupervised model diff visualize
         python3 gen_patch.py \
         --batchSize=1 --use_spectral_norm_D=1 --which_model_netD="basic" --which_model_netG="unet_shift_triple" --model="shiftnet" --shift_sz=1 --mask_thred=1 \
-        --data_version=$dataset_version --dataset_mode="aligned_sliding" --loadSize=64 --crop_stride=$crop_stride  --mask_type="center" --input_nc=3 --output_nc=3 \
+        --data_version=$dataset_version --dataset_mode="aligned_sliding" --loadSize=64 --crop_stride=$crop_stride  --mask_type="center" --input_nc=3 --output_nc=3 --resolution='resized' \
         --model_version=$model_version --which_epoch="200" \
         --checkpoints_dir='/home/sallylab/Howard/models/' --results_dir='./detect_position/' \
         --normal_how_many=$normal_num --testing_normal_dataroot=$unsup_test_normal_path \
