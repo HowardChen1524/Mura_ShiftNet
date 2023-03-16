@@ -19,7 +19,11 @@ def initail_setting():
     opt.batchSize = 1  # test code only supports batchSize = 1
     opt.serial_batches = True  # no shuffle
 
-    opt.results_dir = f"{opt.results_dir}/{opt.model_version}/{opt.data_version}/{opt.measure_mode}"
+    if opt.mask_part:
+        opt.results_dir = f"{opt.results_dir}/{opt.model_version}/{opt.data_version}/Mask_{opt.measure_mode}"
+    else:
+        opt.results_dir = f"{opt.results_dir}/{opt.model_version}/{opt.data_version}/{opt.measure_mode}"
+        
     if opt.pos_normalize:
         opt.results_dir = f"{opt.results_dir}_pn"
 

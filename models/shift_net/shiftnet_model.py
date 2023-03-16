@@ -190,10 +190,47 @@ class ShiftNetModel(BaseModel):
         start_time = time.time()
         self.fake_B = self.netG(self.real_A) # real_A 當 input 進去做 inpaint
         return time.time() - start_time
-    
+
     '''
     for visualize rec difference or export patch
     '''
+    def compute_diff(self, real_B, fake_B):
+        if self.opt.measure_mode == 'MAE':
+            l1 = torch.nn.L1Loss(reduction='none')
+            return l1(real_B, fake_B)
+
+        elif self.opt.measure_mode == 'MSE':
+            return self.criterionL2(real_B, fake_B).detach().cpu().numpy()
+
+        elif self.opt.measure_mode == 'SSIM':
+            return self.criterionSSIM(torch.unsqueeze(real_B, 0), torch.unsqueeze(fake_B, 0)).detach().cpu().numpy()
+
+        elif self.opt.measure_mode == 'Feat':
+            self.netD.eval()
+            with torch.no_grad():
+                pred_fake = self.netD(fake_B)
+                pred_real = self.netD(real_B)
+            return self.criterionL2(pred_real, pred_fake).detach().cpu().numpy()
+
+        elif self.opt.measure_mode == 'Style':
+            score = 0.0
+            vgg_ft_fakeB = self.vgg16_extractor(torch.unsqueeze(fake_B,0))
+            vgg_ft_realB = self.vgg16_extractor(torch.unsqueeze(real_B,0))
+            for j in range(3):
+                score += self.criterionL2_style_loss(util.gram_matrix(vgg_ft_fakeB[j]), util.gram_matrix(vgg_ft_realB[j]))
+            return score  
+
+        elif self.opt.measure_mode == 'Content':
+            score = 0.0
+            vgg_ft_fakeB = self.vgg16_extractor(torch.unsqueeze(fake_B,0))
+            vgg_ft_realB = self.vgg16_extractor(torch.unsqueeze(real_B,0))
+            for j in range(3):
+                score += self.criterionL2(vgg_ft_realB[j], vgg_ft_fakeB[j])
+            return score  
+        
+        else:
+            raise ValueError("Please choose one measure mode!")
+        
     def visualize_diff(self, mode=None, fn=None):
         with torch.no_grad():
             model_pred_t = self.forward()
@@ -202,7 +239,8 @@ class ShiftNetModel(BaseModel):
         fake_B = self.fake_B.detach() # Inpaint
         real_B = self.real_B # Original
         
-        diff_B = torch.abs(real_B - fake_B)    
+        diff_B = self.compute_diff(real_B, fake_B) 
+        
         gray_diff_B = rgb_to_grayscale(diff_B)
         
         patches, combine_t, denoise_t, export_t = self.combine_patches(fn, gray_diff_B, self.opt.results_dir, 'union')
@@ -391,6 +429,45 @@ class ShiftNetModel(BaseModel):
     '''
     for compute rec anomaly score
     '''
+    def compute_score(self, real_B, fake_B):
+        if self.opt.measure_mode == 'MAE':
+            return self.criterionL1(real_B, fake_B).detach().cpu().numpy()
+        
+        elif self.opt.measure_mode == 'Discounted_L1':
+            return self.criterionL1_mask(real_B, fake_B).detach().cpu().numpy()
+
+        elif self.opt.measure_mode == 'MSE':
+            return self.criterionL2(real_B, fake_B).detach().cpu().numpy()
+
+        elif self.opt.measure_mode == 'SSIM':
+            return self.criterionSSIM(torch.unsqueeze(real_B, 0), torch.unsqueeze(fake_B, 0)).detach().cpu().numpy()
+
+        elif self.opt.measure_mode == 'Feat':
+            self.netD.eval()
+            with torch.no_grad():
+                pred_fake = self.netD(fake_B)
+                pred_real = self.netD(real_B)
+            return self.criterionL2(pred_real, pred_fake).detach().cpu().numpy()
+
+        elif self.opt.measure_mode == 'Style':
+            score = 0.0
+            vgg_ft_fakeB = self.vgg16_extractor(torch.unsqueeze(fake_B,0))
+            vgg_ft_realB = self.vgg16_extractor(torch.unsqueeze(real_B,0))
+            for j in range(3):
+                score += self.criterionL2_style_loss(util.gram_matrix(vgg_ft_fakeB[j]), util.gram_matrix(vgg_ft_realB[j]))
+            return score  
+
+        elif self.opt.measure_mode == 'Content':
+            score = 0.0
+            vgg_ft_fakeB = self.vgg16_extractor(torch.unsqueeze(fake_B,0))
+            vgg_ft_realB = self.vgg16_extractor(torch.unsqueeze(real_B,0))
+            for j in range(3):
+                score += self.criterionL2(vgg_ft_realB[j], vgg_ft_fakeB[j])
+            return score  
+        
+        else:
+            raise ValueError("Please choose one measure mode!")
+    
     def test(self):
         with torch.no_grad():
             self.forward()
@@ -398,222 +475,16 @@ class ShiftNetModel(BaseModel):
         real_B = self.real_B # Original
 
         # ======Anomaly score======
-        if self.opt.measure_mode == 'MSE':
-            return self.criterionL2(real_B, fake_B).detach().cpu().numpy()
-
-        elif self.opt.measure_mode == 'Mask_MSE':
+        if self.opt.mask_part or self.opt.measure_mode == 'Discounted_L1':
             fake_B = fake_B[:, :, self.rand_t:self.rand_t+self.opt.loadSize//2, \
-                                            self.rand_l:self.rand_l+self.opt.loadSize//2]
-
+                                        self.rand_l:self.rand_l+self.opt.loadSize//2]
             real_B = real_B[:, :, self.rand_t:self.rand_t+self.opt.loadSize//2, \
-                                            self.rand_l:self.rand_l+self.opt.loadSize//2]  
-            return self.criterionL2(real_B, fake_B).detach().cpu().numpy()
-        
-        elif self.opt.measure_mode == 'MAE_sliding':
-            crop_scores = []
-            for i in range(0,225):
-                crop_scores.append(self.criterionL1(real_B[i], fake_B[i]).detach().cpu().numpy())
-            crop_scores = np.array(crop_scores)
-            return crop_scores    
-
-        elif self.opt.measure_mode == 'Mask_MAE_sliding':
-            fake_B = fake_B[:, :, self.rand_t:self.rand_t+self.opt.loadSize//2, \
-                                            self.rand_l:self.rand_l+self.opt.loadSize//2]
-
-            real_B = real_B[:, :, self.rand_t:self.rand_t+self.opt.loadSize//2, \
-                                            self.rand_l:self.rand_l+self.opt.loadSize//2]  
-            crop_scores = []
-            for i in range(0,225):
-                crop_scores.append(self.criterionL1(real_B[i], fake_B[i]).detach().cpu().numpy())
-            crop_scores = np.array(crop_scores)
-            return crop_scores
-        
-        elif self.opt.measure_mode == 'Discounted_L1_sliding':
-            fake_B = fake_B[:, :, self.rand_t:self.rand_t+self.opt.loadSize//2, \
-                                                self.rand_l:self.rand_l+self.opt.loadSize//2]
-            real_B = real_B[:, :, self.rand_t:self.rand_t+self.opt.loadSize//2, \
-                                                self.rand_l:self.rand_l+self.opt.loadSize//2]
-                                        
-            crop_scores = []
-            for i in range(0,225):
-                crop_scores.append(self.criterionL1_mask(real_B[i], fake_B[i]).detach().cpu().numpy())
-            crop_scores = np.array(crop_scores)
-            return crop_scores
-            
-        elif self.opt.measure_mode == 'MSE_sliding':
-            crop_scores = []
-            for i in range(0,225):
-                crop_scores.append(self.criterionL2(real_B[i], fake_B[i]).detach().cpu().numpy())
-            crop_scores = np.array(crop_scores)
-            return crop_scores    
-
-        elif self.opt.measure_mode == 'Mask_MSE_sliding':
-            fake_B = fake_B[:, :, self.rand_t:self.rand_t+self.opt.loadSize//2, \
-                                            self.rand_l:self.rand_l+self.opt.loadSize//2]
-
-            real_B = real_B[:, :, self.rand_t:self.rand_t+self.opt.loadSize//2, \
-                                            self.rand_l:self.rand_l+self.opt.loadSize//2]  
-            crop_scores = []
-            for i in range(0,225):
-                crop_scores.append(self.criterionL2(real_B[i], fake_B[i]).detach().cpu().numpy())
-            crop_scores = np.array(crop_scores)
-            return crop_scores
-
-        elif self.opt.measure_mode == 'SSIM_sliding':
-            crop_scores = []
-            for i in range(0,225):
-                crop_scores.append((self.criterionSSIM(torch.unsqueeze(real_B[i], 0), torch.unsqueeze(fake_B[i], 0))).detach().cpu().numpy())
-            crop_scores = np.array(crop_scores)
-            return crop_scores   
-
-        elif self.opt.measure_mode == 'Mask_SSIM_sliding':
-            fake_B = fake_B[:, :, self.rand_t:self.rand_t+self.opt.loadSize//2, \
-                                            self.rand_l:self.rand_l+self.opt.loadSize//2]
-
-            real_B = real_B[:, :, self.rand_t:self.rand_t+self.opt.loadSize//2, \
-                                            self.rand_l:self.rand_l+self.opt.loadSize//2]  
-            crop_scores = []
-            for i in range(0,225):
-                crop_scores.append((self.criterionSSIM(torch.unsqueeze(real_B[i], 0), torch.unsqueeze(fake_B[i], 0))).detach().cpu().numpy())
-            crop_scores = np.array(crop_scores)
-            return crop_scores
-
-        elif self.opt.measure_mode == 'Dis_sliding':
-            self.netD.eval()
-            with torch.no_grad():
-                pred_fake = self.netD(fake_B)
-                pred_real = self.netD(real_B)
-            # print(pred_fake.shape)
-            crop_scores = []
-            for i in range(0,225):
-                crop_scores.append(self.criterionL2(pred_real[i], pred_fake[i]).detach().cpu().numpy())
-            crop_scores = np.array(crop_scores)
-            return crop_scores  
-
-        elif self.opt.measure_mode == 'Mask_Dis_sliding':
-            fake_B = fake_B[:, :, self.rand_t:self.rand_t+self.opt.loadSize//2, \
-                                            self.rand_l:self.rand_l+self.opt.loadSize//2]
-
-            real_B = real_B[:, :, self.rand_t:self.rand_t+self.opt.loadSize//2, \
-                                            self.rand_l:self.rand_l+self.opt.loadSize//2]
-            self.netD.eval()
-            with torch.no_grad():
-                pred_fake = self.netD(fake_B)
-                pred_real = self.netD(real_B)
-            print(pred_fake.shape)
-            crop_scores = []
-            for i in range(0,225):
-                crop_scores.append(self.criterionL2(pred_real[i], pred_fake[i]).detach().cpu().numpy())
-            crop_scores = np.array(crop_scores)
-            return crop_scores
-
-        elif self.opt.measure_mode == 'Style_VGG16_sliding':
-            crop_scores = []
-            for i in range(0,225):
-                score = 0.0
-                vgg_ft_fakeB = self.vgg16_extractor(torch.unsqueeze(fake_B[i],0))
-                vgg_ft_realB = self.vgg16_extractor(torch.unsqueeze(real_B[i],0))
-                for j in range(3):
-                    score += self.criterionL2_style_loss(util.gram_matrix(vgg_ft_fakeB[j]), util.gram_matrix(vgg_ft_realB[j]))
-                crop_scores.append(score.detach().cpu().numpy())
-            crop_scores = np.array(crop_scores)
-            return crop_scores  
-
-        elif self.opt.measure_mode == 'Mask_Style_VGG16_sliding':
-            fake_B = fake_B[:, :, self.rand_t:self.rand_t+self.opt.loadSize//2, \
-                                            self.rand_l:self.rand_l+self.opt.loadSize//2]
-
-            real_B = real_B[:, :, self.rand_t:self.rand_t+self.opt.loadSize//2, \
-                                            self.rand_l:self.rand_l+self.opt.loadSize//2]
-            crop_scores = []
-            for i in range(0,225):
-                score = 0.0
-                vgg_ft_fakeB = self.vgg16_extractor(torch.unsqueeze(fake_B[i],0))
-                vgg_ft_realB = self.vgg16_extractor(torch.unsqueeze(real_B[i],0))
-                for j in range(3):
-                    score += self.criterionL2_style_loss(util.gram_matrix(vgg_ft_fakeB[j]), util.gram_matrix(vgg_ft_realB[j]))
-                crop_scores.append(score.detach().cpu().numpy())
-            crop_scores = np.array(crop_scores)
-            return crop_scores  
-
-        elif self.opt.measure_mode == 'Content_VGG16_sliding':
-            crop_scores = []
-            for i in range(0,225):
-            # for i in range(0,64):
-                score = 0.0
-                vgg_ft_fakeB = self.vgg16_extractor(torch.unsqueeze(fake_B[i],0))
-                vgg_ft_realB = self.vgg16_extractor(torch.unsqueeze(real_B[i],0))
-                for j in range(3):
-                    score += self.criterionL2(vgg_ft_realB[j], vgg_ft_fakeB[j])
-                crop_scores.append(score.detach().cpu().numpy())
-            crop_scores = np.array(crop_scores)
-            return crop_scores  
-
-        elif self.opt.measure_mode == 'Mask_Content_VGG16_sliding':
-            fake_B = fake_B[:, :, self.rand_t:self.rand_t+self.opt.loadSize//2, \
-                                            self.rand_l:self.rand_l+self.opt.loadSize//2]
-
-            real_B = real_B[:, :, self.rand_t:self.rand_t+self.opt.loadSize//2, \
-                                            self.rand_l:self.rand_l+self.opt.loadSize//2]
-            crop_scores = []
-            for i in range(0,225):
-                score = 0.0
-                vgg_ft_fakeB = self.vgg16_extractor(torch.unsqueeze(fake_B[i],0))
-                vgg_ft_realB = self.vgg16_extractor(torch.unsqueeze(real_B[i],0))
-                for j in range(3):
-                    score += self.criterionL2(vgg_ft_realB[j], vgg_ft_fakeB[j])
-                crop_scores.append(score.detach().cpu().numpy())
-            crop_scores = np.array(crop_scores)
-            return crop_scores  
-
-        elif self.opt.measure_mode == 'G_loss_combined':
-            crop_scores = []
-
-            mask_fake_B = fake_B[:, :, self.rand_t:self.rand_t+self.opt.loadSize//2, \
-                                                self.rand_l:self.rand_l+self.opt.loadSize//2]
-            mask_real_B = real_B[:, :, self.rand_t:self.rand_t+self.opt.loadSize//2, \
-                                                self.rand_l:self.rand_l+self.opt.loadSize//2]
-            print(self.opt.gan_weight)
-            print(self.opt.lambda_A)
-            print(self.opt.mask_weight_G)
-            print(self.opt.style_weight)
-            print(self.opt.content_weight)
-            for i in range(0,225):
-                score = 0
-                
-                # # adv
-                # self.netD.eval()
-                # with torch.no_grad():
-                #     pred_fake = self.netD(fake_B[i])
-                # adv_loss = (self.criterionGAN(pred_fake, True)*self.opt.gan_weight).detach().cpu().numpy()
-
-                # L1
-                l1_loss = (self.criterionL1(real_B[i], fake_B[i])*self.opt.lambda_A).detach().cpu().numpy()
-                
-                # D L1
-                D_l1_loss = (self.criterionL1_mask(mask_real_B[i], mask_fake_B[i])*self.opt.mask_weight_G).detach().cpu().numpy()
-
-                # SSIM
-                SSIM_loss = (1-self.criterionSSIM(torch.unsqueeze(real_B[i], 0), torch.unsqueeze(fake_B[i], 0))).detach().cpu().numpy()
-
-                # Content loss & style loss
-                content_loss, style_loss = 0, 0
-                vgg_ft_fakeB = self.vgg16_extractor(torch.unsqueeze(fake_B[i],0))
-                vgg_ft_realB = self.vgg16_extractor(torch.unsqueeze(real_B[i],0))
-                for j in range(3):
-                    style_loss += self.criterionL2_style_loss(util.gram_matrix(vgg_ft_fakeB[j]), util.gram_matrix(vgg_ft_realB[j]))
-                    content_loss += self.criterionL2(vgg_ft_realB[j], vgg_ft_fakeB[j])
-                style_loss = (style_loss*self.opt.style_weight).detach().cpu().numpy() 
-                content_loss = (content_loss*self.opt.content_weight).detach().cpu().numpy()
-                
-                score = l1_loss + D_l1_loss + SSIM_loss + style_loss + content_loss
-
-                crop_scores.append(score)
-            crop_scores = np.array(crop_scores)
-            return crop_scores
-
-        else:
-            raise ValueError("Please choose one measure mode!")
+                                        self.rand_l:self.rand_l+self.opt.loadSize//2]  
+        crop_scores = []
+        for i in range(0,real_B.shape[0]):
+            crop_scores.append(self.compute_score(real_B[i], fake_B[i]))
+        crop_scores = np.array(crop_scores)
+        return crop_scores
 
     # Just assume one shift layer.
     def set_flow_src(self):

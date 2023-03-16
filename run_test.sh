@@ -2,16 +2,11 @@
 # /hcds_vol/private/howard/mura_data/typecplus/img/
 
 declare -a measure_list=(
-                         "MSE_sliding"
-                         "Mask_MSE_sliding"
-                        #  "SSIM_sliding"
-                        #  "Mask_SSIM_sliding"
-                        #  "Dis_sliding"
-                        #  "Mask_Dis_sliding"
-                        #  "Style_VGG16_sliding"
-                        #  "Mask_Style_VGG16_sliding"
-                        #  "Content_VGG16_sliding"
-                        #  "Mask_Content_VGG16_sliding"
+                         "MSE"
+                         "SSIM"
+                         "Feat"
+                         "Style"
+                         "Content"
                         )
 
 # declare -a sup_model_list=(
@@ -88,6 +83,15 @@ do
     --batchSize=1 --use_spectral_norm_D=1 --which_model_netD="basic" --which_model_netG="unet_shift_triple" --model="shiftnet" --shift_sz=1 --mask_thred=1 \
     --data_version=$dataset_version --dataset_mode="aligned_sliding" --loadSize=64 --crop_stride=32  --mask_type="center" --input_nc=3 --output_nc=3 --resolution='resized' \
     --model_version=$model_version --which_epoch="200" --measure_mode=$measure \
+    --checkpoints_dir='/home/sallylab/Howard/models/' --results_dir='./exp_result/Unsupervised' \
+    --normal_how_many=$normal_num --testing_normal_dataroot=$unsup_test_normal_path \
+    --smura_how_many=$smura_num --testing_smura_dataroot=$unsup_test_smura_path \
+    --gpu_ids=1 
+
+    python3 test_sliding.py \
+    --batchSize=1 --use_spectral_norm_D=1 --which_model_netD="basic" --which_model_netG="unet_shift_triple" --model="shiftnet" --shift_sz=1 --mask_thred=1 \
+    --data_version=$dataset_version --dataset_mode="aligned_sliding" --loadSize=64 --crop_stride=32  --mask_type="center" --input_nc=3 --output_nc=3 --resolution='resized' \
+    --model_version=$model_version --which_epoch="200" --measure_mode=$measure --mask_part \
     --checkpoints_dir='/home/sallylab/Howard/models/' --results_dir='./exp_result/Unsupervised' \
     --normal_how_many=$normal_num --testing_normal_dataroot=$unsup_test_normal_path \
     --smura_how_many=$smura_num --testing_smura_dataroot=$unsup_test_smura_path \

@@ -102,13 +102,13 @@ class BaseOptions():
         message += '----------------- End -------------------'
         # print(message)
 
-        # save to the disk
-        expr_dir = os.path.join(opt.checkpoints_dir, opt.model_version)
-        utils_howard.mkdirs(expr_dir)
-        file_name = os.path.join(expr_dir, 'opt.txt')
-        with open(file_name, 'wt') as opt_file:
-            opt_file.write(message)
-            opt_file.write('\n')
+        # save to the disk -- problem, 只有 training 要取消註解
+        # expr_dir = os.path.join(opt.checkpoints_dir, opt.model_version)
+        # utils_howard.mkdirs(expr_dir)
+        # file_name = os.path.join(expr_dir, 'opt.txt')
+        # with open(file_name, 'wt') as opt_file:
+        #     opt_file.write(message)
+        #     opt_file.write('\n')
 
     def parse(self, options=None):
 

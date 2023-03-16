@@ -23,6 +23,7 @@ class TestOptions(BaseOptions):
         parser.add_argument('--which_epoch', type=str, default='latest', help='which epoch to load (shiftnet model)? set to latest to use latest cached model')
         # test
         parser.add_argument('--measure_mode', type=str)
+        parser.add_argument('--mask_part', action='store_true', help='')
         parser.add_argument('--pos_normalize', action='store_true', help='do position normalize')
         parser.add_argument('--using_threshold', action='store_true', help='using threshold to do blind test')
         parser.add_argument('--using_record', action='store_true', help='using record to test')
