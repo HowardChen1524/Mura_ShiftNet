@@ -107,7 +107,7 @@ def supervised_model_gradcam(opt, gpu):
         
         # rgb_img = rgb_img[index]
         # print(cam_discrete)
-        mask = Image.fromarray(mask).resize((512,512), Image.Resampling.NEAREST).convert('L')
+        mask = Image.fromarray(mask).resize((1920,1080), Image.Resampling.NEAREST).convert('L')
         mask.save(join_path(opt.results_dir, name))
         # cam_image.show()
         # plt.figure(figsize=(10, 3))

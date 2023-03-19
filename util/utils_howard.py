@@ -961,10 +961,12 @@ def plot_roc_curve(roc_auc, fpr, tpr, path, name):
     plt.clf()
 
 def plot_score_distribution(n_scores, s_scores, path, name):
+    print(len(n_scores))
+    print(len(s_scores))
     plt.clf()
     # plt.xlim(4e-05, 4e-04)
-    # plt.xlim(5e-05, 1.5e-04) # shiftnet
-    plt.xlim(3e-05, 1.2e-04) # pennet
+    # plt.xlim(8e-05, 1.5e-05) # shiftnet
+    # plt.xlim(3e-05, 1.2e-04) # pennet
     # plt.xlim(4.5e-05, 8e-05)
     plt.hist(n_scores, bins=50, alpha=0.5, density=True, label="normal")
     plt.hist(s_scores, bins=50, alpha=0.5, density=True, label="smura")
@@ -1067,16 +1069,16 @@ def plot_sup_unsup_scatter(conf_sup, score_unsup, path, name):
     plt.savefig(f"{path}/{name}_all_scatter.png")
     plt.clf()
 
-def plot_img_diff_hist(img_pixel_list, save_dir, isCenter):
+def plot_img_diff_hist(img_pixel_list, save_dir, mode, isCenter):
     # print(img_pixel_list.max())
     # print(img_pixel_list.argmax())
     # print(img_pixel_list.min())
     # print(img_pixel_list.argmin())
     # plt.hist(img_pixel_list, bins=50, range=[min(img_pixel_list), max(img_pixel_list)])
     mkdir(save_dir)
-    plt.hist(img_pixel_list, bins=100, range=[0, 0.02])
+    plt.hist(img_pixel_list, bins=100)
     if isCenter:
-        plt.savefig(os.path.join(save_dir, 'mask_diff_hist.png'))
+        plt.savefig(os.path.join(save_dir, f'{mode}_mask_diff_hist.png'))
     else:
-        plt.savefig(os.path.join(save_dir, 'diff_hist.png'))
+        plt.savefig(os.path.join(save_dir, f'{mode}_diff_hist.png'))
     plt.clf()

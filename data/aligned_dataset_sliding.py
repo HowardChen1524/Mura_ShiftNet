@@ -21,13 +21,8 @@ class AlignedDatasetSliding(BaseDataset):
         self.dir_A = opt.dataroot
         self.A_paths = make_dataset(self.dir_A) # return image path list (image_folder.py)
         print(f"Take all img: {len(self.A_paths)}")
-        # crop stride 32, for training
+        # crop stride 32, for training for 512
         self.edge_index_list = [0, 105, 210, 14, 119, 224] 
-
-        # crop stride 16, for find mura location
-        self.corner_index_list = [0, 28, 812, 840]
-        self.ud_index_list = [i for i in range(1, 28)] + [i for i in range(813, 840)]
-        self.lr_index_list = [(29*i) for i in range(1, 27)] + [(28*i) for i in range(1, 27)]
 
         if self.opt.input_nc==3:
             transform_list = [transforms.ToTensor(),

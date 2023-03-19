@@ -6,7 +6,7 @@ import torch
 from torch.nn import functional as F
 from torchvision.transforms.functional import rgb_to_grayscale
 from util import util
-from util.utils_howard import tensor2img, mkdir, enhance_img
+from util.utils_howard import tensor2img, mkdir, enhance_img, plot_img_diff_hist
 from models import networks
 from models.shift_net.base_model import BaseModel
 from piqa import SSIM
@@ -200,17 +200,26 @@ class ShiftNetModel(BaseModel):
             return l1(real_B, fake_B)
 
         elif self.opt.measure_mode == 'MSE':
-            return self.criterionL2(real_B, fake_B).detach().cpu().numpy()
+            l2 = torch.nn.MSELoss(reduction='none')
+            return l2(real_B, fake_B)
 
         elif self.opt.measure_mode == 'SSIM':
-            return self.criterionSSIM(torch.unsqueeze(real_B, 0), torch.unsqueeze(fake_B, 0)).detach().cpu().numpy()
+            crop_scores = []
+            for i in range(0,real_B.shape[0]):
+                crop_scores.append(self.criterionSSIM(torch.unsqueeze(real_B[i], 0), torch.unsqueeze(fake_B[i], 0)))
+            crop_scores = torch.stack(crop_scores)
+            print(crop_scores.shape)
+            raise
+            return crop_scores
+            
 
         elif self.opt.measure_mode == 'Feat':
             self.netD.eval()
             with torch.no_grad():
                 pred_fake = self.netD(fake_B)
                 pred_real = self.netD(real_B)
-            return self.criterionL2(pred_real, pred_fake).detach().cpu().numpy()
+            l2 = torch.nn.MSELoss(reduction='none')
+            return l2(pred_real, pred_fake)
 
         elif self.opt.measure_mode == 'Style':
             score = 0.0
@@ -232,6 +241,8 @@ class ShiftNetModel(BaseModel):
             raise ValueError("Please choose one measure mode!")
         
     def visualize_diff(self, mode=None, fn=None):
+        model_pred_t, combine_t, denoise_t, export_t = 0,0,0,0
+
         with torch.no_grad():
             model_pred_t = self.forward()
             print(f"model inpainting time cost: {model_pred_t}")
@@ -243,11 +254,12 @@ class ShiftNetModel(BaseModel):
         
         gray_diff_B = rgb_to_grayscale(diff_B)
         
+        # plot_img_diff_hist(gray_diff_B.detach().cpu().numpy().flatten(), os.path.join(self.opt.results_dir, f'diff_hist/{fn}'), self.opt.measure_mode, False)
+
         patches, combine_t, denoise_t, export_t = self.combine_patches(fn, gray_diff_B, self.opt.results_dir, 'union')
-        
-        # self.export_inpaint_imgs(real_B, os.path.join(self.opt.results_dir, f'ori_diff_patches/{fn}'), 0) # 0 true, 1 fake
-        # self.export_inpaint_imgs(fake_B, os.path.join(self.opt.results_dir, f'ori_diff_patches/{fn}'), 1) # 0 true, 1 fake
-        # self.export_inpaint_imgs(patches, os.path.join(self.opt.results_dir, f'ori_diff_patches/{fn}'), 2) # 0 true, 1 fake
+        self.export_inpaint_imgs(real_B, os.path.join(self.opt.results_dir, f'ori_diff_patches/{fn}'), 0) # 0 true, 1 fake
+        self.export_inpaint_imgs(fake_B, os.path.join(self.opt.results_dir, f'ori_diff_patches/{fn}'), 1) # 0 true, 1 fake
+        self.export_inpaint_imgs(patches, os.path.join(self.opt.results_dir, f'ori_diff_patches/{fn}'), 2) # 0 true, 1 fake
 
         return (model_pred_t, combine_t, denoise_t, export_t)
     
@@ -258,8 +270,10 @@ class ShiftNetModel(BaseModel):
             PADDING_PIXEL = 14
             IMGH = IMGW = (ORISIZE-2*EDGE_PIXEL+2*PADDING_PIXEL)
         else:
-            IMGH = IMGW = 512
-        
+            # IMGH = IMGW = 512
+            IMGH = 1080
+            IMGW = 1920
+
         start_time = time.time()
         if overlap_strategy == 'union':
             threshold = float(self.opt.binary_threshold)
@@ -268,10 +282,11 @@ class ShiftNetModel(BaseModel):
             # thresholding
             patches[patches>=threshold] = 1
             patches[patches<threshold] = -1
-            
-            l = int(math.sqrt(patches.shape[0]))
-            patches_reshape = patches.view(l,l,1,self.opt.loadSize,self.opt.loadSize)
-            
+
+            # for square
+            # l = int(math.sqrt(patches.shape[0])) 
+            # patches_reshape = patches.view(l,l,1,self.opt.loadSize,self.opt.loadSize)
+            patches_reshape = patches.view(33,59,1,self.opt.loadSize,self.opt.loadSize)
             # create combined img template
             patches_combined = torch.zeros((1, IMGH, IMGW), device=self.device)
 
@@ -455,7 +470,7 @@ class ShiftNetModel(BaseModel):
             vgg_ft_realB = self.vgg16_extractor(torch.unsqueeze(real_B,0))
             for j in range(3):
                 score += self.criterionL2_style_loss(util.gram_matrix(vgg_ft_fakeB[j]), util.gram_matrix(vgg_ft_realB[j]))
-            return score  
+            return score.detach().cpu().numpy()
 
         elif self.opt.measure_mode == 'Content':
             score = 0.0
@@ -463,7 +478,7 @@ class ShiftNetModel(BaseModel):
             vgg_ft_realB = self.vgg16_extractor(torch.unsqueeze(real_B,0))
             for j in range(3):
                 score += self.criterionL2(vgg_ft_realB[j], vgg_ft_fakeB[j])
-            return score  
+            return score.detach().cpu().numpy()
         
         else:
             raise ValueError("Please choose one measure mode!")

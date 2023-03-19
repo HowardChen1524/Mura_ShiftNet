@@ -12,6 +12,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-dv', '--dataset_version', type=str, default=None, required=True)
 parser.add_argument('-dd', '--data_dir', type=str, default=None, required=True)
 parser.add_argument('-sd', '--save_dir', type=str, default=None, required=True)
+parser.add_argument('-rs', '--resized', action='store_true')
 
 def add_row(info_fn, fn, obj):
     info_fn['fn'] = fn
@@ -39,6 +40,8 @@ args = parser.parse_args()
 dataset_version = args.dataset_version
 data_dir = args.data_dir
 save_dir = args.save_dir
+isResize = args.resized
+
 os.makedirs(join_path(save_dir, dataset_version), exist_ok=True)
 # 將所有標註 xml 統整成標註 df
 xml_dir = join_path(data_dir, f'{dataset_version}/xml')
@@ -77,16 +80,23 @@ for img_path in img_list:
         continue
     img = Image.open(img_path)
     img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
-    img = cv2.resize(img, (512,512), interpolation=cv2.INTER_AREA)
+    if isResize:
+        img = cv2.resize(img, (512,512), interpolation=cv2.INTER_AREA)
     img = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
     fn_series_list = df[df['fn']==fn]
     
     actual_pos_list = []
     for i in range(0, fn_series_list.shape[0]):
         fn_series = fn_series_list.iloc[i]
-        actual_pos_list.append((int(fn_series['x0']/3.75), int(fn_series['y0']/2.109375), int(fn_series['x1']/ 3.75), int(fn_series['y1']/2.109375)))
-
-    binary_img = np.zeros((512,512)) # for binary mask
+        if isResize:
+            actual_pos_list.append((int(fn_series['x0']/3.75), int(fn_series['y0']/2.109375), int(fn_series['x1']/ 3.75), int(fn_series['y1']/2.109375)))
+        else:
+            actual_pos_list.append((int(fn_series['x0']), int(fn_series['y0']), int(fn_series['x1']), int(fn_series['y1'])))
+    
+    if isResize:
+        binary_img = np.zeros((512,512)) # for binary mask
+    else:
+        binary_img = np.zeros((1080,1920)) # for binary mask
 
     for actual_pos in actual_pos_list:
         draw = ImageDraw.Draw(img)  
