@@ -257,9 +257,9 @@ class ShiftNetModel(BaseModel):
         # plot_img_diff_hist(gray_diff_B.detach().cpu().numpy().flatten(), os.path.join(self.opt.results_dir, f'diff_hist/{fn}'), self.opt.measure_mode, False)
 
         patches, combine_t, denoise_t, export_t = self.combine_patches(fn, gray_diff_B, self.opt.results_dir, 'union')
-        self.export_inpaint_imgs(real_B, os.path.join(self.opt.results_dir, f'ori_diff_patches/{fn}'), 0) # 0 true, 1 fake
-        self.export_inpaint_imgs(fake_B, os.path.join(self.opt.results_dir, f'ori_diff_patches/{fn}'), 1) # 0 true, 1 fake
-        self.export_inpaint_imgs(patches, os.path.join(self.opt.results_dir, f'ori_diff_patches/{fn}'), 2) # 0 true, 1 fake
+        # self.export_inpaint_imgs(real_B, os.path.join(self.opt.results_dir, f'ori_diff_patches/{fn}'), 0) # 0 true, 1 fake
+        # self.export_inpaint_imgs(fake_B, os.path.join(self.opt.results_dir, f'ori_diff_patches/{fn}'), 1) # 0 true, 1 fake
+        # self.export_inpaint_imgs(patches, os.path.join(self.opt.results_dir, f'ori_diff_patches/{fn}'), 2) # 0 true, 1 fake
 
         return (model_pred_t, combine_t, denoise_t, export_t)
     

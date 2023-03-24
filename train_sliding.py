@@ -1,3 +1,4 @@
+import os
 import time
 from options.train_options import TrainOptions
 from data.data_loader import CreateDataLoader
@@ -6,6 +7,7 @@ from util.logger import Logger
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
+from util.utils_howard import mkdir
 
 def plot_loss(epochs, loss, name):
     plt.plot(epochs, loss)
@@ -19,6 +21,7 @@ def plot_loss(epochs, loss, name):
 if __name__ == "__main__":
 
     opt = TrainOptions().parse() # 讀取 cmd 的 train option param
+    mkdir(os.path.join(opt.checkpoints_dir, opt.model_version))
     data_loader = CreateDataLoader(opt) # 建立 DataLoader 並讀取 (data_loader.py)
     dataset = data_loader.load_data()
     dataset_size = len(data_loader)

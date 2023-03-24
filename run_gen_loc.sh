@@ -11,8 +11,8 @@ model_version="ShiftNet_SSIM_d23_8k_change_cropping_ori_res"
 
 base_dir="/home/sallylab/Howard/Mura_ShiftNet/detect_position"
 
-declare th_list=(0.0125 0.0150)
-declare min_area_list=(10 20 30 40 50 60 70 80 90 100)
+declare th_list=(0.0125)
+declare min_area_list=(1)
 declare grad_th_list=(0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0)
 # declare th_list=(0.0100)
 # declare min_area_list=(1)
@@ -64,99 +64,99 @@ do
         --normal_how_many=$normal_num --testing_normal_dataroot=$unsup_test_normal_path \
         --smura_how_many=$smura_num --testing_smura_dataroot=$unsup_test_smura_path \
         --binary_threshold=$th --min_area=$min_area \
-        --gpu_ids=0
+        --gpu_ids=1
 
-        # plot gt
-        data_dir="${base_dir}/${dataset_version}/${crop_stride}/union/${th}_diff_pos_area_${min_area}/imgs"
-        csv_path="${base_dir}/${dataset_version}/${dataset_version}.csv"
-        save_dir="${base_dir}/${dataset_version}/${crop_stride}/union/${th}_diff_pos_area_${min_area}/imgs_gt"
-        python3 ./detect_position/code/plot_gt_on_result/plot_gt_on_result.py \
-        -cp=$csv_path \
-        -dd=$data_dir \
-        -sd=$save_dir
+        # # plot gt
+        # data_dir="${base_dir}/${dataset_version}/${crop_stride}/union/${th}_diff_pos_area_${min_area}/imgs"
+        # csv_path="${base_dir}/${dataset_version}/${dataset_version}.csv"
+        # save_dir="${base_dir}/${dataset_version}/${crop_stride}/union/${th}_diff_pos_area_${min_area}/imgs_gt"
+        # python3 ./detect_position/code/plot_gt_on_result/plot_gt_on_result.py \
+        # -cp=$csv_path \
+        # -dd=$data_dir \
+        # -sd=$save_dir
 
-        # cal dice and recall & precision
-        gt_dir="${base_dir}/${dataset_version}/actual_pos/ground_truth"
-        save_dir="${base_dir}/${dataset_version}/${crop_stride}/union/${th}_diff_pos_area_${min_area}"
-        python3 ./detect_position/code/calculate_metrics/calculate_metrics.py \
-        -dd=$data_dir \
-        -gd=$gt_dir \
-        -sd=$save_dir
+        # # cal dice and recall & precision
+        # gt_dir="${base_dir}/${dataset_version}/actual_pos/ground_truth"
+        # save_dir="${base_dir}/${dataset_version}/${crop_stride}/union/${th}_diff_pos_area_${min_area}"
+        # python3 ./detect_position/code/calculate_metrics/calculate_metrics.py \
+        # -dd=$data_dir \
+        # -gd=$gt_dir \
+        # -sd=$save_dir
     done
 done
 
-data_dir="${base_dir}/${dataset_version}/${crop_stride}/union/"
-save_dir="${base_dir}/${dataset_version}/${crop_stride}"
-python3 ./detect_position/code/summary_exp_result/summary_exp_result.py \
--dd=$data_dir \
--sd=$save_dir
+# data_dir="${base_dir}/${dataset_version}/${crop_stride}/union/"
+# save_dir="${base_dir}/${dataset_version}/${crop_stride}"
+# python3 ./detect_position/code/summary_exp_result/summary_exp_result.py \
+# -dd=$data_dir \
+# -sd=$save_dir
 
-# ===== combine sup =====
-for grad_th in ${grad_th_list[@]}
-do
-    # generate gradcam
-    python3 sup_gradcam.py \
-    --batchSize=1 \
-    --sup_model_version=$sup_model_version --checkpoints_dir='/home/sallylab/Howard/models/' \
-    --data_version=$dataset_version --loadSize=64 --testing_smura_dataroot=$unsup_test_smura_path \
-    --sup_gradcam_th=$grad_th \
-    --gpu_ids=0
+# # ===== combine sup =====
+# for grad_th in ${grad_th_list[@]}
+# do
+#     # generate gradcam
+#     python3 sup_gradcam.py \
+#     --batchSize=1 \
+#     --sup_model_version=$sup_model_version --checkpoints_dir='/home/sallylab/Howard/models/' \
+#     --data_version=$dataset_version --loadSize=64 --testing_smura_dataroot=$unsup_test_smura_path \
+#     --sup_gradcam_th=$grad_th \
+#     --gpu_ids=0
 
-    # plot gt
-    data_dir="${base_dir}/${dataset_version}/sup_gradcam/SEResNeXt101_d23/${grad_th}"
-    csv_path="${base_dir}/${dataset_version}/${dataset_version}.csv"
-    save_dir="${base_dir}/${dataset_version}/sup_gradcam/SEResNeXt101_d23/${grad_th}_gt"
-    python3 ./detect_position/code/plot_gt_on_result/plot_gt_on_result.py \
-    -cp=$csv_path \
-    -dd=$data_dir \
-    -sd=$save_dir
+#     # plot gt
+#     data_dir="${base_dir}/${dataset_version}/sup_gradcam/SEResNeXt101_d23/${grad_th}"
+#     csv_path="${base_dir}/${dataset_version}/${dataset_version}.csv"
+#     save_dir="${base_dir}/${dataset_version}/sup_gradcam/SEResNeXt101_d23/${grad_th}_gt"
+#     python3 ./detect_position/code/plot_gt_on_result/plot_gt_on_result.py \
+#     -cp=$csv_path \
+#     -dd=$data_dir \
+#     -sd=$save_dir
 
-    # cal dice and recall & precision
-    gt_dir="${base_dir}/${dataset_version}/actual_pos/ground_truth"
-    save_dir="${base_dir}/${dataset_version}/sup_gradcam/SEResNeXt101_d23/${grad_th}_gt"
-    python3 ./detect_position/code/calculate_metrics/calculate_metrics.py \
-    -dd=$data_dir \
-    -gd=$gt_dir \
-    -sd=$save_dir
+#     # cal dice and recall & precision
+#     gt_dir="${base_dir}/${dataset_version}/actual_pos/ground_truth"
+#     save_dir="${base_dir}/${dataset_version}/sup_gradcam/SEResNeXt101_d23/${grad_th}_gt"
+#     python3 ./detect_position/code/calculate_metrics/calculate_metrics.py \
+#     -dd=$data_dir \
+#     -gd=$gt_dir \
+#     -sd=$save_dir
 
-    for th in ${th_list[@]}
-    do
-        for min_area in ${min_area_list[@]}
-        do
-            # combine gradcam
-            sup_dir="${base_dir}/${dataset_version}/sup_gradcam/${sup_model_version}/${grad_th}"
-            unsup_dir="${base_dir}/${dataset_version}/${crop_stride}/union/${th}_diff_pos_area_${min_area}/imgs"
-            save_dir="${base_dir}/${dataset_version}/${crop_stride}/combine_grad/sup_${grad_th}_unsup_${th}_${min_area}/imgs"
-            python3 ./detect_position/code/combine_gradcam/combine_gradcam.py \
-            -upd=$unsup_dir \
-            -spd=$sup_dir \
-            -sd=$save_dir
+#     for th in ${th_list[@]}
+#     do
+#         for min_area in ${min_area_list[@]}
+#         do
+#             # combine gradcam
+#             sup_dir="${base_dir}/${dataset_version}/sup_gradcam/${sup_model_version}/${grad_th}"
+#             unsup_dir="${base_dir}/${dataset_version}/${crop_stride}/union/${th}_diff_pos_area_${min_area}/imgs"
+#             save_dir="${base_dir}/${dataset_version}/${crop_stride}/combine_grad/sup_${grad_th}_unsup_${th}_${min_area}/imgs"
+#             python3 ./detect_position/code/combine_gradcam/combine_gradcam.py \
+#             -upd=$unsup_dir \
+#             -spd=$sup_dir \
+#             -sd=$save_dir
 
-            # plot gt
-            data_dir="${base_dir}/${dataset_version}/${crop_stride}/combine_grad/sup_${grad_th}_unsup_${th}_${min_area}/imgs"
-            csv_path="${base_dir}/${dataset_version}/${dataset_version}.csv"
-            save_dir="${base_dir}/${dataset_version}/${crop_stride}/combine_grad/sup_${grad_th}_unsup_${th}_${min_area}/imgs_gt"
-            python3 ./detect_position/code/plot_gt_on_result/plot_gt_on_result.py \
-            -cp=$csv_path \
-            -dd=$data_dir \
-            -sd=$save_dir
+#             # plot gt
+#             data_dir="${base_dir}/${dataset_version}/${crop_stride}/combine_grad/sup_${grad_th}_unsup_${th}_${min_area}/imgs"
+#             csv_path="${base_dir}/${dataset_version}/${dataset_version}.csv"
+#             save_dir="${base_dir}/${dataset_version}/${crop_stride}/combine_grad/sup_${grad_th}_unsup_${th}_${min_area}/imgs_gt"
+#             python3 ./detect_position/code/plot_gt_on_result/plot_gt_on_result.py \
+#             -cp=$csv_path \
+#             -dd=$data_dir \
+#             -sd=$save_dir
 
-            # cal dice and recall & precision
-            gt_dir="${base_dir}/${dataset_version}/actual_pos/ground_truth"
-            save_dir="${base_dir}/${dataset_version}/${crop_stride}/combine_grad/sup_${grad_th}_unsup_${th}_${min_area}"
-            python3 ./detect_position/code/calculate_metrics/calculate_metrics.py \
-            -dd=$data_dir \
-            -gd=$gt_dir \
-            -sd=$save_dir
-        done
-    done
-done
+#             # cal dice and recall & precision
+#             gt_dir="${base_dir}/${dataset_version}/actual_pos/ground_truth"
+#             save_dir="${base_dir}/${dataset_version}/${crop_stride}/combine_grad/sup_${grad_th}_unsup_${th}_${min_area}"
+#             python3 ./detect_position/code/calculate_metrics/calculate_metrics.py \
+#             -dd=$data_dir \
+#             -gd=$gt_dir \
+#             -sd=$save_dir
+#         done
+#     done
+# done
 
-data_dir="${base_dir}/${dataset_version}/${crop_stride}/combine_grad/"
-save_dir="${base_dir}/${dataset_version}/${crop_stride}"
-python3 ./detect_position/code/summary_exp_result/summary_exp_result.py \
--dd=$data_dir \
--sd=$save_dir \
--ic
+# data_dir="${base_dir}/${dataset_version}/${crop_stride}/combine_grad/"
+# save_dir="${base_dir}/${dataset_version}/${crop_stride}"
+# python3 ./detect_position/code/summary_exp_result/summary_exp_result.py \
+# -dd=$data_dir \
+# -sd=$save_dir \
+# -ic
 
 

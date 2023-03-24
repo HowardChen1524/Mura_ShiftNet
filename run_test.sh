@@ -6,7 +6,7 @@ declare -a measure_list=(
                         #  "SSIM"
                         #  "Feat"
                         #  "Style"
-                         "Content"
+                        #  "Content"
                         )
 
 # declare -a sup_model_list=(
@@ -58,14 +58,13 @@ smura_num=143
 # d24 d25 blind test
 # dataset_version="d24_d25_8k"
 # sup_data_path="/hcds_vol/private/howard/mura_data/d25_merge/"
-# # data_csv_path="/hcds_vol/private/howard/mura_data/d25_merge/d25_data_merged.csv"
-# data_csv_path="/hcds_vol/private/howard/mura_data/d25_merge_8k/d25_data_merged_new.csv"
-# unsup_test_normal_path="/hcds_vol/private/howard/mura_data/d25_merge_8k/d2425_all_normal_8k/"
-# unsup_test_smura_path="/hcds_vol/private/howard/mura_data/d25_merge_8k/d2425_all_smura_8k/"
+# data_csv_path="/home/sallylab/min/d25_merge_8k/d25_data_merged_new.csv"
+# unsup_test_normal_path="/home/sallylab/min/d25_merge_8k/d2425_all_normal_8k/"
+# unsup_test_smura_path="/home/sallylab/min/d25_merge_8k/d2425_all_smura_8k/"
 # normal_num=87
 # smura_num=85
 # conf_csv_dir='/home/ldap/sallylin/Howard/Mura_ShiftNet/exp_result/Supervised/ensemble_d23/d24_d25_8k'
-# # score_csv_dir='/home/ldap/sallylin/Howard/Mura_ShiftNet/exp_result/Unsupervised/ShiftNet_SSIM_d23_8k/d24_d25_8k/Mask_MSE_sliding'
+# score_csv_dir='/home/ldap/sallylin/Howard/Mura_ShiftNet/exp_result/Unsupervised/ShiftNet_SSIM_d23_8k/d24_d25_8k/Mask_MSE_sliding'
 # score_csv_dir='/home/ldap/sallylin/Howard/Mura_ShiftNet/exp_result/Unsupervised/PEN-Net_d23_8k/d24_d25_8k/Mask_MSE_sliding'
 
 # only supervised model
@@ -82,30 +81,32 @@ for measure in ${measure_list[@]}
 do
     python3 test_sliding.py \
     --batchSize=1 --use_spectral_norm_D=1 --which_model_netD="basic" --which_model_netG="unet_shift_triple" --model="shiftnet" --shift_sz=1 --mask_thred=1 \
-    --data_version=$dataset_version --dataset_mode="aligned_sliding" --loadSize=64 --crop_stride=32  --mask_type="center" --input_nc=3 --output_nc=3 --resolution='origin' \
+    --data_version=$dataset_version --dataset_mode="aligned_sliding" --loadSize=64 --crop_stride=32  --mask_type="center" --input_nc=3 --output_nc=3 \
     --model_version=$model_version --which_epoch="200" --measure_mode=$measure \
     --checkpoints_dir='/home/sallylab/Howard/models/' --results_dir='./exp_result/Unsupervised' \
     --normal_how_many=$normal_num --testing_normal_dataroot=$unsup_test_normal_path \
     --smura_how_many=$smura_num --testing_smura_dataroot=$unsup_test_smura_path \
+    --resolution='origin' \
     --gpu_ids=1 
 
-    python3 test_sliding.py \
-    --batchSize=1 --use_spectral_norm_D=1 --which_model_netD="basic" --which_model_netG="unet_shift_triple" --model="shiftnet" --shift_sz=1 --mask_thred=1 \
-    --data_version=$dataset_version --dataset_mode="aligned_sliding" --loadSize=64 --crop_stride=32  --mask_type="center" --input_nc=3 --output_nc=3 --resolution='origin' \
-    --model_version=$model_version --which_epoch="200" --measure_mode=$measure \
-    --checkpoints_dir='/home/sallylab/Howard/models/' --results_dir='./exp_result/Unsupervised' \
-    --normal_how_many=$normal_num --testing_normal_dataroot=$unsup_test_normal_path \
-    --smura_how_many=$smura_num --testing_smura_dataroot=$unsup_test_smura_path \
-    --gpu_ids=1 --pos_normalize
+    # python3 test_sliding.py \
+    # --batchSize=1 --use_spectral_norm_D=1 --which_model_netD="basic" --which_model_netG="unet_shift_triple" --model="shiftnet" --shift_sz=1 --mask_thred=1 \
+    # --data_version=$dataset_version --dataset_mode="aligned_sliding" --loadSize=64 --crop_stride=32  --mask_type="center" --input_nc=3 --output_nc=3 --resolution='origin' \
+    # --model_version=$model_version --which_epoch="200" --measure_mode=$measure \
+    # --checkpoints_dir='/home/sallylab/Howard/models/' --results_dir='./exp_result/Unsupervised' \
+    # --normal_how_many=$normal_num --testing_normal_dataroot=$unsup_test_normal_path \
+    # --smura_how_many=$smura_num --testing_smura_dataroot=$unsup_test_smura_path \
+    # --gpu_ids=1 --pos_normalize
 
-    python3 test_sliding.py \
-    --batchSize=1 --use_spectral_norm_D=1 --which_model_netD="basic" --which_model_netG="unet_shift_triple" --model="shiftnet" --shift_sz=1 --mask_thred=1 \
-    --data_version=$dataset_version --dataset_mode="aligned_sliding" --loadSize=64 --crop_stride=32  --mask_type="center" --input_nc=3 --output_nc=3 --resolution='origin' \
-    --model_version=$model_version --which_epoch="200" --measure_mode=$measure --mask_part \
-    --checkpoints_dir='/home/sallylab/Howard/models/' --results_dir='./exp_result/Unsupervised' \
-    --normal_how_many=$normal_num --testing_normal_dataroot=$unsup_test_normal_path \
-    --smura_how_many=$smura_num --testing_smura_dataroot=$unsup_test_smura_path \
-    --gpu_ids=1 
+    # python3 test_sliding.py \
+    # --batchSize=1 --use_spectral_norm_D=1 --which_model_netD="basic" --which_model_netG="unet_shift_triple" --model="shiftnet" --shift_sz=1 --mask_thred=1 \
+    # --data_version=$dataset_version --dataset_mode="aligned_sliding" --loadSize=64 --crop_stride=32  --mask_type="center" --input_nc=3 --output_nc=3 \
+    # --model_version=$model_version --which_epoch="200" --measure_mode=$measure --mask_part \
+    # --checkpoints_dir='/home/sallylab/Howard/models/' --results_dir='./exp_result/Unsupervised' \
+    # --normal_how_many=$normal_num --testing_normal_dataroot=$unsup_test_normal_path \
+    # --smura_how_many=$smura_num --testing_smura_dataroot=$unsup_test_smura_path \
+    # --resolution='origin' \
+    # --gpu_ids=1 
 done
 
 # supervised with unsupervised
