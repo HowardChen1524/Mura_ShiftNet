@@ -23,7 +23,8 @@ sup_model_version="SEResNeXt101_d23"
 model_version="ShiftNet_SSIM_d23_4k_step_5000_change_cropping"
 # model_version="ShiftNet_SSIM_d23_8k"
 # model_version="ShiftNet_SSIM_d23_8k_change_cropping"
-# model_version="ShiftNet_SSIM_d23_8k_change_cropping_ori_res"
+# # model_version="ShiftNet_SSIM_d23_8k_change_cropping_ori_res"
+model_version="ShiftNet_SSIM_d23_8k_change_cropping_ori_res_v2"
 
 # model_version="PEN-NET_d23_8k"
 

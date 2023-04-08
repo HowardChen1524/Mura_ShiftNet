@@ -7,7 +7,8 @@ sup_model_version="SEResNeXt101_d23"
 model_version="ShiftNet_SSIM_d23_4k_step_5000_change_cropping"
 # model_version="ShiftNet_SSIM_d23_8k"
 # model_version="ShiftNet_SSIM_d23_8k_change_cropping"
-# model_version="ShiftNet_SSIM_d23_8k_change_cropping_ori_res"
+# # model_version="ShiftNet_SSIM_d23_8k_change_cropping_ori_res"
+model_version="ShiftNet_SSIM_d23_8k_change_cropping_ori_res_v2"
 
 base_dir="/home/sallylab/Howard/Mura_ShiftNet/detect_position"
 
@@ -15,10 +16,14 @@ declare th_list=(0.0125 0.0150 0.0175)
 declare min_area_list=(1 5 10 15 20 25 30 35 40 45 50 55 60 65)
 declare grad_th_list=(0.1 0.2 0.3 0.4 0.5)
 
-crop_stride=16
-
 # ===== dataset =====
 # dataset_version="typec+b1"
+# unsup_test_normal_path="/home/sallylab/min/d23_merge/test/test_normal_8k/" # for unsupervised model
+# unsup_test_smura_path="/home/sallylab/min/typec+b1/img/" # for unsupervised model
+# normal_num=0
+# smura_num=31
+
+# dataset_version="typec+b1_edge"
 # unsup_test_normal_path="/home/sallylab/min/d23_merge/test/test_normal_8k/" # for unsupervised model
 # unsup_test_smura_path="/home/sallylab/min/typec+b1/img/" # for unsupervised model
 # normal_num=0

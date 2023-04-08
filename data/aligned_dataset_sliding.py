@@ -76,7 +76,7 @@ class AlignedDatasetSliding(BaseDataset):
 
         A_img = self.transform(A)
         
-        if ~self.opt.isTrain and self.opt.isPadding: 
+        if (~self.opt.isTrain) and self.opt.isPadding: 
             # pil_img = tensor2img(A_img)
             # pil_img = enhance_img(pil_img)
             # pil_img.save(f"{A_path.split('/')[-1]}_ori.png")
