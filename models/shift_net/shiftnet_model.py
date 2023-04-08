@@ -120,6 +120,24 @@ class ShiftNetModel(BaseModel):
             print('load model successful')
         self.print_networks(opt.verbose)
 
+        assert (self.opt.resolution == 'resized') or (self.opt.resolution == 'origin')
+        if self.opt.resolution == 'resized':
+            self.RESOLUTION = (512,512)
+        else:
+            self.RESOLUTION = (1920,1080)
+
+        if self.opt.isPadding:
+            self.EDGE_PIXEL = 6
+            self.PADDING_PIXEL = 14
+            self.IMGH = self.RESOLUTION[1]-(2*self.EDGE_PIXEL)+(2*self.PADDING_PIXEL)
+            self.IMGW = self.RESOLUTION[0]-(2*self.EDGE_PIXEL)+(2*self.PADDING_PIXEL)
+        else:
+            self.IMGH = self.RESOLUTION[1]
+            self.IMGW = self.RESOLUTION[0]
+            
+        self.num_w_crop = math.ceil((self.IMGW-self.opt.loadSize)/self.opt.crop_stride) + 1
+        self.num_h_crop = math.ceil((self.IMGH-self.opt.loadSize)/self.opt.crop_stride) + 1
+        
     def set_input(self, input):
         self.image_paths = input['A_paths']
         
@@ -264,16 +282,6 @@ class ShiftNetModel(BaseModel):
         return (model_pred_t, combine_t, denoise_t, export_t)
     
     def combine_patches(self, fn, patches, save_dir, overlap_strategy):
-        if self.opt.isPadding:
-            ORISIZE = 512
-            EDGE_PIXEL = 6
-            PADDING_PIXEL = 14
-            IMGH = IMGW = (ORISIZE-2*EDGE_PIXEL+2*PADDING_PIXEL)
-        else:
-            # IMGH = IMGW = 512
-            IMGH = 1080
-            IMGW = 1920
-
         start_time = time.time()
         if overlap_strategy == 'union':
             threshold = float(self.opt.binary_threshold)
@@ -286,22 +294,25 @@ class ShiftNetModel(BaseModel):
             # for square
             # l = int(math.sqrt(patches.shape[0])) 
             # patches_reshape = patches.view(l,l,1,self.opt.loadSize,self.opt.loadSize)
-            patches_reshape = patches.view(33,59,1,self.opt.loadSize,self.opt.loadSize)
+            
+            patches_reshape = patches.view(self.num_h_crop,self.num_w_crop,1,self.opt.loadSize,self.opt.loadSize)
+            # print(patches_reshape.shape)
+            # raise
             # create combined img template
-            patches_combined = torch.zeros((1, IMGH, IMGW), device=self.device)
+            patches_combined = torch.zeros((1, self.IMGH, self.IMGW), device=self.device)
 
             # fill combined img
             ps = self.opt.loadSize # crop patch size
             sd = self.opt.crop_stride # crop stride
             idy = 0
-            for y in range(0, IMGH, sd):
+            for y in range(0, self.IMGH, sd):
                 # print(f"y {y}")
-                if (y + ps) > IMGH:
+                if (y + ps) > self.IMGH:
                     break
                 idx = 0
-                for x in range(0, IMGW, sd):
+                for x in range(0, self.IMGW, sd):
                     # print(f"x {x}")
-                    if (x + ps) > IMGW:
+                    if (x + ps) > self.IMGW:
                         break
                     # 判斷是否 最上 y=0 & 最左=0 & 最右x=14
                     if idy == 0: # 只需考慮左右重疊
@@ -361,8 +372,8 @@ class ShiftNetModel(BaseModel):
             
             if self.opt.isPadding:
                 # crop flip part
-                patches_combined = patches_combined[PADDING_PIXEL:-PADDING_PIXEL, PADDING_PIXEL:-PADDING_PIXEL]
-                pad_width = ((EDGE_PIXEL, EDGE_PIXEL), (EDGE_PIXEL, EDGE_PIXEL))  # 上下左右各填充6个元素
+                patches_combined = patches_combined[self.PADDING_PIXEL:-self.PADDING_PIXEL, self.PADDING_PIXEL:-self.PADDING_PIXEL]
+                pad_width = ((self.EDGE_PIXEL, self.EDGE_PIXEL), (self.EDGE_PIXEL, self.EDGE_PIXEL))  # 上下左右各填充6个元素
                 patches_combined = np.pad(patches_combined, pad_width, mode='constant', constant_values=0)
             
             start_time = time.time()

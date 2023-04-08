@@ -46,7 +46,7 @@ def main(opt):
        
         if i >= opt.how_many:
             break
-        continue
+        
         fn = data['A_paths'][0][fn_len:]
         print(f"Image num {i}: {fn}")
         fn_log.append(fn)
