@@ -11,6 +11,7 @@ import sys
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-dd', '--data_dir', type=str, default=None, required=True)
+parser.add_argument('-gd', '--gt_dir', type=str, default=None, required=True)
 parser.add_argument('-cp', '--csv_path', type=str, default=None, required=True)
 parser.add_argument('-sd', '--save_dir', type=str, default=None, required=True)
 parser.add_argument('-rs', '--resized', action='store_true')
@@ -21,6 +22,7 @@ def join_path(p1,p2):
 if __name__ == '__main__': 
     args = parser.parse_args()
     data_dir = args.data_dir
+    gt_dir = args.gt_dir
     csv_path = args.csv_path
     save_dir = args.save_dir
     isResize = args.resized
@@ -31,8 +33,14 @@ if __name__ == '__main__':
     df = pd.read_csv(csv_path)
     # 基於標註 df 將實際 mura 位置標註在圖上
     img_list = glob(f"{join_path(data_dir, '*png')}")
+    gt_list = [i for i in os.listdir(gt_dir)]
+    print(gt_list)
     for img_path in img_list:
         fn = img_path.split('/')[-1]
+        print(fn)
+        if fn not in gt_list:
+            continue
+        print(fn)
         img = Image.open(img_path)
         img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
         img = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))

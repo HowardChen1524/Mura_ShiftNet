@@ -270,11 +270,10 @@ class ShiftNetModel(BaseModel):
         
         diff_B = self.compute_diff(real_B, fake_B) 
         
-        gray_diff_B = rgb_to_grayscale(diff_B)
-        
         # plot_img_diff_hist(gray_diff_B.detach().cpu().numpy().flatten(), os.path.join(self.opt.results_dir, f'diff_hist/{fn}'), self.opt.measure_mode, False)
 
-        patches, combine_t, denoise_t, export_t = self.combine_patches(fn, gray_diff_B, self.opt.results_dir, 'union')
+        patches, combine_t, denoise_t, export_t = self.combine_patches(fn, diff_B, self.opt.results_dir, self.opt.overlap_strategy)
+
         # self.export_inpaint_imgs(real_B, os.path.join(self.opt.results_dir, f'ori_diff_patches/{fn}'), 0) # 0 true, 1 fake
         # self.export_inpaint_imgs(fake_B, os.path.join(self.opt.results_dir, f'ori_diff_patches/{fn}'), 1) # 0 true, 1 fake
         # self.export_inpaint_imgs(patches, os.path.join(self.opt.results_dir, f'ori_diff_patches/{fn}'), 2) # 0 true, 1 fake
@@ -282,26 +281,20 @@ class ShiftNetModel(BaseModel):
         return (model_pred_t, combine_t, denoise_t, export_t)
     
     def combine_patches(self, fn, patches, save_dir, overlap_strategy):
-        start_time = time.time()
+        
         if overlap_strategy == 'union':
-            threshold = float(self.opt.binary_threshold)
+            
             save_dir = os.path.join(save_dir, 'union')
 
-            # thresholding
+            # combine patches
+            start_time = time.time()
+            patches = rgb_to_grayscale(patches) # RGB to Gray
+            threshold = self.opt.binary_threshold # thresholding
             patches[patches>=threshold] = 1
             patches[patches<threshold] = -1
 
-            # for square
-            # l = int(math.sqrt(patches.shape[0])) 
-            # patches_reshape = patches.view(l,l,1,self.opt.loadSize,self.opt.loadSize)
-            
             patches_reshape = patches.view(self.num_h_crop,self.num_w_crop,1,self.opt.loadSize,self.opt.loadSize)
-            # print(patches_reshape.shape)
-            # raise
-            # create combined img template
             patches_combined = torch.zeros((1, self.IMGH, self.IMGW), device=self.device)
-
-            # fill combined img
             ps = self.opt.loadSize # crop patch size
             sd = self.opt.crop_stride # crop stride
             idy = 0
@@ -363,9 +356,10 @@ class ShiftNetModel(BaseModel):
                 idy+=1
             combine_t = time.time() - start_time
             print(f"combine time cost: {combine_t}")
+
+            # denoise patches
             denoise_t=0
             start_time = time.time()
-            # patches_combined = self.remove_small_areas(patches_combined, min_area)
             patches_combined = self.remove_small_areas_opencv(patches_combined)
             denoise_t = time.time() - start_time
             print(f"denoise time cost: {denoise_t}")
@@ -377,11 +371,56 @@ class ShiftNetModel(BaseModel):
                 patches_combined = np.pad(patches_combined, pad_width, mode='constant', constant_values=0)
             
             start_time = time.time()
-            # self.export_combined_diff_img(patches_combined, fn, os.path.join(save_dir, f'{threshold:.4f}_diff_pos_area_{min_area}/imgs'))
             self.export_combined_diff_img_opencv(patches_combined, fn, os.path.join(save_dir, f'{threshold:.4f}_diff_pos_area_{self.opt.min_area}/imgs'))
             export_t = time.time() - start_time
             print(f"export time cost: {export_t}")
+        elif overlap_strategy == 'average':
+            save_dir = os.path.join(save_dir, 'average')
+            
+            # combine patches
+            start_time = time.time()
+            top_k = self.opt.top_k  # set diffence value top-k
+            patches_combined = torch.zeros((3, self.IMGH, self.IMGW), device=self.device)
+            patches_count = torch.zeros((3, self.IMGH, self.IMGW), device=self.device)
+            patches_reshape = patches.view(self.num_h_crop,self.num_w_crop,3,self.opt.loadSize,self.opt.loadSize)
+            ps = self.opt.loadSize # crop patch size
+            sd = self.opt.crop_stride # crop stride
+            idy = 0
+            for idy in range(0, self.num_h_crop):
+                for idx in range(0, self.num_w_crop):
+                    patches_combined[:, idy*sd:(idy*sd)+ps, idx*sd:idx*sd+ps] += patches_reshape[idy][idx]
+                    patches_count[:, idy*sd:(idy*sd)+ps, idx*sd:idx*sd+ps] += 1.0
+            patches_combined = patches_combined / patches_count
+            
+            # RGB to Gray
+            patches_combined = rgb_to_grayscale(patches_combined)
 
+            # filter top five percent pixel value
+            num_pixels = patches_combined.numel()
+            num_top_pixels = int(num_pixels * top_k)
+            filter, _ = patches_combined.view(-1).kthvalue(num_pixels - num_top_pixels)
+            patches_combined[patches_combined>=filter] = 1
+            patches_combined[patches_combined<filter] = -1
+
+            combine_t = time.time() - start_time
+            print(f"combine time cost: {combine_t}")
+
+            start_time = time.time()
+            patches_combined = self.remove_small_areas_opencv(patches_combined)
+            denoise_t = time.time() - start_time
+            print(f"denoise time cost: {denoise_t}")
+
+            if self.opt.isPadding:
+                # crop flip part
+                patches_combined = patches_combined[self.PADDING_PIXEL:-self.PADDING_PIXEL, self.PADDING_PIXEL:-self.PADDING_PIXEL]
+                pad_width = ((self.EDGE_PIXEL, self.EDGE_PIXEL), (self.EDGE_PIXEL, self.EDGE_PIXEL))  # 上下左右各填充6个元素
+                patches_combined = np.pad(patches_combined, pad_width, mode='constant', constant_values=0)
+            
+            start_time = time.time()
+            self.export_combined_diff_img_opencv(patches_combined, fn, os.path.join(save_dir, f'{top_k:3f}_diff_pos_area_{self.opt.min_area}/imgs'))
+            export_t = time.time() - start_time
+            print(f"export time cost: {export_t}")
+            
         return patches, combine_t, denoise_t, export_t
     
     def remove_small_areas_opencv(self, image):
@@ -389,10 +428,10 @@ class ShiftNetModel(BaseModel):
         image[image==-1] = 0
         image[image==1] = 255
         image = image.astype(np.uint8)
-
+        
         # 使用 connectedComponents 函數
         num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(image, connectivity=4)
-
+        
         # 輸出連通區域的數量
         # print("連通區域的數量：", num_labels)
 
@@ -412,16 +451,16 @@ class ShiftNetModel(BaseModel):
         # labeled_img = cv2.cvtColor(labeled_img, cv2.COLOR_HSV2BGR)
         # labeled_img[label_hue == 0] = 0
         # cv2.imwrite('labeled_image.png', labeled_img)
-
+        
         # 指定面積閾值
         min_area_threshold = self.opt.min_area
-
+        
         # 遍歷所有區域
         for i in range(1, num_labels):
             # 如果區域面積小於閾值，就將對應的像素值設置為黑色
             if stats[i, cv2.CC_STAT_AREA] < min_area_threshold:
                 labels[labels == i] = 0
-
+        
         # 將標籤為 0 的像素設置為白色，其它像素設置為黑色
         result = labels.astype('uint8')
         # print(np.unique(labels))

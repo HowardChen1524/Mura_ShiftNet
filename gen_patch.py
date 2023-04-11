@@ -69,11 +69,11 @@ def main(opt):
         combine_t_list.append(t[1])
         denoise_t_list.append(t[2])
         export_t_list.append(t[3])
-        
-    print(f"model_pred time cost mean: {np.mean(model_pred_t_list)}")
-    print(f"combine time cost mean: {np.mean(combine_t_list)}")
-    print(f"denoise time cost mean: {np.mean(denoise_t_list)}")
-    print(f"export time cost mean: {np.mean(export_t_list)}")
+    if mode == 1: 
+        print(f"model_pred time cost mean: {np.mean(model_pred_t_list)}")
+        print(f"combine time cost mean: {np.mean(combine_t_list)}")
+        print(f"denoise time cost mean: {np.mean(denoise_t_list)}")
+        print(f"export time cost mean: {np.mean(export_t_list)}")
 
 if __name__ == "__main__":
 

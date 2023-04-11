@@ -48,6 +48,7 @@ def initail_setting():
   opt.batchSize = 1  # test code only supports batchSize = 1
   opt.serial_batches = True  # no shuffle
   opt.results_dir = f"./detect_position/{opt.data_version}/sup_gradcam/{opt.sup_model_version}/{opt.sup_gradcam_th}"
+
   mkdir(opt.results_dir)
   set_seed(2022)
   
@@ -107,7 +108,11 @@ def supervised_model_gradcam(opt, gpu):
         
         # rgb_img = rgb_img[index]
         # print(cam_discrete)
-        mask = Image.fromarray(mask).resize((1920,1080), Image.Resampling.NEAREST).convert('L')
+        if opt.resolution == 'resized':
+            RESOLUTION = (512,512)
+        else:
+            RESOLUTION = (1920,1080)
+        mask = Image.fromarray(mask).resize(RESOLUTION, Image.Resampling.NEAREST).convert('L')
         mask.save(join_path(opt.results_dir, name))
         # cam_image.show()
         # plt.figure(figsize=(10, 3))

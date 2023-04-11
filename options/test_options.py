@@ -28,9 +28,15 @@ class TestOptions(BaseOptions):
         parser.add_argument('--using_threshold', action='store_true', help='using threshold to do blind test')
         parser.add_argument('--using_record', action='store_true', help='using record to test')
         # visual position
-        parser.add_argument('--binary_threshold', type=float, help='patch combine th')
+        parser.add_argument('--overlap_strategy', type=str, help='[union|average]')
         parser.add_argument('--min_area', type=int, help='patch combine filter min area')
         parser.add_argument('--sup_gradcam_th', type=float, help='')
+        ## union
+        parser.add_argument('--binary_threshold', type=float, help='patch combine th')
+        ## average
+        parser.add_argument('--top_k', type=float, help='get top k difference value as smura')
+
+        
 
         self.isTrain = False
 

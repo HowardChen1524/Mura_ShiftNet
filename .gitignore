@@ -6,8 +6,8 @@ log/
 logs/
 exp_result/
 detect_position/typec+b1
-detect_position/typec+b1_edge
 detect_position/typed
+detect_position/typed_shifted_7
 *.JPG
 *.jpg
 *.txt
