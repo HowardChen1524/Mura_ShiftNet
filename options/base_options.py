@@ -12,7 +12,7 @@ class BaseOptions():
         parser.add_argument('--dataroot', type=str, help='Mura data path')
         parser.add_argument('--dataset_mode', type=str, default='aligned_sliding', help='[aligned_resized|aligned_sliding]')
         parser.add_argument('--max_dataset_size', type=int, default=float("inf"), help='Maximum number of samples allowed per dataset') 
-        parser.add_argument('--loadSize', type=int, default=512, help='resize images to this size')
+        parser.add_argument('--loadSize', type=int, default=64, help='crop size')
         parser.add_argument('--mask_type', type=str, default='center', help='Mask 類型 [center|random]')
         parser.add_argument('--mask_sub_type', type=str, default='rect', help='Mask 形狀, [rect|fractal|island]')
         parser.add_argument('--add_mask2input', type=int, default=1, help='If True, It will add the mask as a fourth dimension over input space')
@@ -73,7 +73,7 @@ class BaseOptions():
         # Howard add
         parser.add_argument('--resolution', type=str, default='origin', help='[origin, resized], default resize 512*512')
         parser.add_argument('--crop_stride', type=int, default=32, help='slding crop stride')
-        parser.add_argument('--isPadding', action='store_true', help='')
+        parser.add_argument('--isPadding', type=int, required=True)
         
         self.initialized = True # 表示已經做完初始化
         return parser

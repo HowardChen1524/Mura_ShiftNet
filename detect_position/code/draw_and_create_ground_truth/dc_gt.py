@@ -12,7 +12,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-dv', '--dataset_version', type=str, default=None, required=True)
 parser.add_argument('-dd', '--data_dir', type=str, default=None, required=True)
 parser.add_argument('-sd', '--save_dir', type=str, default=None, required=True)
-parser.add_argument('-rs', '--resized', action='store_true')
+parser.add_argument('-rs', '--resized', type=int, default=None, required=True)
 
 def add_row(info_fn, fn, obj):
     info_fn['fn'] = fn

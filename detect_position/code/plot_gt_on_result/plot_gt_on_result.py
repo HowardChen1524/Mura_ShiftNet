@@ -14,7 +14,7 @@ parser.add_argument('-dd', '--data_dir', type=str, default=None, required=True)
 parser.add_argument('-gd', '--gt_dir', type=str, default=None, required=True)
 parser.add_argument('-cp', '--csv_path', type=str, default=None, required=True)
 parser.add_argument('-sd', '--save_dir', type=str, default=None, required=True)
-parser.add_argument('-rs', '--resized', action='store_true')
+parser.add_argument('-rs', '--resized', type=int, default=None, required=True)
 
 def join_path(p1,p2):
     return os.path.join(p1,p2)

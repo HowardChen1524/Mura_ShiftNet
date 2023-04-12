@@ -5,6 +5,7 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('-dd', '--data_dir', type=str, default=None, required=True)
 parser.add_argument('-sd', '--save_dir', type=str, default=None, required=True)
+parser.add_argument('-os', '--overlap_strategy', type=str, default=None, required=True)
 parser.add_argument('-ic', '--isCombine', action='store_true')
 
 def join_path(p1,p2):
@@ -14,6 +15,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     data_dir = args.data_dir
     save_dir = args.save_dir
+    overlap_strategy = args.overlap_strategy
     isCombine = args.isCombine
 
     exp_name_list = []
@@ -43,7 +45,7 @@ if __name__ == '__main__':
         # 删除中间的列
         df_sorted = df_sorted.drop(['grad_th', 'th', 'min_area'], axis=1)
         
-        df_sorted.to_csv(join_path(save_dir, 'combine_summary.csv'), index=False)
+        df_sorted.to_csv(join_path(save_dir, f'combine_{overlap_strategy}_summary.csv'), index=False)
     else:
         df[['th', 'min_area']] = df['exp'].str.split('_', expand=True)[[0,4]].astype(float)
 
@@ -53,6 +55,6 @@ if __name__ == '__main__':
         # 删除中间的列
         df_sorted = df_sorted.drop(['th', 'min_area'], axis=1)
 
-        df_sorted.to_csv(join_path(save_dir, 'unsup_summary.csv'), index=False)
+        df_sorted.to_csv(join_path(save_dir, f'unsup_{overlap_strategy}_summary.csv'), index=False)
 
             
