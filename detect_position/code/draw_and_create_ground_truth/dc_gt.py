@@ -66,7 +66,11 @@ df = pd.DataFrame.from_dict(info_fn_list)
 df.to_csv(join_path(save_dir, f'{dataset_version}/{dataset_version}.csv'), index=False, header=True)
 
 # 基於標註 df 將實際 mura 位置標註在圖上
-save_dir = join_path(save_dir, f'{dataset_version}/actual_pos')
+if isResize:
+    resolution = "resized"
+else:
+    resolution = "origin"
+save_dir = join_path(save_dir, f'{dataset_version}/{resolution}/actual_pos')
 os.makedirs(save_dir, exist_ok=True)
 os.makedirs(join_path(save_dir, f'bounding_box'), exist_ok=True)
 os.makedirs(join_path(save_dir, f'ground_truth'), exist_ok=True)

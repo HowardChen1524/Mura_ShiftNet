@@ -47,7 +47,7 @@ def initail_setting():
   opt.nThreads = 1   # test code only supports nThreads = 1
   opt.batchSize = 1  # test code only supports batchSize = 1
   opt.serial_batches = True  # no shuffle
-  opt.results_dir = f"./detect_position/{opt.data_version}/sup_gradcam/{opt.sup_model_version}/{opt.sup_gradcam_th}"
+  opt.results_dir = f"./detect_position/{opt.data_version}/{opt.resolution}/sup_gradcam/{opt.sup_model_version}/{opt.sup_gradcam_th}"
 
   mkdir(opt.results_dir)
   set_seed(2022)

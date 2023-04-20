@@ -15,7 +15,7 @@ def initail_setting():
     opt.batchSize = 1  # test code only supports batchSize = 1
     opt.serial_batches = True  # no shuffle
 
-    opt.results_dir = f"{opt.results_dir}/{opt.data_version}/{opt.crop_stride}"
+    opt.results_dir = f"{opt.results_dir}/{opt.data_version}/{opt.resolution}/{opt.crop_stride}"
 
     mkdir(opt.results_dir)
 

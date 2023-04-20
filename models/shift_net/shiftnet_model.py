@@ -272,10 +272,10 @@ class ShiftNetModel(BaseModel):
         
         # plot_img_diff_hist(gray_diff_B.detach().cpu().numpy().flatten(), os.path.join(self.opt.results_dir, f'diff_hist/{fn}'), self.opt.measure_mode, False)
 
-        patches, combine_t, denoise_t, export_t = self.combine_patches(fn, diff_B, self.opt.results_dir, self.opt.overlap_strategy)
+        # patches, combine_t, denoise_t, export_t = self.combine_patches(fn, diff_B, self.opt.results_dir, self.opt.overlap_strategy)
 
-        # self.export_inpaint_imgs(real_B, os.path.join(self.opt.results_dir, f'ori_diff_patches/{fn}'), 0) # 0 true, 1 fake
-        # self.export_inpaint_imgs(fake_B, os.path.join(self.opt.results_dir, f'ori_diff_patches/{fn}'), 1) # 0 true, 1 fake
+        self.export_inpaint_imgs(real_B, os.path.join(self.opt.results_dir, f'ori_diff_patches/{fn}'), 0) # 0 true, 1 fake
+        self.export_inpaint_imgs(fake_B, os.path.join(self.opt.results_dir, f'ori_diff_patches/{fn}'), 1) # 0 true, 1 fake
         # self.export_inpaint_imgs(patches, os.path.join(self.opt.results_dir, f'ori_diff_patches/{fn}'), 2) # 0 true, 1 fake
 
         return (model_pred_t, combine_t, denoise_t, export_t)
@@ -298,15 +298,21 @@ class ShiftNetModel(BaseModel):
             ps = self.opt.loadSize # crop patch size
             sd = self.opt.crop_stride # crop stride
             idy = 0
+            y_flag = False
             for y in range(0, self.IMGH, sd):
                 # print(f"y {y}")
-                if (y + ps) > self.IMGH:
-                    break
+                if y_flag: break
+                if (y + ps) >= self.IMGH:
+                    y = self.IMGH-self.opt.loadSize
+                    y_flag = True
                 idx = 0
+                x_flag = False
                 for x in range(0, self.IMGW, sd):
                     # print(f"x {x}")
+                    if x_flag: break
                     if (x + ps) > self.IMGW:
-                        break
+                        x = self.IMGW-self.opt.loadSize
+                        x_flag = True
                     # 判斷是否 最上 y=0 & 最左=0 & 最右x=14
                     if idy == 0: # 只需考慮左右重疊
                         if idx == 0: # 最左邊直接先放
@@ -380,6 +386,7 @@ class ShiftNetModel(BaseModel):
             # combine patches
             start_time = time.time()
             top_k = self.opt.top_k  # set diffence value top-k
+
             patches_combined = torch.zeros((3, self.IMGH, self.IMGW), device=self.device)
             patches_count = torch.zeros((3, self.IMGH, self.IMGW), device=self.device)
             patches_reshape = patches.view(self.num_h_crop,self.num_w_crop,3,self.opt.loadSize,self.opt.loadSize)
@@ -387,9 +394,16 @@ class ShiftNetModel(BaseModel):
             sd = self.opt.crop_stride # crop stride
             idy = 0
             for idy in range(0, self.num_h_crop):
-                for idx in range(0, self.num_w_crop):
-                    patches_combined[:, idy*sd:(idy*sd)+ps, idx*sd:idx*sd+ps] += patches_reshape[idy][idx]
-                    patches_count[:, idy*sd:(idy*sd)+ps, idx*sd:idx*sd+ps] += 1.0
+                crop_y = idy*sd
+                if (idy*sd+ps) >= self.IMGH:
+                    crop_y = self.IMGH-ps
+                for idx in range(0, self.num_w_crop):  
+                    crop_x = idx*sd
+                    if (idx*sd+ps) >= self.IMGW:
+                        crop_x = self.IMGW-ps     
+                    patches_combined[:, crop_y:crop_y+ps, crop_x:crop_x+ps] += patches_reshape[idy][idx]
+                    patches_count[:, crop_y:crop_y+ps, crop_x:crop_x+ps] += 1.0
+
             patches_combined = patches_combined / patches_count
             
             # RGB to Gray
@@ -417,7 +431,7 @@ class ShiftNetModel(BaseModel):
                 patches_combined = np.pad(patches_combined, pad_width, mode='constant', constant_values=0)
             
             start_time = time.time()
-            self.export_combined_diff_img_opencv(patches_combined, fn, os.path.join(save_dir, f'{top_k:3f}_diff_pos_area_{self.opt.min_area}/imgs'))
+            self.export_combined_diff_img_opencv(patches_combined, fn, os.path.join(save_dir, f'{top_k:.3f}_diff_pos_area_{self.opt.min_area}/imgs'))
             export_t = time.time() - start_time
             print(f"export time cost: {export_t}")
             

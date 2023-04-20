@@ -73,7 +73,7 @@ class BaseOptions():
         # Howard add
         parser.add_argument('--resolution', type=str, default='origin', help='[origin, resized], default resize 512*512')
         parser.add_argument('--crop_stride', type=int, default=32, help='slding crop stride')
-        parser.add_argument('--isPadding', type=int, required=True)
+        parser.add_argument('--isPadding', type=int, default=0, help='whether to use padding')
         
         self.initialized = True # 表示已經做完初始化
         return parser
