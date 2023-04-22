@@ -15,7 +15,7 @@ sup_model_version="SEResNeXt101_d23"
 # model_version="ShiftNet_SSIM_d23_8k"
 # model_version="ShiftNet_SSIM_d23_8k_change_cropping"
 # model_version="ShiftNet_SSIM_d23_8k_change_cropping_ori_res"
-# model_version="ShiftNet_SSIM_d23_8k__cropping_fixed_edge_ori_res_smooth"
+# model_version="ShiftNet_SSIM_d23_8k_cropping_fixed_edge_ori_res_smooth"
 
 # which_epoch="200"
 # which_epoch="300"

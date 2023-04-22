@@ -49,9 +49,8 @@ if __name__ == "__main__":
     for epoch in range(opt.epoch_count, opt.niter + 1): # opt.epoch_count default 1
         epoch_start_time = time.time()
         iter_data_time = time.time()
-        epoch_iter = 0
         
-        for i, data in enumerate(dataset): # enumerate(dataset)每次都會讀入一個 batch 的資料
+        for i, data in enumerate(dataset): # enumerate(dataset)每次都會讀入一個 mini-batch 的資料
             if i >= opt.fix_step:
                 print('Limit Step 5000')
                 break
@@ -62,8 +61,7 @@ if __name__ == "__main__":
                         
             # batchSize default 1
             total_steps += opt.batchSize
-            epoch_iter += opt.batchSize
-
+            
             # remove extra dim
             bs, ncrops, c, h, w = data['A'].size()
             data['A'] = data['A'].view(-1, c, h, w)
@@ -81,7 +79,7 @@ if __name__ == "__main__":
             if total_steps % opt.print_freq == 0:
                 losses = model.get_current_losses()
                 t = (time.time() - iter_start_time) / opt.batchSize 
-                logger.print_current_losses(epoch, epoch_iter, losses, t, t_data)
+                logger.print_current_losses(epoch, total_steps, losses, t, t_data)
 
             # 取得現在時間放入 iter_data_time?
             iter_data_time = time.time()
