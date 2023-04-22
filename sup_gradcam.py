@@ -90,7 +90,14 @@ def supervised_model_gradcam(opt, gpu):
     for x, y, n in tqdm(dataloader):
         grayscale_cam.append(cam(input_tensor=x, aug_smooth=False, eigen_smooth=False))
 
-    print(len(grayscale_cam))
+    # print(grayscale_cam[0])
+    # print(grayscale_cam[0].shape)
+    # conf = cv2.resize(grayscale_cam[0][0], (512,512), interpolation=cv2.INTER_NEAREST)
+    # print(conf.shape)
+
+    # raise
+
+    
 
     for index, (cam, rgb_img) in enumerate(zip(grayscale_cam, rgb_images)):
         # rgb_img = fast_tran(rgb_img).permute(1, 2, 0).numpy()
