@@ -18,7 +18,7 @@ class TrainOptions(BaseOptions):
         parser.add_argument('--crop_image_num', type=int, default=64, help='The number of cropping image')
         # monitor training
         parser.add_argument('--print_freq', type=int, default=50, help='frequency of showing training results on console')
-        parser.add_argument('--save_epoch_freq', type=int, default=10, help='frequency of saving checkpoints at the end of epochs')
+        parser.add_argument('--save_epoch_freq', type=int, default=50, help='frequency of saving checkpoints at the end of epochs')
         # continue training
         parser.add_argument('--continue_train', action='store_true', help='continue training: load the latest model')
         parser.add_argument('--which_epoch', type=str, default='latest', help='which epoch to load? set to latest to use latest cached model')

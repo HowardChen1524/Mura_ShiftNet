@@ -866,7 +866,7 @@ def plot_scatter(conf_sup, score_unsup):
     # plt.xlim(4e-05, 4e-04) # 小
     # plt.xlim(4.5e-05, 8e-05) # 大
     # plt.xlim(5e-05, 1.5e-04) # 中
-    plt.xlim(3e-05, 1.2e-04) # pennet
+    # plt.xlim(3e-05, 1.2e-04) # pennet
     plt.xlabel("score (Unsupervised)")
     plt.ylabel("Conf (Supervised)")
     plt.title('scatter')
@@ -989,7 +989,7 @@ def plot_score_scatter(n_max, s_max, n_mean, s_mean, path, name):
     
     # plt.xlim(5e-05, 1.5e-04)
     # plt.xlim(4.5e-05, 8e-05)
-    plt.xlim(3e-05, 1.2e-04) # pennet
+    # plt.xlim(3e-05, 1.2e-04) # pennet
     plt.xlabel("max")
     plt.ylabel("mean")
     plt.title('scatter')
@@ -1002,7 +1002,7 @@ def plot_score_scatter(n_max, s_max, n_mean, s_mean, path, name):
  
     # plt.xlim(5e-05, 1.5e-04)
     # plt.xlim(4.5e-05, 8e-05)
-    plt.xlim(3e-05, 1.2e-04) # pennet
+    # plt.xlim(3e-05, 1.2e-04) # pennet
     plt.xlabel("max")
     plt.ylabel("mean")
     plt.title('scatter')
@@ -1015,7 +1015,7 @@ def plot_score_scatter(n_max, s_max, n_mean, s_mean, path, name):
     
     # plt.xlim(5e-05, 1.5e-04)
     # plt.xlim(4.5e-05, 8e-05)
-    plt.xlim(3e-05, 1.2e-04) # pennet
+    # plt.xlim(3e-05, 1.2e-04) # pennet
     plt.xlabel("max")
     plt.ylabel("mean")
     plt.title('scatter')
@@ -1039,7 +1039,7 @@ def plot_sup_unsup_scatter(conf_sup, score_unsup, path, name):
     plt.clf()
     # plt.xlim(5e-05, 1.5e-04)
     # plt.xlim(4.5e-05, 8e-05)
-    plt.xlim(3e-05, 1.2e-04) # pennet
+    # plt.xlim(3e-05, 1.2e-04) # pennet
     plt.xlabel("score (Unsupervised)")
     plt.ylabel("Conf (Supervised)")
     plt.title('scatter')
@@ -1049,7 +1049,7 @@ def plot_sup_unsup_scatter(conf_sup, score_unsup, path, name):
     # smura
     # plt.xlim(5e-05, 1.5e-04)
     # plt.xlim(4.5e-05, 8e-05)
-    plt.xlim(3e-05, 1.2e-04) # pennet
+    # plt.xlim(3e-05, 1.2e-04) # pennet
     plt.xlabel("score (Unsupervised)")
     plt.ylabel("Conf (Supervised)")
     plt.title('scatter')
@@ -1060,7 +1060,7 @@ def plot_sup_unsup_scatter(conf_sup, score_unsup, path, name):
     # plt.xlim(4e-05, 4e-04) 
     # plt.xlim(5e-05, 1.5e-04)
     # plt.xlim(4.5e-05, 8e-05)
-    plt.xlim(3e-05, 1.2e-04) # pennet
+    # plt.xlim(3e-05, 1.2e-04) # pennet
     plt.xlabel("score (Unsupervised)")
     plt.ylabel("Conf (Supervised)")
     plt.title('scatter')

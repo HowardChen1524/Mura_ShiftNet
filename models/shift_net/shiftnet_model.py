@@ -272,10 +272,10 @@ class ShiftNetModel(BaseModel):
         
         # plot_img_diff_hist(gray_diff_B.detach().cpu().numpy().flatten(), os.path.join(self.opt.results_dir, f'diff_hist/{fn}'), self.opt.measure_mode, False)
 
-        # patches, combine_t, denoise_t, export_t = self.combine_patches(fn, diff_B, self.opt.results_dir, self.opt.overlap_strategy)
+        patches, combine_t, denoise_t, export_t = self.combine_patches(fn, diff_B, self.opt.results_dir, self.opt.overlap_strategy)
 
-        self.export_inpaint_imgs(real_B, os.path.join(self.opt.results_dir, f'ori_diff_patches/{fn}'), 0) # 0 true, 1 fake
-        self.export_inpaint_imgs(fake_B, os.path.join(self.opt.results_dir, f'ori_diff_patches/{fn}'), 1) # 0 true, 1 fake
+        # self.export_inpaint_imgs(real_B, os.path.join(self.opt.results_dir, f'ori_diff_patches/{fn}'), 0) # 0 true, 1 fake
+        # self.export_inpaint_imgs(fake_B, os.path.join(self.opt.results_dir, f'ori_diff_patches/{fn}'), 1) # 0 true, 1 fake
         # self.export_inpaint_imgs(patches, os.path.join(self.opt.results_dir, f'ori_diff_patches/{fn}'), 2) # 0 true, 1 fake
 
         return (model_pred_t, combine_t, denoise_t, export_t)
@@ -501,7 +501,7 @@ class ShiftNetModel(BaseModel):
                 pil_img = pil_img.convert('L')           
                 pil_img.save(os.path.join(save_path,f"{idx}.png"))
             else:
-                pil_img.save(os.path.join(save_path,f"{idx}.png"))
+                # pil_img.save(os.path.join(save_path,f"{idx}.png"))
                 pil_img_en = enhance_img(pil_img)
                 pil_img_en.save(os.path.join(save_path,f"en_{idx}.png"))
 
@@ -560,7 +560,7 @@ class ShiftNetModel(BaseModel):
             real_B = real_B[:, :, self.rand_t:self.rand_t+self.opt.loadSize//2, \
                                         self.rand_l:self.rand_l+self.opt.loadSize//2]  
         crop_scores = []
-        for i in range(0,real_B.shape[0]):
+        for i in range(0, real_B.shape[0]):
             crop_scores.append(self.compute_score(real_B[i], fake_B[i]))
         crop_scores = np.array(crop_scores)
         return crop_scores

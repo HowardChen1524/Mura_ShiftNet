@@ -14,6 +14,7 @@ parser.add_argument('-dd', '--data_dir', type=str, default=None, required=True)
 parser.add_argument('-sd', '--save_dir', type=str, default=None, required=True)
 parser.add_argument('-rs', '--resized', type=int, default=None, required=True)
 
+
 def add_row(info_fn, fn, obj):
     info_fn['fn'] = fn
     info_fn['smura_name'] = obj['name']
@@ -70,6 +71,7 @@ if isResize:
     resolution = "resized"
 else:
     resolution = "origin"
+
 save_dir = join_path(save_dir, f'{dataset_version}/{resolution}/actual_pos')
 os.makedirs(save_dir, exist_ok=True)
 os.makedirs(join_path(save_dir, f'bounding_box'), exist_ok=True)

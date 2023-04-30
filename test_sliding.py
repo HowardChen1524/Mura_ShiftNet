@@ -185,10 +185,11 @@ def unsupervised_model_prediction(opt):
         # it not only sets the input data with mask, but also sets the latent mask.
         model.set_input(data)
         img_scores = model.test()
-        # pos_list = [i for i in range(0, 225)]
+        # pos_list = [i for i in range(0, 900)]
         # inpainting_path = os.path.join(opt.results_dir, f'patch_diff_{opt.crop_stride}/{fn}')
         # mkdir(inpainting_path)
         # score_df = pd.DataFrame(list(zip(pos_list,img_scores)), columns=['pos','score'])
+        # score_df = score_df.sort_values('score', ascending=False)
         # score_df.to_csv(os.path.join(inpainting_path, 'pos_score.csv'), index=False)
         # img_scores = model.test()
         
