@@ -15,6 +15,10 @@ def CreateDataset(opt):
         from data.aligned_dataset_sliding import AlignedDatasetSliding
         dataset = AlignedDatasetSliding()
 
+    elif opt.dataset_mode == 'sup_unsup_dataset':
+        from data.sup_unsup_dataset import SupUnsupDataset
+        dataset = SupUnsupDataset()
+    
     else:
         raise ValueError("Dataset [%s] not recognized." % opt.dataset_mode)
 
