@@ -7,6 +7,11 @@ from models import create_model
 
 from util.utils_howard import mkdir, set_seed
 
+from pytorch_grad_cam import GradCAM
+import torch
+import torch.nn as nn
+import os
+import cv2
 # 同時讀圖
 ## create dataset
 ## 每次給 unsup and sup 圖
@@ -29,8 +34,24 @@ def initail_setting():
 
     return opt, opt.gpu_ids[0]
 
+def sup_init(opt):
+    # load model
+    model_sup = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_se_resnext101_32x4d')
+    model_sup.fc = nn.Sequential(
+            nn.Linear(2048, 1),
+            nn.Sigmoid()
+        )
+    sup_model_path = os.path.join(opt.checkpoints_dir, f"{opt.sup_model_version}/model.pt")
+    print(sup_model_path)
+    model_sup.load_state_dict(torch.load(sup_model_path, map_location=torch.device(f"cuda:{gpu}")))  
+    cam = GradCAM(model=model_sup, target_layers=[model_sup.layers[-1]], use_cuda=True)
+    return model_sup, cam
+
 def main(opt):
+    
+    sup_model, gradcam = sup_init(opt)
     model = create_model(opt)
+
     data_loader = CreateDataLoader(opt)
 
     dataset = data_loader['smura']
@@ -39,45 +60,53 @@ def main(opt):
     fn_len = len(opt.testing_smura_dataroot)
 
     fn_log = []
-    model_pred_t_list = []
-    combine_t_list = []
-    denoise_t_list = []
-    export_t_list = []
     for i, data in enumerate(dataset):
        
         if i >= opt.how_many:
             break
-        
-        print(data)
-        raise
+
         fn = data['A_paths'][0][fn_len:]
         print(f"Image num {i}: {fn}")
         fn_log.append(fn)
 
-        # (1,mini-batch,c,h,w) -> (mini-batch,c,h,w)，會有多一個維度是因為 dataloader batchsize 設 1
-        bs, ncrops, c, h, w = data['A'].size()
-        data['A'] = data['A'].view(-1, c, h, w)
-
-        bs, ncrops, c, h, w = data['B'].size()
-        data['B'] = data['B'].view(-1, c, h, w)
+        sup_data = data[0]
+        unsup_data = data[1]
         
-        bs, ncrops, c, h, w = data['M'].size()
-        data['M'] = data['M'].view(-1, c, h, w)
+        # sup
+        grad_conf = gradcam(input_tensor=sup_data, aug_smooth=False, eigen_smooth=False)
+        # grad_conf = cv2.resize()
+        
+        # unsup
+        bs, ncrops, c, h, w = unsup_data['A'].size()
+        unsup_data['A'] = unsup_data['A'].view(-1, c, h, w)
+
+        bs, ncrops, c, h, w = unsup_data['B'].size()
+        unsup_data['B'] = unsup_data['B'].view(-1, c, h, w)
+        
+        bs, ncrops, c, h, w = unsup_data['M'].size()
+        unsup_data['M'] = unsup_data['M'].view(-1, c, h, w)
        
         # 建立 input real_A & real_B
-        # it not only sets the input data with mask, but also sets the latent mask.
-        model.set_input(data)
-        t = model.visualize_diff(mode, fn)
-        model_pred_t_list.append(t[0])
-        combine_t_list.append(t[1])
-        denoise_t_list.append(t[2])
-        export_t_list.append(t[3])
-    
-    print(f"model_pred time cost mean: {np.mean(model_pred_t_list)}")
-    print(f"combine time cost mean: {np.mean(combine_t_list)}")
-    print(f"denoise time cost mean: {np.mean(denoise_t_list)}")
-    print(f"export time cost mean: {np.mean(export_t_list)}")
+        # it not only sets the input unsup_data with mask, but also sets the latent mask.
+        model.set_input(unsup_data)
+        diff_score = model.get_diff_res()
+        
+        alpha = opt.combine_weight
+        combine_res = grad_conf*alpha + diff_score*(1-alpha)
 
+        top_k = opt.top_k
+
+        # filter top five percent pixel value
+        num_pixels = combine_res.numel()
+        num_top_pixels = int(num_pixels * top_k)
+        filter, _ = combine_res.view(-1).kthvalue(num_pixels - num_top_pixels)
+        combine_res[combine_res>=filter] = 1
+        combine_res[combine_res<filter] = -1
+        
+        save_path = os.path.join(opt.results_dir, f'combine/{top_k:.3f}_diff_pos_area_{opt.min_area}/imgs')
+        mkdir(save_path)             
+        cv2.imwrite(os.path.join(save_path, fn), combine_res)
+        
 if __name__ == "__main__":
 
     opt, gpu = initail_setting()  

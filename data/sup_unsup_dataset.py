@@ -31,6 +31,8 @@ class SupUnsupDataset(BaseDataset):
             self.RESOLUTION = (512,512)
         else:
             self.RESOLUTION = (1920,1080)
+        self.set_sup()
+        self.set_unsup()
                                           
     def set_sup(self):
         transform_list = [transforms.Resize([256, 256], interpolation=InterpolationMode.BILINEAR),
@@ -94,7 +96,7 @@ class SupUnsupDataset(BaseDataset):
             # pil_img = enhance_img(pil_img)
             # pil_img.save(f"{fp.split('/')[-1]}_ori.png")
 
-            A_img  = A_img[:,EDGE_PIXEL:-EDGE_PIXEL,EDGE_PIXEL:-EDGE_PIXEL]
+            A_img = A_img[:,EDGE_PIXEL:-EDGE_PIXEL,EDGE_PIXEL:-EDGE_PIXEL]
             # pil_img = tensor2img(A_img)
             # pil_img = enhance_img(pil_img)
             # pil_img.save(f"{fp.split('/')[-1]}_crop.png")

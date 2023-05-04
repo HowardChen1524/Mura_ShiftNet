@@ -280,6 +280,46 @@ class ShiftNetModel(BaseModel):
 
         return (model_pred_t, combine_t, denoise_t, export_t)
     
+    def get_diff_res(self):
+        with torch.no_grad():
+            model_pred_t = self.forward()
+            print(f"model inpainting time cost: {model_pred_t}")
+
+        fake_B = self.fake_B.detach() # Inpaint
+        real_B = self.real_B # Original
+        
+        patches = self.compute_diff(real_B, fake_B) 
+        
+        patches_combined = torch.zeros((3, self.IMGH, self.IMGW), device=self.device)
+        patches_count = torch.zeros((3, self.IMGH, self.IMGW), device=self.device)
+        patches_reshape = patches.view(self.num_h_crop,self.num_w_crop,3,self.opt.loadSize,self.opt.loadSize)
+        ps = self.opt.loadSize # crop patch size
+        sd = self.opt.crop_stride # crop stride
+        idy = 0
+        for idy in range(0, self.num_h_crop):
+            crop_y = idy*sd
+            if (idy*sd+ps) >= self.IMGH:
+                crop_y = self.IMGH-ps
+            for idx in range(0, self.num_w_crop):  
+                crop_x = idx*sd
+                if (idx*sd+ps) >= self.IMGW:
+                    crop_x = self.IMGW-ps     
+                patches_combined[:, crop_y:crop_y+ps, crop_x:crop_x+ps] += patches_reshape[idy][idx]
+                patches_count[:, crop_y:crop_y+ps, crop_x:crop_x+ps] += 1.0
+
+        patches_combined = patches_combined / patches_count
+        
+        # RGB to Gray
+        patches_combined = rgb_to_grayscale(patches_combined)
+
+        if self.opt.isPadding:
+            # crop flip part
+            patches_combined = patches_combined[self.PADDING_PIXEL:-self.PADDING_PIXEL, self.PADDING_PIXEL:-self.PADDING_PIXEL]
+            pad_width = ((self.EDGE_PIXEL, self.EDGE_PIXEL), (self.EDGE_PIXEL, self.EDGE_PIXEL))  # 上下左右各填充6个元素
+            patches_combined = np.pad(patches_combined, pad_width, mode='constant', constant_values=0)
+        
+        return patches_combined
+    
     def combine_patches(self, fn, patches, save_dir, overlap_strategy):
         
         if overlap_strategy == 'union':
