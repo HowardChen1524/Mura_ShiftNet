@@ -311,7 +311,8 @@ class ShiftNetModel(BaseModel):
         
         # RGB to Gray
         patches_combined = rgb_to_grayscale(patches_combined)
-
+        patches_combined = patches_combined[0]
+        
         if self.opt.isPadding:
             # crop flip part
             patches_combined = patches_combined[self.PADDING_PIXEL:-self.PADDING_PIXEL, self.PADDING_PIXEL:-self.PADDING_PIXEL]

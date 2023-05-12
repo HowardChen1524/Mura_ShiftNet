@@ -35,7 +35,10 @@ class TestOptions(BaseOptions):
         parser.add_argument('--binary_threshold', type=float, help='patch combine th')
         ## average
         parser.add_argument('--top_k', type=float, help='get top k difference value as smura')
-
+        ## combine supervised model
+        parser.add_argument('--combine_alpha', type=float, help='')
+        parser.add_argument('--combine_beta', type=float, help='')
+        
         
 
         self.isTrain = False
