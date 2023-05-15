@@ -32,8 +32,7 @@ isPadding=1
 # isPadding=0
 isResize=1
 # isResize=0
-declare min_area_list=(1 5 10 15 20 25 30 35 40 45 50 55 60 65 70)
-# declare grad_th_list=(0.1)
+declare min_area_list=(30 40 50 55 60)
 # declare min_area_list=(1)
 
 
@@ -76,7 +75,7 @@ do
             # for alpha in $(seq 0.010 0.010 1.000)
             for alpha in $(seq 1000 1000 10000)
             do
-                for beta in $(seq 1 1 10)
+                for beta in $(seq 1 1 1)
                 do # 10e-6 10e-2
                     # generate unsupervised model diff visualize
                     python3 combine_gen_patch.py \
@@ -116,13 +115,4 @@ do
         done
     done
 done
-
-
-# data_dir="${base_dir}/${dataset_version}/${resolution}/${crop_stride}/${overlap_strategy}/"
-# save_dir="${base_dir}/${dataset_version}/${resolution}/${crop_stride}"
-# python3 ./detect_position/code/summary_exp_result/summary_exp_result.py \
-# -dd=$data_dir \
-# -sd=$save_dir \
-# -os=$overlap_strategy
-
 
