@@ -33,8 +33,8 @@ def initail_setting():
     mkdir(opt.results_dir)
 
     set_seed(2022)
-
-    return opt, opt.gpu_ids[0]
+    
+    return opt, opt.gpu_ids
 
 def sup_init(opt):
     # load model

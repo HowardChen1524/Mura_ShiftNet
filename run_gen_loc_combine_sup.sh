@@ -5,7 +5,8 @@ checkpoints_dir="../models/"
 results_dir="./detect_position/"
 loadSize=64
 measure_mode="MAE"
-gpu_ids=0
+gpu_ids="-1" # cpu
+
 # ===== model =====
 # sup_model_version="ensemble_d23"
 sup_model_version="SEResNeXt101_d23"
@@ -32,9 +33,8 @@ isPadding=1
 # isPadding=0
 isResize=1
 # isResize=0
-declare min_area_list=(30 40 50 55 60)
+declare min_area_list=(10 15 20 25 30)
 # declare min_area_list=(1)
-
 
 # ===== dataset =====
 dataset_mode="sup_unsup_dataset"
@@ -50,33 +50,26 @@ smura_num=31
 # normal_num=0
 # smura_num=26
 
-# dataset_version="typed_shifted_7"
-# unsup_test_normal_path="/home/sallylab/min/d23_merge/test/test_normal_4k/" # for unsupervised model
-# unsup_test_smura_path="/home/sallylab/min/typed_shifted_7/img/" # for unsupervised model
-# normal_num=0
-# smura_num=26
-
 # ===== generate ground truth =====
-# data_dir='/home/sallylab/min/'
-# save_dir='/home/sallylab/Howard/Mura_ShiftNet/detect_position/'
-# python3 /home/sallylab/Howard/Mura_ShiftNet/detect_position/code/draw_and_create_ground_truth/dc_gt.py \
+# data_dir='/home/mura/mura_data'
+# save_dir='/home/mura/Mura_ShiftNet/detect_position/'
+# python3 /home/mura/Mura_ShiftNet/detect_position/code/draw_and_create_ground_truth/dc_gt.py \
 # -dv=$dataset_version \
 # -dd=$data_dir \
 # -sd=$save_dir \
 # -rs=$isResize
 
 # ===== unsup =====
-for grad_th in $(seq 0.1 0.1 0.5)
+for th in $(seq 0.010 0.010 0.100)
 do
-    for th in $(seq 0.010 0.010 0.100)
+    for min_area in ${min_area_list[@]}
     do
-        for min_area in ${min_area_list[@]}
+        for beta in $(seq 0.0 1.0 1.0)
         do
-            # for alpha in $(seq 0.010 0.010 1.000)
-            for alpha in $(seq 1000 1000 10000)
-            do
-                for beta in $(seq 1 1 1)
-                do # 10e-6 10e-2
+            for alpha in $(seq 0.0 500.0 10000.0)
+            do # 10e-6 10e-2
+                if [ $alpha != 0.0 ] && [ $beta != 0.0 ]; 
+                then
                     # generate unsupervised model diff visualize
                     python3 combine_gen_patch.py \
                     --data_version=$dataset_version --dataset_mode=$dataset_mode --loadSize=$loadSize --crop_stride=$crop_stride \
@@ -86,33 +79,38 @@ do
                     --resolution=$resolution --overlap_strategy=$overlap_strategy\
                     --isPadding=$isPadding \
                     --sup_model_version=$sup_model_version \
-                    --sup_gradcam_th=$grad_th \
                     --top_k=$th --min_area=$min_area \
                     --combine_alpha=$alpha --combine_beta=$beta \
                     --gpu_ids=$gpu_ids
 
-                    # # plot gt
-                    # data_dir="${base_dir}/${dataset_version}/${resolution}/${crop_stride}/${overlap_strategy}/${th}_diff_pos_area_${min_area}/imgs"
-                    # gt_dir="${base_dir}/${dataset_version}/${resolution}/actual_pos/ground_truth"
-                    # csv_path="${base_dir}/${dataset_version}/${dataset_version}.csv"
-                    # save_dir="${base_dir}/${dataset_version}/${resolution}/${crop_stride}/${overlap_strategy}/${th}_diff_pos_area_${min_area}/imgs_gt"
-                    # python3 ./detect_position/code/plot_gt_on_result/plot_gt_on_result.py \
-                    # -cp=$csv_path \
-                    # -dd=$data_dir \
-                    # -gd=$gt_dir \
-                    # -sd=$save_dir \
-                    # -rs=$isResize # for resizing
+                    # plot gt
+                    data_dir="${base_dir}/${dataset_version}/${resolution}/combine_sup_unsup/combine/${th}_diff_pos_area_${min_area}_${alpha}_${beta}/imgs"
+                    gt_dir="${base_dir}/${dataset_version}/${resolution}/actual_pos/ground_truth"
+                    csv_path="${base_dir}/${dataset_version}/${dataset_version}.csv"
+                    save_dir="${base_dir}/${dataset_version}/${resolution}/combine_sup_unsup/combine/${th}_diff_pos_area_${min_area}_${alpha}_${beta}/imgs_gt"
+                    python3 ./detect_position/code/plot_gt_on_result/plot_gt_on_result.py \
+                    -cp=$csv_path \
+                    -dd=$data_dir \
+                    -gd=$gt_dir \
+                    -sd=$save_dir \
+                    -rs=$isResize # for resizing
 
-                    # # cal dice and recall & precision
-                    # gt_dir="${base_dir}/${dataset_version}/${resolution}/actual_pos/ground_truth"
-                    # save_dir="${base_dir}/${dataset_version}/${resolution}/${crop_stride}/${overlap_strategy}/${th}_diff_pos_area_${min_area}"
-                    # python3 ./detect_position/code/calculate_metrics/calculate_metrics.py \
-                    # -dd=$data_dir \
-                    # -gd=$gt_dir \
-                    # -sd=$save_dir
-                done
+                    # cal dice and recall & precision
+                    gt_dir="${base_dir}/${dataset_version}/${resolution}/actual_pos/ground_truth"
+                    save_dir="${base_dir}/${dataset_version}/${resolution}/combine_sup_unsup/combine/${th}_diff_pos_area_${min_area}_${alpha}_${beta}_sup_${grad_th}"
+                    python3 ./detect_position/code/calculate_metrics/calculate_metrics.py \
+                    -dd=$data_dir \
+                    -gd=$gt_dir \
+                    -sd=$save_dir
+                fi
             done
         done
     done
 done
 
+data_dir="${base_dir}/${dataset_version}/${resolution}/combine_sup_unsup/combine/"
+save_dir="${base_dir}/${dataset_version}/${resolution}/combine_sup_unsup/"
+python3 ./detect_position/code/summary_exp_result/summary_exp_result.py \
+-dd=$data_dir \
+-sd=$save_dir \
+-os=$overlap_strategy

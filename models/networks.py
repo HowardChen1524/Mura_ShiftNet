@@ -61,12 +61,12 @@ def init_weights(net, init_type='normal', gain=0.02):
 
 
 def init_net(net, init_type='normal', init_gain=0.02, gpu_ids=[]):
-    if len(gpu_ids) > 0:
-        assert(torch.cuda.is_available()) # 電腦的 GPU 能否被 PyTorch 調用
-        # net.to(gpu_ids[0])
-        net.to('cpu')
-        
-        # net = torch.nn.DataParallel(net, gpu_ids) # 用多个GPU来加速训练
+    if gpu_ids == "-1":
+        net.to(torch.device('cpu'))
+    else:
+        net.to(torch.device(f'cuda:{gpu_ids}'))
+    
+    # net = torch.nn.DataParallel(net, gpu_ids) # 用多个GPU来加速训练
     
     init_weights(net, init_type, gain=init_gain) # 初始化權重
     return net

@@ -47,8 +47,10 @@ def initail_setting():
   opt.nThreads = 1   # test code only supports nThreads = 1
   opt.batchSize = 1  # test code only supports batchSize = 1
   opt.serial_batches = True  # no shuffle
-  opt.results_dir = f"./detect_position/{opt.data_version}/{opt.resolution}/sup_gradcam/{opt.sup_model_version}/{opt.sup_gradcam_th}"
-
+  if opt.sup_th_strategy == 'fixed':
+    opt.results_dir = f"./detect_position/{opt.data_version}/{opt.resolution}/sup_gradcam/{opt.sup_model_version}/fixed/{opt.sup_gradcam_th}/imgs"
+  elif opt.sup_th_strategy == 'dynamic':
+    opt.results_dir = f"./detect_position/{opt.data_version}/{opt.resolution}/sup_gradcam/{opt.sup_model_version}/dynamic/{opt.top_k:.2f}/imgs"
   mkdir(opt.results_dir)
   set_seed(2022)
   
@@ -89,50 +91,32 @@ def supervised_model_gradcam(opt, gpu):
 
     for x, y, n in tqdm(dataloader):
         grayscale_cam.append(cam(input_tensor=x, aug_smooth=False, eigen_smooth=False))
-
-    # print(grayscale_cam[0])
-    # print(grayscale_cam[0].shape)
-    # conf = cv2.resize(grayscale_cam[0][0], (512,512), interpolation=cv2.INTER_NEAREST)
-    # print(conf.shape)
-
-    # raise
-
     
-
+    top_k = opt.top_k
     for index, (cam, rgb_img) in enumerate(zip(grayscale_cam, rgb_images)):
-        # rgb_img = fast_tran(rgb_img).permute(1, 2, 0).numpy()
-        # cam_image = show_cam_on_image(rgb_img, cam[0])
-        # cam_image = Image.fromarray(cv2.cvtColor(cam_image, cv2.COLOR_BGR2RGB))
+        
         name = test_files[index]
-        cam_discrete = cam[0] > opt.sup_gradcam_th
+        if opt.sup_th_strategy == 'dynamic':
+            num_pixels = cam[0].flatten().shape[0]
+            print(num_pixels)
+            print(top_k)
+            num_top_pixels = int(num_pixels * top_k)
+            filter = np.partition(cam[0].flatten(), -num_top_pixels)[-num_top_pixels]
+            print(f"Threshold: {filter}")
+            cam_discrete = cam[0] > filter
+            
+        elif opt.sup_th_strategy == 'fixed':
+            cam_discrete = cam[0] > opt.sup_gradcam_th
+
         mask = np.ones((256, 256), dtype='uint8')*255
         mask[cam_discrete == False] = 0
-        # origin_img = rgb_img.copy()
-        # ret, thresh = cv2.threshold(mask, 100, 255, 0)
-        # contours, _ = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-        # for cnt in contours:
-        #     cv2.drawContours(origin_img, [cnt], 0, (0, 255, 0), 1)
-        
-        # rgb_img = rgb_img[index]
-        # print(cam_discrete)
+            
         if opt.resolution == 'resized':
             RESOLUTION = (512,512)
         else:
             RESOLUTION = (1920,1080)
         mask = Image.fromarray(mask).resize(RESOLUTION, Image.Resampling.NEAREST).convert('L')
         mask.save(join_path(opt.results_dir, name))
-        # cam_image.show()
-        # plt.figure(figsize=(10, 3))
-        # plt.suptitle(name)
-        # plt.subplot(1, 3, 1)
-        # plt.imshow(origin_img)
-        # plt.subplot(1, 3, 2)
-        # plt.imshow(cam_image)
-        # plt.subplot(1, 3, 3)
-        # plt.imshow(cam_discrete)
-        # if not os.path.exists(result_dir+'/origin/'):
-        #     os.makedirs(result_dir+'/origin/')
-        # plt.savefig(os.path.join(result_dir+'/origin/', f"gradcam_{name}.png"))
 
 if __name__ == '__main__':
   

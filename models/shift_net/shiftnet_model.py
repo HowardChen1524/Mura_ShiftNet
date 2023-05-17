@@ -42,8 +42,7 @@ class ShiftNetModel(BaseModel):
         self.mask_global[:, :, int(self.opt.loadSize/4): int(self.opt.loadSize/2) + int(self.opt.loadSize/4),\
                                 int(self.opt.loadSize/4): int(self.opt.loadSize/2) + int(self.opt.loadSize/4)] = 1 # (white)
 
-        if len(opt.gpu_ids) > 0:
-            self.mask_global = self.mask_global.to(self.device)
+        self.mask_global = self.mask_global.to(self.device)
 
         # load/define networks
         # self.ng_innerCos_list is the guidance loss list in netG inner layers.
@@ -454,6 +453,7 @@ class ShiftNetModel(BaseModel):
             num_pixels = patches_combined.numel()
             num_top_pixels = int(num_pixels * top_k)
             filter, _ = patches_combined.view(-1).kthvalue(num_pixels - num_top_pixels)
+            print(f"Theshold: {filter}")
             patches_combined[patches_combined>=filter] = 1
             patches_combined[patches_combined<filter] = -1
 
