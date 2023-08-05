@@ -1,7 +1,7 @@
 from PIL import Image, ImageEnhance
 import os
 # add contrast
-base_dir = '/home/mura/Mura_ShiftNet/detect_position/typec+b1/resized/actual_pos/bounding_box'
+base_dir = '/home/mura/mura_data/typed_demura/test_smura_wo_label'
 save_dir = './res'
 os.makedirs(save_dir, exist_ok=True)
 

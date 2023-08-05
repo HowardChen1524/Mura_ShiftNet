@@ -60,6 +60,7 @@ class AlignedDatasetSliding(BaseDataset):
             sigmaX = 0      # X 方向的标准差
             sigmaY = 0      # Y 方向的标准差
             img = cv2.GaussianBlur(img, ksize, sigmaX, sigmaY)
+            # pass
             
             
         A = Image.fromarray(cv2.cvtColor(img,cv2.COLOR_BGR2RGB))  
@@ -103,7 +104,7 @@ class AlignedDatasetSliding(BaseDataset):
         # sliding crop
         A_imgs = []
         _, h, w = A_img.size()
-        # print(h,w)
+        # print(h, w)
         y_flag = False
         for y in range(0, h, self.opt.crop_stride): # stride default 32
             if y_flag: break

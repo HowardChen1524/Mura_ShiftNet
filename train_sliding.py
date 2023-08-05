@@ -52,7 +52,7 @@ if __name__ == "__main__":
         
         for i, data in enumerate(dataset): # enumerate(dataset)每次都會讀入一個 mini-batch 的資料
             if i >= opt.fix_step:
-                print('Limit Step 5000')
+                print(f'Limit Step {opt.fix_step}')
                 break
 
             iter_start_time = time.time()
@@ -71,7 +71,7 @@ if __name__ == "__main__":
 
             bs, ncrops, c, h, w = data['M'].size()
             data['M'] = data['M'].view(-1, c, h, w)
-
+            
             # training
             model.set_input(data)  
             model.optimize_parameters()

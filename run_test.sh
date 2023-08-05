@@ -1,8 +1,6 @@
 #!/bin/bash
-# /hcds_vol/private/howard/mura_data/typecplus/img/
 
 checkpoints_dir="./log/Unsupervised/"
-# checkpoints_dir="../models/"
 results_dir="./exp_result/Unsupervised/"
 loadSize=64
 gpu_ids=0
@@ -12,7 +10,7 @@ declare -a measure_list=(
                         #  "SSIM"
                         #  "Feat"
                         #  "Style"
-                         "Content"
+                        #  "Content"
                         )
 crop_stride=32
 # resolution="resized"
@@ -26,7 +24,8 @@ which_epoch="300"
 
 # model_version="ShiftNet_SSIM_d23_4k"
 # model_version="ShiftNet_SSIM_d23_4k_step_5000_change_cropping"
-model_version="ShiftNet_SSIM_d23_4k_step_5000_cropping_fixed_ori_res_smooth"
+# model_version="ShiftNet_SSIM_d23_4k_step_5000_cropping_fixed_ori_res_smooth"
+model_version="ShiftNet_SSIM_typed_step_5000_cropping_fixed_ori_res_smooth"
 
 # model_version="ShiftNet_SSIM_d23_8k"
 # model_version="ShiftNet_SSIM_d23_8k_change_cropping"
@@ -36,13 +35,13 @@ model_version="ShiftNet_SSIM_d23_4k_step_5000_cropping_fixed_ori_res_smooth"
 
 # model_version="PEN-NET_d23_8k"
 
-dataset_version="d23_4k"
-unsup_test_normal_path="/home/sallylab/min/d23_merge/test/test_normal_4k/" # for unsupervised model
-unsup_test_smura_path="/home/sallylab/min/d23_merge/test/test_smura_4k/" # for unsupervised model
-# normal_num=5
-# smura_num=5
-normal_num=16295
-smura_num=181
+# dataset_version="d23_4k"
+# unsup_test_normal_path="/home/sallylab/min/d23_merge/test/test_normal_4k/" # for unsupervised model
+# unsup_test_smura_path="/home/sallylab/min/d23_merge/test/test_smura_4k/" # for unsupervised model
+# # normal_num=5
+# # smura_num=5
+# normal_num=16295
+# smura_num=181
 
 # dataset_version="typed"
 # unsup_test_normal_path="/home/sallylab/min/typed_normal/test/" # for unsupervised model
@@ -55,6 +54,12 @@ smura_num=181
 # unsup_test_smura_path="/home/sallylab/min/typed_no_blue/img/" # for unsupervised model
 # normal_num=40
 # smura_num=23
+
+dataset_version="typed_demura"
+unsup_test_normal_path="/home/mura/mura_data/typed_demura/train_normal/" # for unsupervised model
+unsup_test_smura_path="/home/mura/mura_data/typed_demura/test_smura_wo_label/" # for unsupervised model
+normal_num=10
+smura_num=26
 
 # dataset_version="d23_8k"
 # # sup_data_path="/hcds_vol/private/howard/mura_data/d23_merge/" # for supervised model
@@ -91,25 +96,25 @@ do
     --resolution=$resolution \
     --gpu_ids=$gpu_ids
 
-    python3 test_sliding.py \
-    --batchSize=1 \
-    --data_version=$dataset_version --loadSize=$loadSize --crop_stride=$crop_stride \
-    --model_version=$model_version --which_epoch=$which_epoch --measure_mode=$measure \
-    --checkpoints_dir=$checkpoints_dir --results_dir=$results_dir \
-    --normal_how_many=$normal_num --testing_normal_dataroot=$unsup_test_normal_path \
-    --smura_how_many=$smura_num --testing_smura_dataroot=$unsup_test_smura_path \
-    --resolution=$resolution \
-    --gpu_ids=$gpu_ids \
-    --mask_part
+    # python3 test_sliding.py \
+    # --batchSize=1 \
+    # --data_version=$dataset_version --loadSize=$loadSize --crop_stride=$crop_stride \
+    # --model_version=$model_version --which_epoch=$which_epoch --measure_mode=$measure \
+    # --checkpoints_dir=$checkpoints_dir --results_dir=$results_dir \
+    # --normal_how_many=$normal_num --testing_normal_dataroot=$unsup_test_normal_path \
+    # --smura_how_many=$smura_num --testing_smura_dataroot=$unsup_test_smura_path \
+    # --resolution=$resolution \
+    # --gpu_ids=$gpu_ids \
+    # --mask_part
 
-    python3 test_sliding.py \
-    --batchSize=1 \
-    --data_version=$dataset_version --loadSize=$loadSize --crop_stride=$crop_stride \
-    --model_version=$model_version --which_epoch=$which_epoch --measure_mode=$measure \
-    --checkpoints_dir=$checkpoints_dir --results_dir=$results_dir \
-    --normal_how_many=$normal_num --testing_normal_dataroot=$unsup_test_normal_path \
-    --smura_how_many=$smura_num --testing_smura_dataroot=$unsup_test_smura_path \
-    --resolution=$resolution \
-    --gpu_ids=$gpu_ids \
-    --pos_normalize 
+    # python3 test_sliding.py \
+    # --batchSize=1 \
+    # --data_version=$dataset_version --loadSize=$loadSize --crop_stride=$crop_stride \
+    # --model_version=$model_version --which_epoch=$which_epoch --measure_mode=$measure \
+    # --checkpoints_dir=$checkpoints_dir --results_dir=$results_dir \
+    # --normal_how_many=$normal_num --testing_normal_dataroot=$unsup_test_normal_path \
+    # --smura_how_many=$smura_num --testing_smura_dataroot=$unsup_test_smura_path \
+    # --resolution=$resolution \
+    # --gpu_ids=$gpu_ids \
+    # --pos_normalize 
 done

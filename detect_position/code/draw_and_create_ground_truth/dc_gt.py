@@ -77,7 +77,7 @@ os.makedirs(save_dir, exist_ok=True)
 os.makedirs(join_path(save_dir, f'bounding_box'), exist_ok=True)
 os.makedirs(join_path(save_dir, f'ground_truth'), exist_ok=True)
 
-img_dir = join_path(data_dir, f'{dataset_version}/img')
+img_dir = join_path(data_dir, f'{dataset_version}/imgs')
 img_list = glob(f"{join_path(img_dir, '*png')}")
 for img_path in img_list:
     fn = img_path.split('/')[-1]

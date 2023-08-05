@@ -524,9 +524,9 @@ class ShiftNetModel(BaseModel):
         return result
     
     def export_combined_diff_img_opencv(self, img, name, save_path):
-        mkdir(save_path)             
+        mkdir(save_path)        
         cv2.imwrite(os.path.join(save_path, name), img)
-
+        
     def export_inpaint_imgs(self, output, save_path, img_type):
         if img_type == 0:
             save_path =  os.path.join(save_path, 'real')
@@ -544,7 +544,7 @@ class ShiftNetModel(BaseModel):
             else:
                 # pil_img.save(os.path.join(save_path,f"{idx}.png"))
                 pil_img_en = enhance_img(pil_img)
-                pil_img_en.save(os.path.join(save_path,f"en_{idx}.png"))
+                pil_img_en.save(os.path.join(save_path, f"en_{idx}.png"))
 
     '''
     for compute rec anomaly score
