@@ -18,7 +18,7 @@ class BaseOptions():
         parser.add_argument('--add_mask2input', type=int, default=1, help='If True, It will add the mask as a fourth dimension over input space')
         parser.add_argument('--batchSize', type=int, default=1, help='input batch size')
         parser.add_argument('--serial_batches', action='store_true', help='if true, takes images in order to make batches, otherwise takes them randomly')
-        parser.add_argument('--nThreads', default=2, type=int, help='# threads for loading data')
+        parser.add_argument('--nThreads', default=1, type=int, help='# threads for loading data')
         
         # Model
         parser.add_argument('--model_version', type=str, help='model_version name')

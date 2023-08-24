@@ -47,11 +47,6 @@ def initail_setting():
   opt.nThreads = 1   # test code only supports nThreads = 1
   opt.batchSize = 1  # test code only supports batchSize = 1
   opt.serial_batches = True  # no shuffle
-  if opt.sup_th_strategy == 'fixed':
-    opt.results_dir = f"./detect_position/{opt.data_version}/{opt.resolution}/sup_gradcam/{opt.sup_model_version}/fixed/{opt.sup_gradcam_th}/imgs"
-  elif opt.sup_th_strategy == 'dynamic':
-    opt.results_dir = f"./detect_position/{opt.data_version}/{opt.resolution}/sup_gradcam/{opt.sup_model_version}/dynamic/{opt.top_k:.2f}/imgs"
-  mkdir(opt.results_dir)
   set_seed(2022)
   
   return opt, opt.gpu_ids[0]
@@ -96,18 +91,7 @@ def supervised_model_gradcam(opt, gpu):
     for index, (cam, rgb_img) in enumerate(zip(grayscale_cam, rgb_images)):
         
         name = test_files[index]
-        if opt.sup_th_strategy == 'dynamic':
-            num_pixels = cam[0].flatten().shape[0]
-            print(num_pixels)
-            print(top_k)
-            num_top_pixels = int(num_pixels * top_k)
-            filter = np.partition(cam[0].flatten(), -num_top_pixels)[-num_top_pixels]
-            print(f"Threshold: {filter}")
-            cam_discrete = cam[0] > filter
-            
-        elif opt.sup_th_strategy == 'fixed':
-            cam_discrete = cam[0] > opt.sup_gradcam_th
-
+        cam_discrete = cam[0] > opt.sup_gradcam_th
         mask = np.ones((256, 256), dtype='uint8')*255
         mask[cam_discrete == False] = 0
             
@@ -115,8 +99,10 @@ def supervised_model_gradcam(opt, gpu):
             RESOLUTION = (512,512)
         else:
             RESOLUTION = (1920,1080)
-        mask = Image.fromarray(mask).resize(RESOLUTION, Image.Resampling.NEAREST).convert('L')
-        mask.save(join_path(opt.results_dir, name))
+        mask = Image.fromarray(mask).resize(RESOLUTION, Image.Resampling.BILINEAR).convert('L')
+        save_path = os.path.join(opt.results_dir, 'img')
+        mkdir(save_path)
+        mask.save(join_path(save_path, name))
 
 if __name__ == '__main__':
   

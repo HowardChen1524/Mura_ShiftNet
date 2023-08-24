@@ -257,7 +257,7 @@ class ShiftNetModel(BaseModel):
         else:
             raise ValueError("Please choose one measure mode!")
         
-    def visualize_diff(self, mode=None, fn=None):
+    def visualize_diff(self, fn=None):
         model_pred_t, combine_t, denoise_t, export_t = 0,0,0,0
 
         with torch.no_grad():
@@ -269,9 +269,7 @@ class ShiftNetModel(BaseModel):
         
         diff_B = self.compute_diff(real_B, fake_B) 
         
-        # plot_img_diff_hist(gray_diff_B.detach().cpu().numpy().flatten(), os.path.join(self.opt.results_dir, f'diff_hist/{fn}'), self.opt.measure_mode, False)
-
-        patches, combine_t, denoise_t, export_t = self.combine_patches(fn, diff_B, self.opt.results_dir, self.opt.overlap_strategy)
+        combine_t, denoise_t, export_t = self.create_visualize_image(fn, diff_B, self.opt.results_dir)
 
         # self.export_inpaint_imgs(real_B, os.path.join(self.opt.results_dir, f'ori_diff_patches/{fn}'), 0) # 0 true, 1 fake
         # self.export_inpaint_imgs(fake_B, os.path.join(self.opt.results_dir, f'ori_diff_patches/{fn}'), 1) # 0 true, 1 fake
@@ -279,19 +277,38 @@ class ShiftNetModel(BaseModel):
 
         return (model_pred_t, combine_t, denoise_t, export_t)
     
-    def get_diff_res(self):
-        with torch.no_grad():
-            model_pred_t = self.forward()
-            print(f"model inpainting time cost: {model_pred_t}")
+    def create_visualize_image(self, fn, patches, save_dir):
+        top_k = self.opt.top_k
 
-        fake_B = self.fake_B.detach() # Inpaint
-        real_B = self.real_B # Original
+        start_time = time.time()
+        combine_t = time.time() - start_time
+        patches_combined = self.combine_patches(patches)
+        print(f"combine time cost: {combine_t}")
+
+        patches_thesholding = self.top_percent_thesholding(patches_combined, top_k)
+
+        start_time = time.time()
+        patches_denoise = self.remove_small_areas(patches_thesholding)
+        denoise_t = time.time() - start_time
+        print(f"denoise time cost: {denoise_t}")
+
+        if self.opt.isPadding:
+            # crop flip part
+            patches_denoise = patches_denoise[self.PADDING_PIXEL:-self.PADDING_PIXEL, self.PADDING_PIXEL:-self.PADDING_PIXEL]
+            pad_width = ((self.EDGE_PIXEL, self.EDGE_PIXEL), (self.EDGE_PIXEL, self.EDGE_PIXEL))  # 上下左右各填充6个元素
+            patches_res = np.pad(patches_denoise, pad_width, mode='constant', constant_values=0)
         
-        patches = self.compute_diff(real_B, fake_B) 
-        
-        patches_combined = torch.zeros((3, self.IMGH, self.IMGW), device=self.device)
+        start_time = time.time()
+        self.export_combined_diff_img(patches_res, fn, os.path.join(save_dir, 'img'))
+        export_t = time.time() - start_time
+        print(f"export time cost: {export_t}")
+            
+        return combine_t, denoise_t, export_t
+    
+    def combine_patches(self, patches):
+        image = torch.zeros((3, self.IMGH, self.IMGW), device=self.device)
         patches_count = torch.zeros((3, self.IMGH, self.IMGW), device=self.device)
-        patches_reshape = patches.view(self.num_h_crop,self.num_w_crop,3,self.opt.loadSize,self.opt.loadSize)
+        patches_reshape = patches.view(self.num_h_crop, self.num_w_crop, 3, self.opt.loadSize, self.opt.loadSize)
         ps = self.opt.loadSize # crop patch size
         sd = self.opt.crop_stride # crop stride
         idy = 0
@@ -303,182 +320,25 @@ class ShiftNetModel(BaseModel):
                 crop_x = idx*sd
                 if (idx*sd+ps) >= self.IMGW:
                     crop_x = self.IMGW-ps     
-                patches_combined[:, crop_y:crop_y+ps, crop_x:crop_x+ps] += patches_reshape[idy][idx]
+                image[:, crop_y:crop_y+ps, crop_x:crop_x+ps] += patches_reshape[idy][idx]
                 patches_count[:, crop_y:crop_y+ps, crop_x:crop_x+ps] += 1.0
 
-        patches_combined = patches_combined / patches_count
+        image = image / patches_count
         
-        # RGB to Gray
-        patches_combined = rgb_to_grayscale(patches_combined)
-        patches_combined = patches_combined[0]
-        
-        if self.opt.isPadding:
-            # crop flip part
-            patches_combined = patches_combined[self.PADDING_PIXEL:-self.PADDING_PIXEL, self.PADDING_PIXEL:-self.PADDING_PIXEL]
-            pad_width = ((self.EDGE_PIXEL, self.EDGE_PIXEL), (self.EDGE_PIXEL, self.EDGE_PIXEL))  # 上下左右各填充6个元素
-            patches_combined = np.pad(patches_combined, pad_width, mode='constant', constant_values=0)
-        
-        return patches_combined
-    
-    def combine_patches(self, fn, patches, save_dir, overlap_strategy):
-        
-        if overlap_strategy == 'union':
-            
-            save_dir = os.path.join(save_dir, 'union')
+        image = rgb_to_grayscale(image)
+        return image
 
-            # combine patches
-            start_time = time.time()
-            patches = rgb_to_grayscale(patches) # RGB to Gray
-            threshold = self.opt.binary_threshold # thresholding
-            patches[patches>=threshold] = 1
-            patches[patches<threshold] = -1
+    def top_percent_thesholding(self, image, top_k):
+        # filter top five percent pixel value
+        num_pixels = image.numel()
+        num_top_pixels = math.ceil(num_pixels * top_k)
+        filter, _ = image.view(-1).kthvalue(num_pixels - num_top_pixels)
+        print(f"Theshold: {filter}")
+        image[image>=filter] = 1
+        image[image<filter] = -1
+        return image
 
-            patches_reshape = patches.view(self.num_h_crop,self.num_w_crop,1,self.opt.loadSize,self.opt.loadSize)
-            patches_combined = torch.zeros((1, self.IMGH, self.IMGW), device=self.device)
-            ps = self.opt.loadSize # crop patch size
-            sd = self.opt.crop_stride # crop stride
-            idy = 0
-            y_flag = False
-            for y in range(0, self.IMGH, sd):
-                # print(f"y {y}")
-                if y_flag: break
-                if (y + ps) >= self.IMGH:
-                    y = self.IMGH-self.opt.loadSize
-                    y_flag = True
-                idx = 0
-                x_flag = False
-                for x in range(0, self.IMGW, sd):
-                    # print(f"x {x}")
-                    if x_flag: break
-                    if (x + ps) > self.IMGW:
-                        x = self.IMGW-self.opt.loadSize
-                        x_flag = True
-                    # 判斷是否 最上 y=0 & 最左=0 & 最右x=14
-                    if idy == 0: # 只需考慮左右重疊
-                        if idx == 0: # 最左邊直接先放
-                            patches_combined[:, y:y+ps, x:x+ps] = patches_reshape[idy][idx]
-                        else: 
-                            # 左半聯集 
-                            # 先相加，value only 1, -1 結果只會有 2, -2, 0
-                            patches_combined[:, y:y+ps, x:x+(ps-sd)] = \
-                                            patches_combined[:, y:y+ps, x:x+(ps-sd)] + patches_reshape[idy][idx][:, :, :(ps-sd)] 
-                            # 0, 2 = 1 (or==True), -2 = -1 (or==False)
-                            # print(patches_combined[:, y:y+ps, x:x+sd].shape)
-                            # print(patches_combined[:, y:y+ps, x:x+sd])
-                            # print(patches_combined[:, y:y+ps, x:x+sd].unique())
-                            patches_combined[:, y:y+ps, x:x+(ps-sd)][patches_combined[:, y:y+ps, x:x+(ps-sd)]!=-2] = 1 # or=True 0,2
-                            patches_combined[:, y:y+ps, x:x+(ps-sd)][patches_combined[:, y:y+ps, x:x+(ps-sd)]==-2] = -1  # or=False -2
-                            # print(patches_combined[:, y:y+ps, x:x+sd].shape)
-                            # print(patches_combined[:, y:y+ps, x:x+sd])
-                            # print(patches_combined[:, y:y+ps, x:x+sd].unique())
-                            # 右半，直接放
-                            patches_combined[:, y:y+ps, x+(ps-sd):x+ps] = \
-                                            patches_reshape[idy][idx][:, :, (ps-sd):ps]                           
-                    else: # 還需考慮上下重疊
-                        if idx == 0: 
-                            # 上方聯集
-                            patches_combined[:, y:y+(ps-sd), x:x+ps] = \
-                                            patches_combined[:, y:y+(ps-sd), x:x+ps] + patches_reshape[idy][idx][:, :(ps-sd), :] 
-                            patches_combined[:, y:y+(ps-sd), x:x+ps][patches_combined[:, y:y+(ps-sd), x:x+ps]!=-2] = 1 # or==True 0,2
-                            patches_combined[:, y:y+(ps-sd), x:x+ps][patches_combined[:, y:y+(ps-sd), x:x+ps]==-2] = -1  # or=False -2
-                            # 下方，直接放
-                            patches_combined[:, y+(ps-sd):y+ps, x:x+ps] = \
-                                            patches_reshape[idy][idx][:, (ps-sd):ps, :]
-                        else:
-                            # 上方聯集
-                            patches_combined[:, y:y+(ps-sd), x:x+ps] = \
-                                            patches_combined[:, y:y+(ps-sd), x:x+ps] + patches_reshape[idy][idx][:, :(ps-sd), :] 
-                            patches_combined[:, y:y+(ps-sd), x:x+ps][patches_combined[:, y:y+(ps-sd), x:x+ps]!=-2] = 1 # or==True 0,2
-                            patches_combined[:, y:y+(ps-sd), x:x+ps][patches_combined[:, y:y+(ps-sd), x:x+ps]==-2] = -1  # or=False -2
-                            # 下左聯集
-                            patches_combined[:, y+(ps-sd):y+ps, x:x+(ps-sd)] = \
-                                            patches_combined[:, y+(ps-sd):y+ps, x:x+(ps-sd)] + patches_reshape[idy][idx][:, (ps-sd):ps, :(ps-sd)] 
-                            patches_combined[:, y+(ps-sd):y+ps, x:x+(ps-sd)][patches_combined[:, y+(ps-sd):y+ps, x:x+(ps-sd)]!=-2] = 1 # or==True 0,2
-                            patches_combined[:, y+(ps-sd):y+ps, x:x+(ps-sd)][patches_combined[:, y+(ps-sd):y+ps, x:x+(ps-sd)]==-2] = -1  # or=False -2
-                            # 下右半直接放
-                            patches_combined[:, y+(ps-sd):y+ps, x+(ps-sd):x+ps] = \
-                                            patches_reshape[idy][idx][:, (ps-sd):ps, (ps-sd):ps]   
-                    idx+=1
-                idy+=1
-            combine_t = time.time() - start_time
-            print(f"combine time cost: {combine_t}")
-
-            # denoise patches
-            denoise_t=0
-            start_time = time.time()
-            patches_combined = self.remove_small_areas_opencv(patches_combined)
-            denoise_t = time.time() - start_time
-            print(f"denoise time cost: {denoise_t}")
-            
-            if self.opt.isPadding:
-                # crop flip part
-                patches_combined = patches_combined[self.PADDING_PIXEL:-self.PADDING_PIXEL, self.PADDING_PIXEL:-self.PADDING_PIXEL]
-                pad_width = ((self.EDGE_PIXEL, self.EDGE_PIXEL), (self.EDGE_PIXEL, self.EDGE_PIXEL))  # 上下左右各填充6个元素
-                patches_combined = np.pad(patches_combined, pad_width, mode='constant', constant_values=0)
-            
-            start_time = time.time()
-            self.export_combined_diff_img_opencv(patches_combined, fn, os.path.join(save_dir, f'{threshold:.4f}_diff_pos_area_{self.opt.min_area}/imgs'))
-            export_t = time.time() - start_time
-            print(f"export time cost: {export_t}")
-        elif overlap_strategy == 'average':
-            save_dir = os.path.join(save_dir, 'average')
-            
-            # combine patches
-            start_time = time.time()
-            top_k = self.opt.top_k  # set diffence value top-k
-
-            patches_combined = torch.zeros((3, self.IMGH, self.IMGW), device=self.device)
-            patches_count = torch.zeros((3, self.IMGH, self.IMGW), device=self.device)
-            patches_reshape = patches.view(self.num_h_crop,self.num_w_crop,3,self.opt.loadSize,self.opt.loadSize)
-            ps = self.opt.loadSize # crop patch size
-            sd = self.opt.crop_stride # crop stride
-            idy = 0
-            for idy in range(0, self.num_h_crop):
-                crop_y = idy*sd
-                if (idy*sd+ps) >= self.IMGH:
-                    crop_y = self.IMGH-ps
-                for idx in range(0, self.num_w_crop):  
-                    crop_x = idx*sd
-                    if (idx*sd+ps) >= self.IMGW:
-                        crop_x = self.IMGW-ps     
-                    patches_combined[:, crop_y:crop_y+ps, crop_x:crop_x+ps] += patches_reshape[idy][idx]
-                    patches_count[:, crop_y:crop_y+ps, crop_x:crop_x+ps] += 1.0
-
-            patches_combined = patches_combined / patches_count
-            
-            # RGB to Gray
-            patches_combined = rgb_to_grayscale(patches_combined)
-
-            # filter top five percent pixel value
-            num_pixels = patches_combined.numel()
-            num_top_pixels = int(num_pixels * top_k)
-            filter, _ = patches_combined.view(-1).kthvalue(num_pixels - num_top_pixels)
-            print(f"Theshold: {filter}")
-            patches_combined[patches_combined>=filter] = 1
-            patches_combined[patches_combined<filter] = -1
-
-            combine_t = time.time() - start_time
-            print(f"combine time cost: {combine_t}")
-
-            start_time = time.time()
-            patches_combined = self.remove_small_areas_opencv(patches_combined)
-            denoise_t = time.time() - start_time
-            print(f"denoise time cost: {denoise_t}")
-
-            if self.opt.isPadding:
-                # crop flip part
-                patches_combined = patches_combined[self.PADDING_PIXEL:-self.PADDING_PIXEL, self.PADDING_PIXEL:-self.PADDING_PIXEL]
-                pad_width = ((self.EDGE_PIXEL, self.EDGE_PIXEL), (self.EDGE_PIXEL, self.EDGE_PIXEL))  # 上下左右各填充6个元素
-                patches_combined = np.pad(patches_combined, pad_width, mode='constant', constant_values=0)
-            
-            start_time = time.time()
-            self.export_combined_diff_img_opencv(patches_combined, fn, os.path.join(save_dir, f'{top_k:.3f}_diff_pos_area_{self.opt.min_area}/imgs'))
-            export_t = time.time() - start_time
-            print(f"export time cost: {export_t}")
-            
-        return patches, combine_t, denoise_t, export_t
-    
-    def remove_small_areas_opencv(self, image):
+    def remove_small_areas(self, image):
         image = image.detach().cpu().numpy().transpose((1, 2, 0))
         image[image==-1] = 0
         image[image==1] = 255
@@ -523,7 +383,7 @@ class ShiftNetModel(BaseModel):
         result[result != 0] = 255
         return result
     
-    def export_combined_diff_img_opencv(self, img, name, save_path):
+    def export_combined_diff_img(self, img, name, save_path):
         mkdir(save_path)        
         cv2.imwrite(os.path.join(save_path, name), img)
         
