@@ -6,7 +6,7 @@ import torch
 from torch.nn import functional as F
 from torchvision.transforms.functional import rgb_to_grayscale
 from util import util
-from util.utils_howard import tensor2img, mkdir, enhance_img, plot_img_diff_hist
+from util.utils_howard import tensor2img, mkdir, enhance_img
 from models import networks
 from models.shift_net.base_model import BaseModel
 from piqa import SSIM
