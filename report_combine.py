@@ -12,7 +12,7 @@ from options.test_options import TestOptions
 from data.data_loader import CreateDataLoader
 from models import create_model
 
-from util.utils_howard import mkdir, \
+from Mura_ShiftNet.util.utils import mkdir, \
                               get_data_info, make_test_dataloader, evaluate, get_line_threshold, \
                               plot_score_distribution, plot_sup_unsup_scatter, plot_line_on_scatter, \
                               sup_unsup_prediction_spec_th, sup_unsup_prediction_spec_multi_th, \
@@ -25,13 +25,6 @@ def initail_setting():
     opt.nThreads = 1   # test code only supports nThreads = 1
     opt.batchSize = 1  # test code only supports batchSize = 1
     opt.serial_batches = True  # no shuffle
-    opt.no_flip = True  # no flip
-    opt.loadSize = opt.fineSize  # Do not scale!
-
-    # opt.results_dir = f"{opt.results_dir}/{opt.model_version}_with_SEResNeXt101_d23/{opt.data_version}/{opt.measure_mode}"
-    opt.results_dir = f"{opt.results_dir}/{opt.model_version}_with_Ensemble_d23/{opt.data_version}/{opt.measure_mode}"
-
-    mkdir(opt.results_dir)
 
     return opt, opt.gpu_ids[0]
   
@@ -66,21 +59,11 @@ def show_and_save_result(conf_sup, score_unsup, use_th, path, name):
             
             log_file.write(msg)
     else:
-        sup_res = find_sup_th(conf_sup, path)
         # ===== Auto find threshold line =====
         one_res, one_line_time = sup_unsup_prediction_auto_th(true_label, all_conf_sup, all_score_unsup, path)
-        two_res, two_line_time = sup_unsup_prediction_auto_multi_th(true_label, all_conf_sup, all_score_unsup, path)
-        sup_unsup_svm(true_label, all_conf_sup, all_score_unsup, path)
         log_name = os.path.join(path, f'{result_name}_find_th_log.txt')
         msg = ''
         with open(log_name, "w") as log_file:
-            msg += f"=============== supervised ===================\n"
-            msg += f"tnr0.987 recall: {sup_res['tnr0.987_recall']}\n"
-            msg += f"tnr0.987 precision: {sup_res['tnr0.987_precision']}\n"
-            msg += f"tnr0.996 recall: {sup_res['tnr0.996_recall']}\n"
-            msg += f"tnr0.996 precision: {sup_res['tnr0.996_precision']}\n"
-            msg += f"tnr0.998 recall: {sup_res['tnr0.998_recall']}\n"
-            msg += f"tnr0.998 precision: {sup_res['tnr0.998_precision']}\n"
             msg += f"=============== one line ===================\n"
             msg += f"one line time: {one_line_time}\n"
             msg += f"tnr0.987 recall: {one_res['tnr0.987_recall']}\n"
@@ -89,17 +72,9 @@ def show_and_save_result(conf_sup, score_unsup, use_th, path, name):
             msg += f"tnr0.996 precision: {one_res['tnr0.996_precision']}\n"
             msg += f"tnr0.998 recall: {one_res['tnr0.998_recall']}\n"
             msg += f"tnr0.998 precision: {one_res['tnr0.998_precision']}\n"
-            msg += f"=============== two line ===================\n"
-            msg += f"two line time: {two_line_time}\n"
-            msg += f"tnr0.987 recall: {two_res['tnr0.987_recall']}\n"
-            msg += f"tnr0.987 precision: {two_res['tnr0.987_precision']}\n"
-            msg += f"tnr0.996 recall: {two_res['tnr0.996_recall']}\n"
-            msg += f"tnr0.996 precision: {two_res['tnr0.996_precision']}\n"
-            msg += f"tnr0.998 recall: {two_res['tnr0.998_recall']}\n"
-            msg += f"tnr0.998 precision: {two_res['tnr0.998_precision']}\n"
             log_file.write(msg)
 
-    plot_line_on_scatter(conf_sup, score_unsup, path)
+    # plot_line_on_scatter(conf_sup, score_unsup, path)
 
 def model_prediction_using_record(opt):
     res_sup = defaultdict(dict)
@@ -112,8 +87,8 @@ def model_prediction_using_record(opt):
         for t in ['n','s']:
             res_unsup[l][t] = None
 
-    sup_df = pd.read_csv(os.path.join(opt.conf_csv_dir, 'sup_conf.csv'))
-    unsup_df = pd.read_csv(os.path.join(opt.score_csv_dir, 'unsup_score_mean.csv'))
+    sup_df = pd.read_csv(opt.sup_conf_score)
+    unsup_df = pd.read_csv(opt.unsup_ano_score)
     merge_df = sup_df.merge(unsup_df, left_on='name', right_on='name')
     
     normal_filter = (merge_df['label_x']==0) & (merge_df['label_y']==0)
@@ -123,19 +98,19 @@ def model_prediction_using_record(opt):
     for l, c in zip(['conf','label','files'],['conf','label_x','name']):
         for t, f in zip(['n', 's'],[normal_filter,smura_filter]):
             res_sup[l][t] = merge_df[c][f].tolist()
-    # print(res_sup['files']['n'][:10])
+    print(res_sup['files']['n'][:10])
 
     for l, c in zip(['score','label','files'],['score_mean','label_y','name']):
         for t, f in zip(['n', 's'],[normal_filter, smura_filter]):
             res_unsup[l][t] = np.array(merge_df[c][f].tolist())
-    # print(res_unsup['files']['n'][:10])
-    
-    # temp
-    all_df = pd.read_csv(os.path.join(opt.score_csv_dir, 'unsup_score_all.csv'))
-    normal_filter = (all_df['label']==0)
-    smura_filter = (all_df['label']==1)
-    res_unsup['all']['n'] = np.array(all_df['score'][normal_filter].tolist())
-    res_unsup['all']['s'] = np.array(all_df['score'][smura_filter].tolist())
+    print(res_unsup['files']['n'][:10])
+    # raise
+    # # temp
+    # all_df = pd.read_csv(os.path.join(opt.score_csv_dir, 'unsup_score_all.csv'))
+    # normal_filter = (all_df['label']==0)
+    # smura_filter = (all_df['label']==1)
+    # res_unsup['all']['n'] = np.array(all_df['score'][normal_filter].tolist())
+    # res_unsup['all']['s'] = np.array(all_df['score'][smura_filter].tolist())
     
     return res_sup, res_unsup
 
@@ -145,8 +120,7 @@ if __name__ == '__main__':
     
     res_sup, res_unsup = model_prediction_using_record(opt)
     
-    # result_name = f"{opt.measure_mode}_SEResNeXt101"
-    result_name = f"{opt.model_version}_{opt.measure_mode}_Ensemble"
+    result_name = f"Combined"
     
     show_and_save_result(res_sup, res_unsup, opt.using_threshold, opt.results_dir, result_name)
     

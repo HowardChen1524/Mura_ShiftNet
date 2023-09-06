@@ -6,7 +6,7 @@ import torch
 from torch.nn import functional as F
 from torchvision.transforms.functional import rgb_to_grayscale
 from util import util
-from util.utils_howard import tensor2img, mkdir, enhance_img
+from util.utils import tensor2img, mkdir, enhance_img
 from models import networks
 from models.shift_net.base_model import BaseModel
 from piqa import SSIM
@@ -455,7 +455,7 @@ class ShiftNetModel(BaseModel):
         real_B = self.real_B # Original
 
         # ======Anomaly score======
-        if self.opt.mask_part or self.opt.measure_mode == 'Discounted_L1':
+        if (self.opt.mask_part == 1) or (self.opt.measure_mode == 'Discounted_L1'):
             fake_B = fake_B[:, :, self.rand_t:self.rand_t+self.opt.loadSize//2, \
                                         self.rand_l:self.rand_l+self.opt.loadSize//2]
             real_B = real_B[:, :, self.rand_t:self.rand_t+self.opt.loadSize//2, \

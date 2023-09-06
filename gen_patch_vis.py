@@ -4,7 +4,7 @@ from options.test_options import TestOptions
 
 from data.data_loader import CreateDataLoader
 from models import create_model
-from util.utils_howard import mkdir, set_seed
+from Mura_ShiftNet.util.utils import mkdir, set_seed
                               
 def initail_setting():
     opt = TestOptions().parse()

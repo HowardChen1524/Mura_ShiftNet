@@ -15,18 +15,16 @@ class TestOptions(BaseOptions):
         parser.add_argument('--how_many', type=int, default=0, help='how many test images to run')
         parser.add_argument('--normal_how_many', type=int, default=0, help='how many test images to run')
         parser.add_argument('--smura_how_many', type=int, default=0, help='how many test images to run')
-        parser.add_argument('--conf_csv_dir', type=str, help='supervised or ensemble')
-        parser.add_argument('--score_csv_dir', type=str, help='using record to test')
+        parser.add_argument('--sup_conf_score', type=str, help='supervised or ensemble')
+        parser.add_argument('--unsup_ano_score', type=str, help='using record to test')
         # model 
         parser.add_argument('--sup_model_version', type=str)
         parser.add_argument('--sup_model_path', type=str)
         parser.add_argument('--which_epoch', type=str, default='latest', help='which epoch to load (shiftnet model)? set to latest to use latest cached model')
         # test
         parser.add_argument('--measure_mode', type=str)
-        parser.add_argument('--mask_part', action='store_true', help='')
+        parser.add_argument('--mask_part', type=int, help='')
         parser.add_argument('--pos_normalize', action='store_true', help='do position normalize')
-        parser.add_argument('--using_threshold', action='store_true', help='using threshold to do blind test')
-        parser.add_argument('--using_record', action='store_true', help='using record to test')
         # visual position
         parser.add_argument('--overlap_strategy', type=str, help='[union|average]')
         parser.add_argument('--min_area', type=int, help='patch combine filter min area')

@@ -12,7 +12,7 @@ import cv2
 import pandas as pd
 import numpy as np
 
-from util.utils_howard import tensor2img, enhance_img, tjwei_augumentation
+from Mura_ShiftNet.util.utils import tensor2img, enhance_img, tjwei_augumentation
 from torchvision.transforms.functional import InterpolationMode
     
 W, H = 1920, 1080

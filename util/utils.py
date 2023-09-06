@@ -177,7 +177,10 @@ def predict_report(preds, labels, names):
 def get_curve_df(labels_res, preds_res):
     pr_list = []
 
-    for i in tqdm(np.linspace(0, 1, num=10001)):
+    # for i in tqdm(np.linspace(0, 1, num=10001)): # supervised
+    # for i in tqdm(np.linspace(9.5e-06, 1.2e-05, num=10001)): # shiftnet d23 8k fix crop mse
+    # for i in tqdm(np.linspace(9.5e-05, 1.1e-04, num=10001)): # shiftnet d23 8k crop mask mse
+    for i in tqdm(np.linspace(6e-04, 1e-03, num=10001)): # skipgan d23 8k crop mse
         pr_result = calc_metric(labels_res, preds_res, i)
         pr_list.append(pr_result)
 
@@ -250,12 +253,14 @@ def calc_matrix(labels_res, preds_res):
     
 def get_data_info(t, l, image_info, data_dir, csv_path):
     res = []
-    # image_info = image_info[(image_info["train_type"] == t) & (image_info["label"] == l) & (image_info["PRODUCT_CODE"] == "T850MVR05")]
-    image_info = image_info[(image_info["batch"] >= 24) & (image_info["batch"] <= 25) & (image_info["label"] == l) & (image_info["PRODUCT_CODE"] == "T850MVR05")]
+    image_info = image_info[(image_info["train_type"] == t) & (image_info["label"] == l) & (image_info["PRODUCT_CODE"] == "T850MVR05")]
+    # image_info = image_info[(image_info["batch"] >= 24) & (image_info["batch"] <= 25) & (image_info["label"] == l) & (image_info["PRODUCT_CODE"] == "T850MVR05")]
     # print(image_info)
     
     for path, img, label, JND in zip(image_info["path"],image_info["name"],image_info["label"],image_info["MULTI_JND"]):
         img_path = os.path.join(os.path.join(data_dir), path, img)
+        print(img_path)
+        
         res.append([img_path, label, JND, t, img])
     X = []
     Y = []
@@ -318,11 +323,21 @@ def find_sup_th(res, save_path):
     # model_pred_result = predict_report(res['preds_res']['all'], res['labels_res']['all'], res['files_res']['all'])
     # model_pred_result.to_csv(os.path.join(save_path, "sup_model_pred_result.csv"), index=None)
     # print("model predict record finished!")
-    all_label = res['label']['n'] + res['label']['s']
-    all_conf = res['conf']['n'] + res['conf']['s']
+    all_label = np.concatenate([res['label']['n'], res['label']['s']])
+    all_conf = np.concatenate([res['conf']['n'], res['conf']['s']])
     res, model_report, curve_df = calc_matrix(all_label, all_conf)
     model_report.to_csv(os.path.join(save_path, "sup_model_report.csv"))
     curve_df.to_csv(os.path.join(save_path, "sup_model_precision_recall_curve.csv"))
+    print("model report record finished!")
+    
+    return res
+
+def find_unsup_th(res, save_path):
+    all_label = np.concatenate([res['label']['n'], res['label']['s']])
+    all_score = np.concatenate([res['score']['n'], res['score']['s']])
+    res, model_report, curve_df = calc_matrix(all_label, all_score)
+    model_report.to_csv(os.path.join(save_path, "unsup_model_report.csv"))
+    curve_df.to_csv(os.path.join(save_path, "unsup_model_precision_recall_curve.csv"))
     print("model report record finished!")
     
     return res
@@ -560,17 +575,21 @@ def sup_unsup_prediction_auto_th(labels, all_conf_sup, all_score_unsup, path):
     # m 0~-50000 stride = 0.01 
     # b 0~20 stride = 0.1
     start_time = time.time()
+    for times_m in range(0, 1, 1): # 次數
     # for times_m in range(0, 501, 1): # 次數
     # for times_m in range(0, 251, 1): # resunet
-    # for times_m in range(0, 1000, 1): # skipgan
-    for times_m in range(0, 101, 1): # pennet
+    # for times_m in range(0, 10001, 1): # skipgan
+    # for times_m in range(0, 101, 1): # pennet
+        m=28300
         # m = (100)*times_m
         # m = (10)*times_m # resunet
         # m = (100)*times_m # skipgan
-        m = (1000)*times_m # pennet
-        # for times_b in range(0, 2001, 1): # 次數
-        for times_b in range(0, 1201, 1): # pennet
-            b = (0.01)*times_b
+        # m = (1000)*times_m # pennet
+        for times_b in range(0, 1, 1): # pennet
+        # for times_b in range(0, 5001, 1): # 次數
+        # for times_b in range(0, 1201, 1): # pennet
+            b=2.39
+            # b = (0.01)*times_b
             combined_scores = m*all_score_unsup + all_conf_sup
             tn, fp, fn, tp = confusion_matrix(y_true=labels, y_pred=(combined_scores >= b)).ravel()
             tnr = tn / (tn + fp)
@@ -1067,18 +1086,4 @@ def plot_sup_unsup_scatter(conf_sup, score_unsup, path, name):
     plt.scatter(n_x, n_y, s=5, c ="blue", alpha=0.2)
     plt.scatter(s_x, s_y, s=5, c ="red", alpha=0.2)
     plt.savefig(f"{path}/{name}_all_scatter.png")
-    plt.clf()
-
-def plot_img_diff_hist(img_pixel_list, save_dir, mode, isCenter):
-    # print(img_pixel_list.max())
-    # print(img_pixel_list.argmax())
-    # print(img_pixel_list.min())
-    # print(img_pixel_list.argmin())
-    # plt.hist(img_pixel_list, bins=50, range=[min(img_pixel_list), max(img_pixel_list)])
-    mkdir(save_dir)
-    plt.hist(img_pixel_list, bins=100)
-    if isCenter:
-        plt.savefig(os.path.join(save_dir, f'{mode}_mask_diff_hist.png'))
-    else:
-        plt.savefig(os.path.join(save_dir, f'{mode}_diff_hist.png'))
     plt.clf()

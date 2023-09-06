@@ -12,7 +12,7 @@ import cv2
 import pandas as pd
 import numpy as np
 
-from util.utils_howard import tensor2img, enhance_img
+from util.utils import tensor2img, enhance_img
 W, H = 1920, 1080
 EDGE_PIXEL = 6
 PADDING_PIXEL = 14
@@ -77,7 +77,7 @@ class AlignedDatasetSliding(BaseDataset):
 
         A_img = self.transform(A)
         
-        if (~self.opt.isTrain) and self.opt.isPadding: 
+        if (~self.opt.isTrain) and self.opt.isPadding == 1: 
             # pil_img = tensor2img(A_img)
             # pil_img = enhance_img(pil_img)
             # pil_img.save(f"{A_path.split('/')[-1]}_ori.png")
@@ -133,7 +133,7 @@ class AlignedDatasetSliding(BaseDataset):
             A_imgs = [A_imgs[crop_index] for crop_index in crop_index_list]
             
         A = torch.stack(A_imgs)
-    
+        
         mask = A.clone().zero_()
         
         # let B directly equals A

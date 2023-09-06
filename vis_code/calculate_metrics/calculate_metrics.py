@@ -9,21 +9,17 @@ import cv2
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-dd', '--data_dir', type=str, default=None, required=True)
-parser.add_argument('-gd', '--gt_dir', type=str, default=None, required=True)
+parser.add_argument('-sgd', '--seg_gt_dir', type=str, default=None, required=True)
 parser.add_argument('-sd', '--save_dir', type=str, default=None, required=True)
 parser.add_argument('-ir', '--isResize', type=int, default=None, required=True)
+parser.add_argument('-cd', '--csv_dir', type=str, default=None, required=True)
+parser.add_argument('-bgd', '--bb_gt_dir', type=str, default=None, required=True)
 
 def compute_recall_precision(y_true, y_pred):
     assert y_true.shape == y_pred.shape, "Error: Images have different shapes"
     tn, fp, fn, tp = confusion_matrix(y_true.ravel(), y_pred.ravel()).ravel()
-    if (tp + fn) == 0:
-        recall = 0.0
-    else:
-        recall = tp / (tp + fn)
-    if (tp + fp) == 0:
-        precision = 0.0
-    else:
-        precision = tp / (tp + fp)
+    precision = 0 if (tp + fp) == 0 else tp / (tp + fp)
+    recall = 0 if (tp + fn) == 0 else tp / (tp + fn)
     return recall, precision
 
 def dice_coefficient(img1, img2):    
@@ -40,14 +36,7 @@ def dice_coefficient(img1, img2):
 def join_path(p1,p2):
     return os.path.join(p1,p2)
 
-if __name__ == '__main__':
-    args = parser.parse_args()
-    data_dir = args.data_dir
-    gt_dir = args.gt_dir
-    save_dir = args.save_dir
-    isResize = args.isResize
-    os.makedirs(save_dir, exist_ok=True)
-    
+def area_based_metric(gt_dir, data_dir, save_dir):
     dice_mean = defaultdict(float)
     recall_mean = defaultdict(float)
     precision_mean = defaultdict(float)
@@ -64,11 +53,6 @@ if __name__ == '__main__':
         gt_img = cv2.threshold(gt_img, thresh, 255, cv2.THRESH_BINARY)[1]/255
         diff_img = cv2.threshold(diff_img, thresh, 255, cv2.THRESH_BINARY)[1]/255
 
-        # print(gt_img.shape)
-        # print(diff_img.shape)
-        # print(np.unique(gt_img))
-        # print(np.unique(diff_img))
-        # raise
         dice = dice_coefficient(gt_img, diff_img)
         dice_mean[fn] = dice            
         recall, precision = compute_recall_precision(gt_img, diff_img)
@@ -87,6 +71,101 @@ if __name__ == '__main__':
     df_recall.to_csv(join_path(save_dir, f'recall_all.csv'),index=False)
     df_precision.to_csv(join_path(save_dir, f'precision_all.csv'),index=False)
 
+def calculate_iou(box1, box2):
+    # Calculate the intersection rectangle
+    x1 = max(box1[0], box2[0])
+    y1 = max(box1[1], box2[1])
+    x2 = min(box1[2], box2[2])
+    y2 = min(box1[3], box2[3])
+
+    # Calculate the area of intersection
+    intersection_area = max(0, x2 - x1 + 1) * max(0, y2 - y1 + 1)
+
+    # Calculate the area of the two boxes
+    box1_area = (box1[2] - box1[0] + 1) * (box1[3] - box1[1] + 1)
+    box2_area = (box2[2] - box2[0] + 1) * (box2[3] - box2[1] + 1)
+
+    # Calculate the IoU
+    iou = intersection_area / float(box1_area + box2_area - intersection_area)
+    return iou
+
+def count_successful_hits(ground_truth_boxes, predicted_boxes, threshold=0.3):
+    hits = 0
+
+    for gt_box in ground_truth_boxes:
+        for pred_box in predicted_boxes:
+            iou = calculate_iou(gt_box, pred_box)
+            if iou >= threshold:
+                hits += 1
+                break  # Break the loop to avoid double counting hits
+
+    return hits
+
+def defect_based_metric(csv_dir, data_dir, save_dir):
+    total_smura_num = 0
+    total_pred_num = 0
+    total_hit_num = 0
+    df = pd.read_csv(csv_dir)
+    for fn in os.listdir(data_dir):
+        print(fn)
+        # Load the images
+        thresh = 127
+        diff_img = cv2.imread(join_path(data_dir,fn), cv2.IMREAD_GRAYSCALE)
+        if isResize == 1:
+            diff_img = cv2.resize(diff_img, (512,512), interpolation=cv2.INTER_LINEAR)
+        diff_img = cv2.threshold(diff_img, thresh, 255, cv2.THRESH_BINARY)[1]
+
+        # Find contours in the binary mask
+        contours, _ = cv2.findContours(diff_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        # print(contours)
+        # Filter and extract bounding boxes
+        min_contour_area = 15 # Adjust this threshold as needed
+        predicted_boxes = []
+
+        for contour in contours:
+            if cv2.contourArea(contour) >= min_contour_area:
+                x, y, w, h = cv2.boundingRect(contour)
+                total_pred_num+=1
+                predicted_boxes.append((x, y, x + w, y + h))
+
+        # Print the predicted bounding box coordinates
+        # print(predicted_boxes)
+        ground_truth_boxes = []
+        gt_df = df[df['fn']==fn]
+        for row in gt_df.itertuples():
+            total_smura_num+=1
+            ground_truth_boxes.append((int(round(row.x0/3.75,0)), int(round(row.y0/2.109375,0)), int(round(row.x1/3.75,0)), int(round(row.y1/2.109375,0))))
+        # print(ground_truth_boxes)
+
+        threshold = 0.3
+
+        hit_count = count_successful_hits(ground_truth_boxes, predicted_boxes, threshold)
+        total_hit_num += hit_count
+        print("Number of successful hits:", hit_count)
+    print("Number of gt:", total_smura_num)
+    print("Number of pred:", total_pred_num)
+    print("Number of hits:", total_hit_num)
+
+    raise
+
+if __name__ == '__main__':
+    args = parser.parse_args()
+    data_dir = args.data_dir
+    seg_gt_dir = args.seg_gt_dir
+    save_dir = args.save_dir
+    isResize = args.isResize
+    csv_dir = args.csv_dir
+    bb_gt_dir = args.bb_gt_dir
+    os.makedirs(save_dir, exist_ok=True)
+    # area_based_metric(seg_gt_dir, data_dir, save_dir)
+    defect_based_metric(csv_dir, data_dir, save_dir)
+
+    # for all image smura
+    # read csv
+    # filter this image bounding box
+    # load image
+    # pred this image bounding box
+    # 
     with open(join_path(save_dir, f"result_all.txt"), 'w') as f:
         msg = f"All img: {count}\n" 
         msg += f"hit num: {df_dice[df_dice['dice']>0].shape[0]}\n"
