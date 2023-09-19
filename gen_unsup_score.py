@@ -25,5 +25,6 @@ def model_prediction(opt):
 
 if __name__ == "__main__":
     opt, gpu = initail_setting()  
-    res = model_prediction(opt)
+    pred_t, res = model_prediction(opt)
+    print(f"Avg Pred time: {pred_t}")
     export_score(res, opt.results_dir)

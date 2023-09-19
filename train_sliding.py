@@ -7,7 +7,7 @@ from util.logger import Logger
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
-from Mura_ShiftNet.util.utils import mkdir
+from util.utils import mkdir
 
 def plot_loss(epochs, loss, name):
     plt.plot(epochs, loss)

@@ -71,6 +71,14 @@ def area_based_metric(gt_dir, data_dir, save_dir):
     df_recall.to_csv(join_path(save_dir, f'recall_all.csv'),index=False)
     df_precision.to_csv(join_path(save_dir, f'precision_all.csv'),index=False)
 
+    with open(join_path(save_dir, f"area_based_result_all.txt"), 'w') as f:
+        msg = f"All img: {count}\n" 
+        msg += f"hit num: {df_dice[df_dice['dice']>0].shape[0]}\n"
+        msg += f"dice mean: {df_dice['dice'].mean()}\n"
+        msg += f"recall mean: {df_recall['recall'].mean()}\n"
+        msg += f"precision mean: {df_precision['precision'].mean()}\n"
+        f.writelines(msg)
+
 def calculate_iou(box1, box2):
     # Calculate the intersection rectangle
     x1 = max(box1[0], box2[0])
@@ -89,7 +97,7 @@ def calculate_iou(box1, box2):
     iou = intersection_area / float(box1_area + box2_area - intersection_area)
     return iou
 
-def count_successful_hits(ground_truth_boxes, predicted_boxes, threshold=0.3):
+def count_successful_hits(ground_truth_boxes, predicted_boxes, threshold):
     hits = 0
 
     for gt_box in ground_truth_boxes:
@@ -101,13 +109,14 @@ def count_successful_hits(ground_truth_boxes, predicted_boxes, threshold=0.3):
 
     return hits
 
-def defect_based_metric(csv_dir, data_dir, save_dir):
+def defect_based_metric(csv_dir, data_dir, save_dir, iou_th=0.3):
     total_smura_num = 0
     total_pred_num = 0
     total_hit_num = 0
     df = pd.read_csv(csv_dir)
+    count = 0
     for fn in os.listdir(data_dir):
-        print(fn)
+        count += 1 
         # Load the images
         thresh = 127
         diff_img = cv2.imread(join_path(data_dir,fn), cv2.IMREAD_GRAYSCALE)
@@ -119,12 +128,13 @@ def defect_based_metric(csv_dir, data_dir, save_dir):
         contours, _ = cv2.findContours(diff_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         # print(contours)
         # Filter and extract bounding boxes
-        min_contour_area = 15 # Adjust this threshold as needed
+        min_contour_area = 1 # 最小輪廓面積，因在生成圖片時已經過濾最小面積，此處設1即可
         predicted_boxes = []
 
         for contour in contours:
             if cv2.contourArea(contour) >= min_contour_area:
                 x, y, w, h = cv2.boundingRect(contour)
+                # csv
                 total_pred_num+=1
                 predicted_boxes.append((x, y, x + w, y + h))
 
@@ -137,16 +147,24 @@ def defect_based_metric(csv_dir, data_dir, save_dir):
             ground_truth_boxes.append((int(round(row.x0/3.75,0)), int(round(row.y0/2.109375,0)), int(round(row.x1/3.75,0)), int(round(row.y1/2.109375,0))))
         # print(ground_truth_boxes)
 
-        threshold = 0.3
+        threshold = iou_th
 
         hit_count = count_successful_hits(ground_truth_boxes, predicted_boxes, threshold)
-        total_hit_num += hit_count
-        print("Number of successful hits:", hit_count)
-    print("Number of gt:", total_smura_num)
-    print("Number of pred:", total_pred_num)
-    print("Number of hits:", total_hit_num)
+        print("Num {}: {}".format(count, fn))
 
-    raise
+        total_hit_num += hit_count
+    
+    with open(join_path(save_dir, f"defect_based_iou_{iou_th}.txt"), 'w') as f:
+        msg = f"All img: {count}\n" 
+        msg += f"IOU th: {iou_th}\n" 
+        msg += f"Number of gt: {total_smura_num}\n"
+        msg += f"Number of pred: {total_pred_num}\n"        
+        msg += f"Number of hits: {total_hit_num}\n"
+        msg += f"Recall: {total_hit_num/total_smura_num}\n"
+        msg += f"Precision: {total_hit_num/total_pred_num}\n"
+
+
+        f.writelines(msg)
 
 if __name__ == '__main__':
     args = parser.parse_args()
@@ -157,19 +175,5 @@ if __name__ == '__main__':
     csv_dir = args.csv_dir
     bb_gt_dir = args.bb_gt_dir
     os.makedirs(save_dir, exist_ok=True)
-    # area_based_metric(seg_gt_dir, data_dir, save_dir)
+    area_based_metric(seg_gt_dir, data_dir, save_dir)
     defect_based_metric(csv_dir, data_dir, save_dir)
-
-    # for all image smura
-    # read csv
-    # filter this image bounding box
-    # load image
-    # pred this image bounding box
-    # 
-    with open(join_path(save_dir, f"result_all.txt"), 'w') as f:
-        msg = f"All img: {count}\n" 
-        msg += f"hit num: {df_dice[df_dice['dice']>0].shape[0]}\n"
-        msg += f"dice mean: {df_dice['dice'].mean()}\n"
-        msg += f"recall mean: {df_recall['recall'].mean()}\n"
-        msg += f"precision mean: {df_precision['precision'].mean()}\n"
-        f.writelines(msg)

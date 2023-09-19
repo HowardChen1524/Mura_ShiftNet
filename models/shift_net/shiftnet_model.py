@@ -450,7 +450,7 @@ class ShiftNetModel(BaseModel):
     
     def test(self):
         with torch.no_grad():
-            self.forward()
+            t = self.forward()
         fake_B = self.fake_B.detach() # Inpaint
         real_B = self.real_B # Original
 
@@ -464,7 +464,7 @@ class ShiftNetModel(BaseModel):
         for i in range(0, real_B.shape[0]):
             crop_scores.append(self.compute_score(real_B[i], fake_B[i]))
         crop_scores = np.array(crop_scores)
-        return crop_scores
+        return t, crop_scores
 
     # Just assume one shift layer.
     def set_flow_src(self):

@@ -25,6 +25,7 @@ def evaluate(opt, dataset_list, model):
         max_anomaly_score_log = None
         mean_anomaly_score_log = None
         fn_log = []
+        pred_time = []
         print(f"Mode(0:normal,1:smura): {mode}, {opt.how_many}")
         for i, data in enumerate(dataset):
             if i >= opt.how_many:
@@ -46,8 +47,9 @@ def evaluate(opt, dataset_list, model):
             # 建立 input real_A & real_B
             # it not only sets the input data with mask, but also sets the latent mask.
             model.set_input(data)
-            img_scores = model.test()
-            
+            t, img_scores = model.test()
+            print(f"Time: {t}")
+            pred_time.append(t)
             # if opt.pos_normalize:
             #     for pos in range(0, img_scores.shape[0]):
             #         img_scores[pos] = (img_scores[pos]-n_pos_mean[pos])/n_pos_std[pos]
@@ -77,7 +79,7 @@ def evaluate(opt, dataset_list, model):
             res['mean']['s'] = mean_anomaly_score_log.copy()
             res['fn']['s'] = fn_log
             res['label']['s'] = [1]*opt.smura_how_many
-    return res
+    return np.mean(pred_time), res
 
 def export_score(score, path):
     name = score['fn']['n'] + score['fn']['s']
@@ -110,11 +112,12 @@ def find_unsup_th(res):
               }
 
     curve_df = get_curve_df(all_label, all_score)
-    
-    results['tnr0.987_th'].append((curve_df[curve_df['tnr'] > 0.987].iloc[0]).threshold)
-    results['tnr0.987_tnr'].append((curve_df[curve_df['tnr'] > 0.987].iloc[0]).tnr)
-    results['tnr0.987_recall'].append((curve_df[curve_df['tnr'] > 0.987].iloc[0]).recall)
-    results['tnr0.987_precision'].append((curve_df[curve_df['tnr'] > 0.987].iloc[0]).precision)
+    tnr987_best_recall_pos = curve_df[(curve_df['tnr'] > 0.987) & (curve_df['tnr'] < 0.988)].recall.argmax()
+
+    results['tnr0.987_th'].append((curve_df[curve_df['tnr'] > 0.987].iloc[tnr987_best_recall_pos]).threshold)
+    results['tnr0.987_tnr'].append((curve_df[curve_df['tnr'] > 0.987].iloc[tnr987_best_recall_pos]).tnr)
+    results['tnr0.987_recall'].append((curve_df[curve_df['tnr'] > 0.987].iloc[tnr987_best_recall_pos]).recall)
+    results['tnr0.987_precision'].append((curve_df[curve_df['tnr'] > 0.987].iloc[tnr987_best_recall_pos]).precision)
 
     # fill empty slot
     for k, v in results.items():
@@ -135,8 +138,6 @@ def calc_metric(labels_res, pred_res, threshold):
 
 def get_curve_df(labels_res, preds_res):
     pr_list = []
-    # for i in tqdm(np.linspace(9.5e-06, 1.2e-05, num=10001)): # shiftnet d23 8k fix crop mse
-    # for i in tqdm(np.linspace(9.5e-05, 1.1e-04, num=10001)): # shiftnet d23 8k crop mask mse
     for i in tqdm(np.linspace(min(preds_res), max(preds_res), num=10001)):
         pr_result = calc_metric(labels_res, preds_res, i)
         pr_list.append(pr_result)
@@ -157,18 +158,38 @@ def plot_roc_curve(labels, scores, path, name):
     plt.savefig(f"{path}/{name}_roc.png")
     plt.clf()
 
-def plot_score_distribution(n_scores, s_scores, path, name):
+def plot_line(score, path, th):
+    # mx + y = b 
+    # y = -mx + b
+    plot_scatter(score)
+    
+    x_vals = [th, th]
+    y_vals = [0, 1]
+    plt.plot(x_vals, y_vals, color='#2ca02c')
+    plt.savefig(f"{path}/tnr_0.987_one_line.png")
     plt.clf()
-    # plt.xlim(4e-05, 4e-04)
-    # plt.xlim(8e-05, 1.5e-05) # shiftnet
-    # plt.xlim(3e-05, 1.2e-04) # pennet
-    # plt.xlim(4.5e-05, 8e-05)
-    plt.hist(n_scores, bins=50, alpha=0.5, density=True, label="normal")
-    plt.hist(s_scores, bins=50, alpha=0.5, density=True, label="smura")
+
+def plot_scatter(score):
+    # normal
+    n_x = score['score']['n']
+    n_y = [0]*len(score['score']['n'])
+    # smura
+    s_x = score['score']['s']
+    s_y = [1]*len(score['score']['s'])
+    plt.clf()
+    plt.xlabel("Score (Unsupervised)")
+    plt.ylabel("x")
+    plt.title('Unsupervised')
+    plt.scatter(n_x, n_y, s=5, c ="blue", alpha=0.2)
+    plt.scatter(s_x, s_y, s=5, c ="red", alpha=0.2)
+
+def plot_score_distribution(score, path, name):
+    plt.clf()
+    plt.hist(score['score']['n'], bins=50, alpha=0.5, density=True, label="normal")
+    plt.hist(score['score']['s'], bins=50, alpha=0.5, density=True, label="smura")
     plt.xlabel('Anomaly Score')
-    plt.title('Score Distribution')
+    plt.title('Unsupervised')
     plt.legend(loc='upper right')
     plt.savefig(f"{path}/{name}_dist.png")
-    plt.clf()
 
 

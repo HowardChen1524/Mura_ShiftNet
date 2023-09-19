@@ -10,6 +10,7 @@ class TestOptions(BaseOptions):
         parser.add_argument('--data_version', type=str)       
         parser.add_argument('--data_csv_path', type=str)
         parser.add_argument('--sup_dataroot', type=str)
+        parser.add_argument('--testing_dataroot', type=str, default='', help='test data path')
         parser.add_argument('--testing_normal_dataroot', type=str, default='', help='test normal data path')
         parser.add_argument('--testing_smura_dataroot', type=str, default='', help='test smura data path') 
         parser.add_argument('--how_many', type=int, default=0, help='how many test images to run')

@@ -153,11 +153,12 @@ def find_sup_th(res):
               }
 
     curve_df = get_curve_df(all_label, all_conf)
+    tnr987_best_recall_pos = curve_df[(curve_df['tnr'] > 0.987) & (curve_df['tnr'] < 0.988)].recall.argmax()
 
-    results['tnr0.987_th'].append((curve_df[curve_df['tnr'] > 0.987].iloc[0]).threshold)
-    results['tnr0.987_tnr'].append((curve_df[curve_df['tnr'] > 0.987].iloc[0]).tnr)
-    results['tnr0.987_recall'].append((curve_df[curve_df['tnr'] > 0.987].iloc[0]).recall)
-    results['tnr0.987_precision'].append((curve_df[curve_df['tnr'] > 0.987].iloc[0]).precision)
+    results['tnr0.987_th'].append((curve_df[(curve_df['tnr'] > 0.987) & (curve_df['tnr'] < 0.988)].iloc[tnr987_best_recall_pos]).threshold)
+    results['tnr0.987_tnr'].append((curve_df[(curve_df['tnr'] > 0.987) & (curve_df['tnr'] < 0.988)].iloc[tnr987_best_recall_pos]).tnr)
+    results['tnr0.987_recall'].append((curve_df[(curve_df['tnr'] > 0.987) & (curve_df['tnr'] < 0.988)].iloc[tnr987_best_recall_pos]).recall)
+    results['tnr0.987_precision'].append((curve_df[(curve_df['tnr'] > 0.987) & (curve_df['tnr'] < 0.988)].iloc[tnr987_best_recall_pos]).precision)
 
     # fill empty slot
     for k, v in results.items():
@@ -198,5 +199,38 @@ def plot_roc_curve(labels, scores, path, name):
   plt.savefig(f"{path}/{name}_roc.png")
   plt.clf()
 
+def plot_line(conf, path, th):
+    # mx + y = b 
+    # y = -mx + b
+    plot_scatter(conf)
+    
+    x_vals = [th, th]
+    y_vals = [0, 1]
+    plt.plot(x_vals, y_vals, color='#2ca02c')
+    plt.savefig(f"{path}/tnr_0.987_one_line.png")
+    plt.clf()
+
+def plot_scatter(conf):
+    # normal
+    n_x = conf['conf']['n']
+    n_y = [0]*len(conf['conf']['n'])
+    # smura
+    s_x = conf['conf']['s']
+    s_y = [1]*len(conf['conf']['s'])
+    plt.clf()
+    plt.xlabel("Conf (Supervised)")
+    plt.ylabel("x")
+    plt.title('Supervised')
+    plt.scatter(n_x, n_y, s=5, c ="blue", alpha=0.2)
+    plt.scatter(s_x, s_y, s=5, c ="red", alpha=0.2)
+
+def plot_conf_distribution(conf, path, name):
+    plt.clf()
+    plt.hist(conf['conf']['n'], bins=50, alpha=0.5, density=True, label="normal")
+    plt.hist(conf['conf']['s'], bins=50, alpha=0.5, density=True, label="smura")
+    plt.xlabel('Conf Score')
+    plt.title('Supervised')
+    plt.legend(loc='upper right')
+    plt.savefig(f"{path}/{name}_dist.png")
 
 

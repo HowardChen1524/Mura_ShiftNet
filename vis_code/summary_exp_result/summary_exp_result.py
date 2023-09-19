@@ -15,21 +15,30 @@ if __name__ == '__main__':
     combine_type = args.combine_type
 
     exp_name_list = []
-    hit_list = []
+    dice_hit_list = []
     dice_list = []
+    pixel_recall_list = []
+    pixel_precision_list = []
+    defect_hit_list = []
     recall_list = []
     precision_list = []
-
     for exp in os.listdir(data_dir):
         exp_name_list.append(exp)
-        with open(join_path(data_dir, f'{exp}/result_all.txt'), 'r') as f:
+        with open(join_path(data_dir, f'{exp}/area_based_result_all.txt'), 'r') as f:
             for line in f:
                 info = line.split(": ")
                 if   info[0] == 'dice mean': dice_list.append(info[1][:-1])
-                elif info[0] == 'recall mean': recall_list.append(info[1][:-1])
-                elif info[0] == 'precision mean': precision_list.append(info[1][:-1])
-                elif info[0] == 'hit num': hit_list.append(info[1][:-1])
-    df = pd.DataFrame(list(zip(exp_name_list, dice_list, recall_list, precision_list, hit_list)), columns=['exp', 'dice mean', 'recall', 'precision', 'hit num'])
+                elif info[0] == 'recall mean': pixel_recall_list.append(info[1][:-1])
+                elif info[0] == 'precision mean': pixel_precision_list.append(info[1][:-1])
+                elif info[0] == 'hit num': dice_hit_list.append(info[1][:-1])
+        
+        with open(join_path(data_dir, f'{exp}/defect_based_iou_0.3.txt'), 'r') as f:
+            for line in f:
+                info = line.split(": ")
+                if   info[0] == 'Number of hits': defect_hit_list.append(info[1][:-1])
+                elif info[0] == 'Recall': recall_list.append(info[1][:-1])
+                elif info[0] == 'Precision': precision_list.append(info[1][:-1])
+    df = pd.DataFrame(list(zip(exp_name_list, dice_list, pixel_recall_list, pixel_precision_list, dice_hit_list, recall_list, precision_list, defect_hit_list)), columns=['exp', 'dice mean', 'pixel recall', 'pixel precision', 'dice hit num', 'recall', 'precision', 'defect hit num'])
     if combine_type == 'combine':
         df[['grad_th', 'th', 'min_area']] = df['exp'].str.split('_', expand=True)[[1,2,6]].astype(float)
 

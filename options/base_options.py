@@ -25,7 +25,7 @@ class BaseOptions():
         parser.add_argument('--output_nc', type=int, default=3, help='# of output image channels')
         parser.add_argument('--which_model_netD', type=str, default='basic', help='selects model to use for netD, [basic|densenet]')
         parser.add_argument('--which_model_netG', type=str, default='unet_shift_triple', help='selects model to use for netG [unet_256| unet_shift_triple| \
-                                                                res_unet_shift_triple|patch_soft_unet_shift_triple| \
+                                                          res_unet_shift_triple|patch_soft_unet_shift_triple| \
                                                                 res_patch_soft_unet_shift_triple| face_unet_shift_triple]')
         parser.add_argument('--ngf', type=int, default=64, help='# of gen filters in first conv layer')
         parser.add_argument('--ndf', type=int, default=64, help='# of discrim filters in first conv layer')
@@ -33,6 +33,16 @@ class BaseOptions():
         parser.add_argument('--bottleneck', type=int, default=512, help='neurals of fc')
         parser.add_argument('--mask_thred', type=int, default=1, help='number to decide whether a patch is masked')
         
+        # CSA
+        parser.add_argument('--input_nc_g', type=int, default=6, help='# of input image channels')
+        parser.add_argument('--which_model_netF', type=str, default='feature')
+        parser.add_argument('--which_model_netP', type=str, default='unet_256')
+        parser.add_argument('--threshold', type=float, default=5/16.0)
+        parser.add_argument('--fixed_mask', type=int, default=1)
+        parser.add_argument('--use_dropout', type=bool, default=False)
+        parser.add_argument('--ncritic', type=bool, default=False)
+        parser.add_argument('--cosis', type=bool, default=False)
+
         # shift layer
         parser.add_argument('--stride', type=int, default=1, help='should be dense, 1 is a good option.')
         parser.add_argument('--shift_sz', type=int, default=1, help='shift_sz>1 only for \'soft_shift_patch\'.')

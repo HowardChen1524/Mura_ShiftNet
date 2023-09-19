@@ -51,7 +51,6 @@ class AlignedDatasetSliding(BaseDataset):
         A_path = self.A_paths[index]
         img = cv2.imread(A_path)  
         
-        assert (self.opt.resolution == 'resized') or (self.opt.resolution == 'origin')
         if self.opt.resolution == 'resized':
             img = cv2.resize(img, (512, 512), interpolation=cv2.INTER_AREA)
         else:

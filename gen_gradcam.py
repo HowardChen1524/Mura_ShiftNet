@@ -13,7 +13,7 @@ from options.test_options import TestOptions
 from data.data_loader import CreateDataLoader
 from models import create_model
 
-from Mura_ShiftNet.util.utils import mkdir, data_transforms, make_single_dataloader, set_seed
+from util.utils import mkdir, data_transforms, make_single_dataloader, set_seed
 
 import torchvision.models as models
 

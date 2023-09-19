@@ -842,9 +842,7 @@ def save_curve_and_report(all_pr_res, path, isOneline=True):
 # draw image
 def plot_one_line(line, color):
     # mx + y = b 
-    # x = 1.2e-04, y = b - 1.2e-04m
-    # y = 1, x = (b-y)/m
-    # y = 0, x = b/m
+    # y = -mx + b
     slope, intercept = line
     if slope == 0:
         # x_vals = [0, 4e-04]

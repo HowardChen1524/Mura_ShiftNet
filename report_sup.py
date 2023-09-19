@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 
 from options.test_options import TestOptions
-from util.utils_sup import find_sup_th
+from util.utils_sup import plot_conf_distribution, find_sup_th, plot_line
 
 def initail_setting():
     opt = TestOptions().parse()
@@ -16,6 +16,9 @@ def initail_setting():
     return opt, opt.gpu_ids[0]
   
 def gen_report(conf, path, name):
+
+    plot_conf_distribution(conf, path, name)
+
     res, model_report = find_sup_th(conf)
     model_report.to_csv(os.path.join(path, f"{name}_th.csv"))
     log_name = os.path.join(path, f'{name}_report.txt')
@@ -28,7 +31,7 @@ def gen_report(conf, path, name):
         msg += f"tnr0.987 precision: {res['tnr0.987_precision'][0]}\n"
         log_file.write(msg)
 
-    # plot_line_on_scatter(conf, score_unsup, path)
+    plot_line(conf, path, res['tnr0.987_th'][0])
 
 def load_res(opt):
     res = defaultdict(dict)
