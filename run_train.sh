@@ -3,7 +3,7 @@
 
 checkpoints_dir='../models'
 loadSize=64
-niter=200
+niter=100
 lr=0.0001
 lr_policy='cosine'
 crop_image_num=64
@@ -39,7 +39,6 @@ python ./train_skipgan_resunet.py \
  --resolution=$resolution \
  --dataroot=$train_normal_path \
  --crop_image_num=$crop_image_num \
-
 # python ./train_sliding.py \
 #  --model="shiftnet" \
 #  --gan_type="vanilla" \

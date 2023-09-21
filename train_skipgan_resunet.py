@@ -813,7 +813,7 @@ class ResUnetGAN(tf.keras.models.Model):
 
 # ===== training =====
 
-def run_trainning(model, train_dataset, num_epochs, path_gmodal, path_dmodal, name_model):
+def run_trainning(model, train_dataset, num_epochs, name_model):
     
     epochs_list = []
     gen_loss_list = []
@@ -832,6 +832,10 @@ def run_trainning(model, train_dataset, num_epochs, path_gmodal, path_dmodal, na
         gen_loss_list.append(result.history["gen_loss"][0])
         disc_loss_list.append(result.history["disc_loss"][0])
         l1_loss_list.append(result.history["loss_rec"][0])
+
+        path_gmodal = os.path.join(saved_model_path,f"{opt.model_version}_{epoch}_g_model.h5")
+        path_dmodal = os.path.join(saved_model_path,f"{opt.model_version}_{epoch}_d_model.h5")
+    
         model.saved_model(path_gmodal, path_dmodal)
         print('saved for epoch:', epoch)
     
@@ -858,9 +862,6 @@ if __name__ == "__main__":
     train_data_path = opt.dataroot
     saved_model_path = os.path.join(opt.checkpoints_dir, f"{opt.model_version}/saved_model/")
         
-    path_gmodal = os.path.join(saved_model_path,f"{opt.model_version}_g_model.h5")
-    path_dmodal = os.path.join(saved_model_path,f"{opt.model_version}_d_model.h5")
-    
     input_shape = (IMG_H, IMG_W, IMG_C)
     print(input_shape)
     inputs = tf.keras.layers.Input(input_shape, name="input_1")
@@ -885,7 +886,7 @@ if __name__ == "__main__":
     else:
         raise ValueError
     
-    run_trainning(model, train_images_dataset, opt.niter, path_gmodal, path_dmodal, opt.model_version)
+    run_trainning(model, train_images_dataset, opt.niter, opt.model_version)
 
 
 
