@@ -112,6 +112,7 @@ def find_unsup_th(res):
               }
 
     curve_df = get_curve_df(all_label, all_score)
+
     tnr987_best_recall_pos = curve_df[(curve_df['tnr'] > 0.987) & (curve_df['tnr'] < 0.988)].recall.argmax()
 
     results['tnr0.987_th'].append((curve_df[curve_df['tnr'] > 0.987].iloc[tnr987_best_recall_pos]).threshold)
@@ -129,12 +130,12 @@ def find_unsup_th(res):
     return results, model_report
     
 # =====
-def calc_metric(labels_res, pred_res, threshold):
-    tn, fp, fn, tp = confusion_matrix(y_true=labels_res, y_pred=(pred_res >= threshold)).ravel()
+def calc_metric(labels_res, preds_res, threshold):
+    tn, fp, fn, tp = confusion_matrix(y_true=labels_res, y_pred=(preds_res >= threshold)).ravel()
     tnr = 0 if (tn + fp) == 0 else tn / (tn + fp)
     precision = 0 if (tp + fp) == 0 else tp / (tp + fp)
     recall = 0 if (tp + fn) == 0 else tp / (tp + fn)
-    return threshold, tnr, precision, recall    
+    return threshold, tnr, precision, recall
 
 def get_curve_df(labels_res, preds_res):
     pr_list = []
@@ -144,10 +145,19 @@ def get_curve_df(labels_res, preds_res):
     curve_df = pd.DataFrame(pr_list, columns=['threshold', 'tnr', 'precision', 'recall'])
     return curve_df
 
-def plot_roc_curve(labels, scores, path, name):
-    fpr, tpr, th = roc_curve(labels, scores)
+def calc_roc_curve(res):
+    all_label = np.concatenate([res['label']['n'], res['label']['s']])
+    all_score = np.concatenate([res['score']['n'], res['score']['s']])
+    
+    fpr, tpr, th = roc_curve(all_label, all_score)
     roc_auc = auc(fpr, tpr)
 
+    optimal_th_index = np.argmax(tpr - fpr)
+    optimal_th = th[optimal_th_index]
+
+    return roc_auc, optimal_th, fpr, tpr
+
+def plot_roc_curve(roc_auc, fpr, tpr, path, name):
     plt.clf()
     plt.plot(fpr, tpr, color='orange', label="ROC curve (area = %0.2f)" % roc_auc)
     plt.plot([0, 1], [0, 1], color='darkblue', linestyle='--')

@@ -16,23 +16,25 @@ isPadding=0
 # ===== model =====
 # sup_model_version="ensemble_d23"
 # sup_model_version="SEResNeXt101_d23"
-sup_model_version="SEResNeXt101_d23_8k"
+# sup_model_version="SEResNeXt101_d23_8k"
 # model_version="ShiftNet_SSIM_d23_8k_cropping_fixed"
 # model_version="ShiftNet_SSIM_d23_8k"
 # model_version="SkipGANomaly_d23_8k_cropping"
 # model_version="ResunetGAN_d23_8k_cropping"
-model_version="CSA_d23_8k_cropping_fixed"
+# model_version="CSA_d23_8k_cropping_fixed"
 
-# model="shiftnet"
-model="csa"
-# gan_type="vanilla"
-gan_type="lsgan"
+model_version="ShiftNet_SSIM_typed_demura_cropping_fixed"
 
-# which_model_netG="unet_shift_triple"
-which_model_netG="unet_csa"
+model="shiftnet"
+# model="csa"
+gan_type="vanilla"
+# gan_type="lsgan"
 
-which_epoch="177"
-# which_epoch="200"
+which_model_netG="unet_shift_triple"
+# which_model_netG="unet_csa"
+
+# which_epoch="177"
+which_epoch="200"
 
 # ===== classify Mura =====
 measure="MSE"
@@ -40,14 +42,24 @@ mask_part=0
 
 # ===== Dataset =====
 dataset_mode="aligned_sliding"
-dataset_version="d23_8k"
-testing_dataroot="/home/mura/mura_data/d23_merge/test/"
-test_normal_path="/home/mura/mura_data/d23_merge/test/test_normal_8k" 
-test_smura_path="/home/mura/mura_data/d23_merge/test/test_smura_8k"
-normal_num=541
-smura_num=143
-sup_data_path="/home/mura/mura_data/d23_merge_8k"
-data_csv_path="/home/mura/mura_data/d23_merge_8k/data_merged.csv"
+# dataset_version="d23_8k"
+# testing_dataroot="/home/mura/mura_data/d23_merge/test/"
+# test_normal_path="/home/mura/mura_data/d23_merge/test/test_normal_8k" 
+# test_smura_path="/home/mura/mura_data/d23_merge/test/test_smura_8k"
+# normal_num=541
+# smura_num=143
+# sup_data_path="/home/mura/mura_data/d23_merge_8k"
+# data_csv_path="/home/mura/mura_data/d23_merge_8k/data_merged.csv"
+
+dataset_version="typed_demura_normal_demura_smura"
+testing_dataroot="/home/mura/mura_data/typed_demura/"
+test_normal_path="/home/mura/mura_data/typed_demura/test_normal/" 
+test_smura_path="/home/mura/mura_data/typed_demura/test_smura/"
+# test_smura_path="/home/mura/mura_data/typed/img/"
+normal_num=1704
+smura_num=26
+# sup_data_path="/home/mura/mura_data/d23_merge_8k"
+# data_csv_path="/home/mura/mura_data/d23_merge_8k/data_merged.csv"
 
 # ===== Unsupervised 生成 anomaly score =====
 if [ "$mask_part" -eq 1 ]; then

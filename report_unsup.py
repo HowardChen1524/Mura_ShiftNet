@@ -6,7 +6,7 @@ import pandas as pd
 
 from options.test_options import TestOptions
 
-from util.utils_unsup import plot_score_distribution, find_unsup_th, plot_line
+from util.utils_unsup import plot_score_distribution, find_unsup_th, plot_line, calc_roc_curve, plot_roc_curve
 
 def initail_setting():
     opt = TestOptions().parse()
@@ -19,6 +19,8 @@ def initail_setting():
 def gen_report(score, path, name):
 
     plot_score_distribution(score, path, name)
+    roc_auc, optimal_th, fpr, tpr = calc_roc_curve(score) 
+    plot_roc_curve(roc_auc, fpr, tpr, path, name)
     
     res, model_report = find_unsup_th(score)
     model_report.to_csv(os.path.join(path, f"{name}_th.csv"))
@@ -31,6 +33,8 @@ def gen_report(score, path, name):
         msg += f"Normal std: {score['all']['n'].std()}\n"
         msg += f"Smura mean: {score['all']['s'].mean()}\n"
         msg += f"Smura std: {score['all']['s'].std()}\n"
+        msg += f"AUC: {roc_auc}\n"
+        msg += f"Highest TPR-FPR threshold: {optimal_th}\n"
         msg += f"tnr0.987 threshold: {res['tnr0.987_th'][0]}\n"
         msg += f"tnr0.987 tnr: {res['tnr0.987_tnr'][0]}\n"
         msg += f"tnr0.987 recall: {res['tnr0.987_recall'][0]}\n"
